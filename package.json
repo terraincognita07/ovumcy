@@ -1,0 +1,15 @@
+{
+  "name": "lume-assets",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./web/src/css/input.css -o ./web/static/css/tailwind.css --minify",
+    "build:js": "cp ./node_modules/htmx.org/dist/htmx.min.js ./web/static/js/htmx.min.js && cp ./node_modules/alpinejs/dist/cdn.min.js ./web/static/js/alpine.min.js",
+    "build": "npm run build:css && npm run build:js"
+  },
+  "devDependencies": {
+    "alpinejs": "^3.14.8",
+    "htmx.org": "^1.9.12",
+    "tailwindcss": "^3.4.17"
+  }
+}

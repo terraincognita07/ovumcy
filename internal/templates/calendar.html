@@ -1,0 +1,71 @@
+{{define "content"}}
+<section class="space-y-6">
+  <div class="journal-card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div>
+      <h1 class="journal-subtitle">{{t .Messages "calendar.title"}}</h1>
+      <p class="journal-muted mt-1">{{.MonthLabel}}</p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="/calendar?month={{.PrevMonth}}" class="btn-secondary">{{t .Messages "calendar.prev"}}</a>
+      <a href="/calendar?month={{.NextMonth}}" class="btn-secondary">{{t .Messages "calendar.next"}}</a>
+      <a href="/calendar" class="btn-primary">{{t .Messages "calendar.today"}}</a>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <section class="journal-card p-4 sm:p-5">
+      <div class="mb-3 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide journal-muted">
+        <span>{{t .Messages "calendar.weekday.sun"}}</span>
+        <span>{{t .Messages "calendar.weekday.mon"}}</span>
+        <span>{{t .Messages "calendar.weekday.tue"}}</span>
+        <span>{{t .Messages "calendar.weekday.wed"}}</span>
+        <span>{{t .Messages "calendar.weekday.thu"}}</span>
+        <span>{{t .Messages "calendar.weekday.fri"}}</span>
+        <span>{{t .Messages "calendar.weekday.sat"}}</span>
+      </div>
+
+      <div class="grid grid-cols-7 gap-2">
+        {{range .CalendarDays}}
+        <button
+          type="button"
+          hx-get="/calendar/day/{{.DateString}}"
+          hx-target="#day-editor"
+          hx-swap="innerHTML"
+          class="{{.CellClass}}">
+          <div class="flex items-center justify-between">
+            <span class="{{.TextClass}}">{{.Day}}</span>
+            {{if .OvulationDot}}
+            <span class="text-base" title="{{t $.Messages "calendar.ovulation_icon"}}">🌞</span>
+            {{end}}
+          </div>
+
+          <div class="mt-2 flex flex-wrap gap-1">
+            {{if .IsPeriod}}
+            <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.period"}}</span>
+            {{end}}
+            {{if and (not .IsPeriod) .IsPredicted}}
+            <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.predicted"}}</span>
+            {{end}}
+            {{if and (not .IsPeriod) (not .IsPredicted) .IsFertility}}
+            <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.fertile"}}</span>
+            {{end}}
+          </div>
+        </button>
+        {{end}}
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-3 text-xs journal-muted">
+        <span class="legend-item"><span class="legend-dot legend-dot-period"></span>{{t .Messages "calendar.legend.actual_period"}}</span>
+        <span class="legend-item"><span class="legend-dot legend-dot-predicted"></span>{{t .Messages "calendar.legend.predicted_period"}}</span>
+        <span class="legend-item"><span class="legend-dot legend-dot-fertile"></span>{{t .Messages "calendar.legend.fertility"}}</span>
+        <span class="legend-item">🌞 {{t .Messages "calendar.legend.ovulation"}}</span>
+      </div>
+    </section>
+
+    <aside id="day-editor" class="journal-card p-4 sm:p-5" hx-get="/calendar/day/{{.Today}}" hx-trigger="load" hx-swap="innerHTML">
+      <p class="journal-muted">{{t .Messages "calendar.loading_day"}}</p>
+    </aside>
+  </div>
+</section>
+{{end}}

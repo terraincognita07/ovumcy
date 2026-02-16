@@ -1,0 +1,33 @@
+package db
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/glebarez/sqlite"
+	"github.com/terraincognita07/lume/internal/models"
+	"gorm.io/gorm"
+)
+
+func OpenSQLite(dbPath string) (*gorm.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		return nil, fmt.Errorf("create db directory: %w", err)
+	}
+
+	dsn := fmt.Sprintf("%s?_foreign_keys=on&_busy_timeout=5000", dbPath)
+	database, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite: %w", err)
+	}
+
+	if err := database.AutoMigrate(
+		&models.User{},
+		&models.SymptomType{},
+		&models.DailyLog{},
+	); err != nil {
+		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+
+	return database, nil
+}

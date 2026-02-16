@@ -1,0 +1,68 @@
+{{define "day_editor_partial"}}
+<div class="space-y-4">
+  <div>
+    <h3 class="journal-subtitle">{{.DateLabel}}</h3>
+    <p class="journal-muted text-xs">{{t .Messages "daylog.title"}}</p>
+  </div>
+
+  {{if .IsOwner}}
+  <form hx-post="/api/days/{{.DateString}}" hx-target="#calendar-save-status" hx-swap="innerHTML" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+    <label class="period-toggle">
+      <input type="checkbox" name="is_period" value="true" {{if .Log.IsPeriod}}checked{{end}}>
+      <span>🩸 {{t .Messages "dashboard.period_day"}}</span>
+    </label>
+
+    <fieldset class="space-y-2">
+      <legend class="field-label">{{t .Messages "dashboard.flow"}}</legend>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="choice-option">
+          <input type="radio" name="flow" value="none" class="choice-input" {{if eq .Log.Flow "none"}}checked{{end}}>
+          <span class="radio-tile radio-tile-sm"><span class="radio-icon">🌫️</span><span>{{flowLabel .Messages "none"}}</span></span>
+        </label>
+        <label class="choice-option">
+          <input type="radio" name="flow" value="light" class="choice-input" {{if eq .Log.Flow "light"}}checked{{end}}>
+          <span class="radio-tile radio-tile-sm"><span class="radio-icon">🌷</span><span>{{flowLabel .Messages "light"}}</span></span>
+        </label>
+        <label class="choice-option">
+          <input type="radio" name="flow" value="medium" class="choice-input" {{if eq .Log.Flow "medium"}}checked{{end}}>
+          <span class="radio-tile radio-tile-sm"><span class="radio-icon">🌺</span><span>{{flowLabel .Messages "medium"}}</span></span>
+        </label>
+        <label class="choice-option">
+          <input type="radio" name="flow" value="heavy" class="choice-input" {{if eq .Log.Flow "heavy"}}checked{{end}}>
+          <span class="radio-tile radio-tile-sm"><span class="radio-icon">🔥</span><span>{{flowLabel .Messages "heavy"}}</span></span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="field-label">{{t .Messages "dashboard.symptoms"}}</legend>
+      <div class="space-y-2">
+        {{range .Symptoms}}
+        <label class="choice-option block">
+          <input type="checkbox" name="symptom_ids" value="{{.ID}}" class="choice-input" {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
+          <span class="check-chip check-chip-sm">
+            <span>{{.Icon}}</span>
+            <span>{{symptomLabel $.Messages .Name}}</span>
+          </span>
+        </label>
+        {{end}}
+      </div>
+    </fieldset>
+
+    <label class="field-label" for="calendar-notes">{{t .Messages "dashboard.notes"}}</label>
+    <textarea id="calendar-notes" name="notes" rows="4" maxlength="2000" class="textarea-field">{{.Log.Notes}}</textarea>
+
+    <button type="submit" class="btn-primary">{{t .Messages "dashboard.save_day"}}</button>
+    <div id="calendar-save-status" class="text-sm"></div>
+  </form>
+  {{else}}
+  <div class="journal-panel space-y-3 text-sm">
+    <p><span class="journal-muted">{{t .Messages "dashboard.period_day"}}:</span> {{if .Log.IsPeriod}}{{t .Messages "common.yes"}}{{else}}{{t .Messages "common.no"}}{{end}}</p>
+    <p><span class="journal-muted">{{t .Messages "dashboard.flow"}}:</span> {{flowLabel .Messages .Log.Flow}}</p>
+    <p class="journal-muted">{{t .Messages "dashboard.partner_readonly"}}</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

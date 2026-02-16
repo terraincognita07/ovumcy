@@ -1,0 +1,79 @@
+{{define "base"}}
+<!doctype html>
+<html lang="{{.Lang}}" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CSRFToken}}">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/css/tailwind.css">
+  <script defer src="/static/js/alpine.min.js"></script>
+  <script defer src="/static/js/htmx.min.js"></script>
+  <script defer src="/static/js/chart-lite.js"></script>
+</head>
+<body>
+  <div class="app-shell" x-data="{ mobileMenu: false }">
+    <header class="paper-header">
+      <div class="container-main flex items-center justify-between py-4">
+        <a href="{{if .CurrentUser}}/{{else}}/login{{end}}" class="brand-mark">{{t .Messages "app.name"}}</a>
+
+        <div class="flex items-center gap-3">
+          <div class="lang-switch" role="group" aria-label="{{t .Messages "lang.switch"}}">
+            <a href="/lang/ru?next={{urlquery .CurrentPath}}" class="lang-link {{if eq .Lang "ru"}}lang-link-active{{end}}">{{t .Messages "lang.ru"}}</a>
+            <a href="/lang/en?next={{urlquery .CurrentPath}}" class="lang-link {{if eq .Lang "en"}}lang-link-active{{end}}">{{t .Messages "lang.en"}}</a>
+          </div>
+
+          {{if .CurrentUser}}
+          <button type="button" class="menu-toggle sm:hidden" @click="mobileMenu = !mobileMenu">{{t .Messages "nav.menu"}}</button>
+          {{end}}
+        </div>
+      </div>
+
+      {{if .CurrentUser}}
+      <div class="container-main pb-4">
+        <nav class="hidden items-center gap-2 sm:flex">
+          <a href="/" class="nav-link {{if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
+          <a href="/calendar" class="nav-link {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
+          <a href="/stats" class="nav-link {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
+
+          <span class="role-chip">{{roleLabel .Messages .CurrentUser.Role}}</span>
+
+          <form action="/api/auth/logout" method="post" class="ml-1">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn-soft">{{t .Messages "nav.logout"}}</button>
+          </form>
+        </nav>
+
+        <nav x-show="mobileMenu" x-transition class="mt-2 space-y-2 sm:hidden">
+          <a href="/" class="nav-link block {{if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
+          <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
+          <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
+          <form action="/api/auth/logout" method="post">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn-soft w-full">{{t .Messages "nav.logout"}}</button>
+          </form>
+        </nav>
+      </div>
+      {{end}}
+    </header>
+
+    <main class="container-main py-8 sm:py-10">
+      {{template "content" .}}
+    </main>
+  </div>
+
+  <script>
+    document.body.addEventListener("htmx:configRequest", function (event) {
+      var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+      if (!tokenMeta) return;
+      var token = tokenMeta.getAttribute("content");
+      if (!token) return;
+      event.detail.parameters = event.detail.parameters || {};
+      event.detail.parameters.csrf_token = token;
+      event.detail.headers = event.detail.headers || {};
+      event.detail.headers["X-CSRF-Token"] = token;
+    });
+  </script>
+</body>
+</html>
+{{end}}

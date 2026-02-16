@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  lume:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lume
+    environment:
+      - TZ=Europe/Belgrade
+      - SECRET_KEY=change_me_in_production
+      - DEFAULT_LANGUAGE=ru
+      - TELEGRAM_BOT_TOKEN=
+      - TELEGRAM_CHAT_ID=
+      - DB_PATH=/app/data/lume.db
+    volumes:
+      - ../data:/app/data
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

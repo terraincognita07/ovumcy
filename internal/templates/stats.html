@@ -1,0 +1,66 @@
+{{define "content"}}
+<section class="space-y-6">
+  <div>
+    <h1 class="journal-title">{{t .Messages "stats.title"}}</h1>
+    <p class="journal-muted mt-2">{{t .Messages "stats.subtitle"}}</p>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <article class="journal-card stat-card reveal">
+      <p class="stat-label">{{t .Messages "dashboard.average_cycle"}}</p>
+      <p class="stat-value mt-2">{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}</p>
+    </article>
+
+    <article class="journal-card stat-card reveal">
+      <p class="stat-label">{{t .Messages "dashboard.median_cycle"}}</p>
+      <p class="stat-value mt-2">{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
+    </article>
+
+    <article class="journal-card stat-card reveal">
+      <p class="stat-label">{{t .Messages "dashboard.average_period"}}</p>
+      <p class="stat-value mt-2">{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}</p>
+    </article>
+
+    <article class="journal-card stat-card reveal">
+      <p class="stat-label">{{t .Messages "dashboard.current_phase"}}</p>
+      <p class="stat-value mt-2"><span class="mr-2">{{phaseIcon .Stats.CurrentPhase}}</span>{{phaseLabel .Messages .Stats.CurrentPhase}}</p>
+    </article>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <section class="journal-card p-5 sm:p-6">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 class="journal-subtitle">{{t .Messages "stats.cycle_trend"}}</h2>
+        <span class="journal-muted text-xs">{{t .Messages "stats.last_12_cycles"}}</span>
+      </div>
+      <div
+        id="cycle-chart"
+        data-chart='{{toJSON .ChartData}}'
+        data-empty-text='{{t .Messages "stats.no_cycle_data"}}'
+        data-days-suffix='{{t .Messages "common.days_short"}}'
+        class="chart-shell">
+      </div>
+    </section>
+
+    <section class="journal-card p-5 sm:p-6">
+      <h2 class="journal-subtitle">{{t .Messages "stats.symptom_frequency"}}</h2>
+      {{if .IsOwner}}
+        {{if .SymptomCounts}}
+        <ul class="mt-4 space-y-2 text-sm">
+          {{range .SymptomCounts}}
+          <li class="journal-panel flex items-center justify-between gap-3">
+            <span class="inline-flex items-center gap-2"><span>{{.Icon}}</span><span>{{symptomLabel $.Messages .Name}}</span></span>
+            <span class="font-semibold">{{.Count}}</span>
+          </li>
+          {{end}}
+        </ul>
+        {{else}}
+        <p class="mt-4 journal-muted text-sm">{{t .Messages "stats.no_symptom_data"}}</p>
+        {{end}}
+      {{else}}
+      <p class="mt-4 journal-muted text-sm">{{t .Messages "stats.hidden_for_partner"}}</p>
+      {{end}}
+    </section>
+  </div>
+</section>
+{{end}}

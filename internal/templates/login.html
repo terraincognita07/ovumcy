@@ -1,0 +1,89 @@
+{{define "content"}}
+<section class="mx-auto flex min-h-[72vh] max-w-3xl items-center justify-center">
+  <div class="journal-card journal-hero w-full p-7 sm:p-10" x-data="authModeResolver()" x-init="detectMode()">
+    <p class="journal-kicker">{{t .Messages "app.name"}}</p>
+
+    {{if .ErrorKey}}
+    <div class="status-error mb-5">{{t .Messages .ErrorKey}}</div>
+    {{end}}
+
+    <div x-cloak x-show="needsSetup === null" class="space-y-4">
+      <h1 class="journal-title">{{t .Messages "auth.loading_mode"}}</h1>
+      <p class="journal-muted">{{t .Messages "auth.login_subtitle"}}</p>
+    </div>
+
+    <div x-cloak x-show="modeError" class="status-error mb-5">{{t .Messages "auth.mode_error"}}</div>
+
+    <section x-cloak x-show="needsSetup === false" class="space-y-5">
+      <div>
+        <h1 class="journal-title">{{t .Messages "auth.welcome_back"}}</h1>
+        <p class="journal-muted mt-2">{{t .Messages "auth.login_subtitle"}}</p>
+      </div>
+
+      <form action="/api/auth/login" method="post" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <label class="field-label" for="login-email">
+          {{t .Messages "auth.email"}}
+        </label>
+        <input id="login-email" type="email" name="email" required autocomplete="email" class="input-field" />
+
+        <label class="field-label" for="login-password">
+          {{t .Messages "auth.password"}}
+        </label>
+        <input id="login-password" type="password" name="password" required minlength="8" autocomplete="current-password" class="input-field" />
+
+        <button type="submit" class="btn-primary w-full">{{t .Messages "auth.login"}}</button>
+      </form>
+    </section>
+
+    <section x-cloak x-show="needsSetup === true" class="space-y-5">
+      <div>
+        <h1 class="journal-title">{{t .Messages "auth.create_account"}}</h1>
+        <p class="journal-muted mt-2">{{t .Messages "auth.register_subtitle"}}</p>
+      </div>
+
+      <form action="/api/auth/register" method="post" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <label class="field-label" for="register-email">
+          {{t .Messages "auth.email"}}
+        </label>
+        <input id="register-email" type="email" name="email" required autocomplete="email" class="input-field" />
+
+        <label class="field-label" for="register-password">
+          {{t .Messages "auth.password"}}
+        </label>
+        <input id="register-password" type="password" name="password" required minlength="8" autocomplete="new-password" class="input-field" />
+
+        <button type="submit" class="btn-primary w-full">{{t .Messages "auth.register"}}</button>
+      </form>
+    </section>
+  </div>
+</section>
+
+<script>
+  function authModeResolver() {
+    return {
+      needsSetup: null,
+      modeError: false,
+      async detectMode() {
+        try {
+          var response = await fetch('/api/auth/setup-status', {
+            method: 'GET',
+            headers: { Accept: 'application/json' }
+          });
+          if (!response.ok) {
+            throw new Error('setup status failed');
+          }
+          var payload = await response.json();
+          this.needsSetup = !!payload.needs_setup;
+        } catch (error) {
+          this.modeError = true;
+          this.needsSetup = false;
+        }
+      }
+    };
+  }
+</script>
+{{end}}
