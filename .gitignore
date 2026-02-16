@@ -32,3 +32,9 @@ node_modules/
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Local agent/task notes
+AGENTS.md
+PROJECT_CONTEXT.md
+TASK-delete-and-highlight.md
+BUGFIXES.md
