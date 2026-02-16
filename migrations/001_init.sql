@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  recovery_code_hash TEXT,
+  must_change_password BOOLEAN NOT NULL DEFAULT 0,
   role TEXT NOT NULL CHECK (role IN ('owner', 'partner')),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

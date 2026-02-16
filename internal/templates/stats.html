@@ -5,10 +5,14 @@
     <p class="journal-muted mt-2">{{t .Messages "stats.subtitle"}}</p>
   </div>
 
+  {{if le .Stats.AverageCycleLength 0.0}}
+  <div class="journal-panel text-sm journal-muted">{{t .Messages "stats.data_notice"}}</div>
+  {{end}}
+
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.average_cycle"}}</p>
-      <p class="stat-value mt-2">{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}</p>
+      <p class="stat-value mt-2">{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
     </article>
 
     <article class="journal-card stat-card reveal">
@@ -18,7 +22,7 @@
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.average_period"}}</p>
-      <p class="stat-value mt-2">{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}</p>
+      <p class="stat-value mt-2">{{if gt .Stats.AveragePeriodLength 0.0}}{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
     </article>
 
     <article class="journal-card stat-card reveal">

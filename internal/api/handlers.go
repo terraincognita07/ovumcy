@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -25,6 +28,7 @@ import (
 )
 
 var hexColorRegex = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+var recoveryCodeRegex = regexp.MustCompile(`^LUME-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$`)
 
 type Handler struct {
 	db              *gorm.DB
@@ -34,6 +38,7 @@ type Handler struct {
 	i18n            *i18n.Manager
 	templates       map[string]*template.Template
 	partials        map[string]*template.Template
+	recoveryLimiter *attemptLimiter
 }
 
 type CalendarDay struct {
@@ -74,6 +79,27 @@ type symptomPayload struct {
 	Name  string `json:"name" form:"name"`
 	Icon  string `json:"icon" form:"icon"`
 	Color string `json:"color" form:"color"`
+}
+
+type forgotPasswordInput struct {
+	RecoveryCode string `json:"recovery_code" form:"recovery_code"`
+}
+
+type resetPasswordInput struct {
+	Token           string `json:"token" form:"token"`
+	Password        string `json:"password" form:"password"`
+	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
+}
+
+type attemptLimiter struct {
+	mu       sync.Mutex
+	attempts map[string][]time.Time
+}
+
+type passwordResetClaims struct {
+	UserID  uint   `json:"uid"`
+	Purpose string `json:"purpose"`
+	jwt.RegisteredClaims
 }
 
 func NewHandler(database *gorm.DB, secret string, templateDir string, location *time.Location, i18nManager *i18n.Manager) (*Handler, error) {
@@ -145,7 +171,16 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 	}
 
 	templates := make(map[string]*template.Template)
-	pages := []string{"login", "dashboard", "calendar", "stats"}
+	pages := []string{
+		"login",
+		"register",
+		"recovery_code",
+		"forgot_password",
+		"reset_password",
+		"dashboard",
+		"calendar",
+		"stats",
+	}
 	for _, page := range pages {
 		templatePath := filepath.Join(templateDir, page+".html")
 		parsed, err := template.New("base").Funcs(funcMap).ParseFiles(
@@ -177,6 +212,7 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		i18n:            i18nManager,
 		templates:       templates,
 		partials:        partials,
+		recoveryLimiter: newAttemptLimiter(),
 	}, nil
 }
 
@@ -206,7 +242,7 @@ func (handler *Handler) SetLanguage(c *fiber.Ctx) error {
 
 func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 	if _, err := handler.authenticateRequest(c); err == nil {
-		return c.Redirect("/", fiber.StatusSeeOther)
+		return c.Redirect("/dashboard", fiber.StatusSeeOther)
 	}
 
 	errorKey := authErrorTranslationKey(c.Query("error"))
@@ -220,6 +256,61 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		"ErrorKey": errorKey,
 	}
 	return handler.render(c, "login", data)
+}
+
+func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
+	if _, err := handler.authenticateRequest(c); err == nil {
+		return c.Redirect("/dashboard", fiber.StatusSeeOther)
+	}
+
+	errorKey := authErrorTranslationKey(c.Query("error"))
+	messages := currentMessages(c)
+	title := translateMessage(messages, "meta.title.register")
+	if title == "meta.title.register" {
+		title = "Lume | Sign Up"
+	}
+	data := fiber.Map{
+		"Title":    title,
+		"ErrorKey": errorKey,
+	}
+	return handler.render(c, "register", data)
+}
+
+func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
+	errorKey := authErrorTranslationKey(c.Query("error"))
+	messages := currentMessages(c)
+	title := translateMessage(messages, "meta.title.forgot_password")
+	if title == "meta.title.forgot_password" {
+		title = "Lume | Password Recovery"
+	}
+	data := fiber.Map{
+		"Title":    title,
+		"ErrorKey": errorKey,
+	}
+	return handler.render(c, "forgot_password", data)
+}
+
+func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
+	token := strings.TrimSpace(c.Query("token"))
+	messages := currentMessages(c)
+	title := translateMessage(messages, "meta.title.reset_password")
+	if title == "meta.title.reset_password" {
+		title = "Lume | Reset Password"
+	}
+
+	invalidToken := false
+	if _, err := handler.parsePasswordResetToken(token); err != nil {
+		invalidToken = true
+	}
+
+	data := fiber.Map{
+		"Title":        title,
+		"Token":        token,
+		"InvalidToken": invalidToken,
+		"ForcedReset":  parseBoolValue(c.Query("forced")),
+		"ErrorKey":     authErrorTranslationKey(c.Query("error")),
+	}
+	return handler.render(c, "reset_password", data)
 }
 
 func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
@@ -418,13 +509,8 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 	if err != nil {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
 	}
-
-	var usersCount int64
-	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to verify setup")
-	}
-	if usersCount > 0 {
-		return handler.respondAuthError(c, fiber.StatusForbidden, "registration disabled")
+	if err := validatePasswordStrength(credentials.Password); err != nil {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "weak password")
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
@@ -432,11 +518,17 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
 	}
 
+	recoveryCode, recoveryHash, err := generateRecoveryCodeHash()
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
+	}
+
 	user := models.User{
-		Email:        credentials.Email,
-		PasswordHash: string(passwordHash),
-		Role:         models.RoleOwner,
-		CreatedAt:    time.Now().In(handler.location),
+		Email:            credentials.Email,
+		PasswordHash:     string(passwordHash),
+		RecoveryCodeHash: recoveryHash,
+		Role:             models.RoleOwner,
+		CreatedAt:        time.Now().In(handler.location),
 	}
 	if err := handler.db.Create(&user).Error; err != nil {
 		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
@@ -450,7 +542,18 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
-	return redirectOrJSON(c, "/")
+	if acceptsJSON(c) {
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"ok":            true,
+			"recovery_code": recoveryCode,
+		})
+	}
+
+	return handler.render(c, "recovery_code", fiber.Map{
+		"Title":        localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
+		"RecoveryCode": recoveryCode,
+		"ContinuePath": "/dashboard",
+	})
 }
 
 func (handler *Handler) Login(c *fiber.Ctx) error {
@@ -468,11 +571,30 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusUnauthorized, "invalid credentials")
 	}
 
+	if user.MustChangePassword {
+		token, err := handler.buildPasswordResetToken(user.ID, 30*time.Minute)
+		if err != nil {
+			return apiError(c, fiber.StatusInternalServerError, "failed to create reset token")
+		}
+		path := "/reset-password?token=" + url.QueryEscape(token) + "&forced=1"
+		if acceptsJSON(c) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":       "password change required",
+				"reset_token": token,
+			})
+		}
+		if isHTMX(c) {
+			c.Set("HX-Redirect", path)
+			return c.SendStatus(fiber.StatusOK)
+		}
+		return c.Redirect(path, fiber.StatusSeeOther)
+	}
+
 	if err := handler.setAuthCookie(c, &user); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
-	return redirectOrJSON(c, "/")
+	return redirectOrJSON(c, "/dashboard")
 }
 
 func (handler *Handler) Logout(c *fiber.Ctx) error {
@@ -485,6 +607,115 @@ func (handler *Handler) Logout(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"ok": true})
 	}
 	return c.Redirect("/login", fiber.StatusSeeOther)
+}
+
+func (handler *Handler) ForgotPassword(c *fiber.Ctx) error {
+	now := time.Now().In(handler.location)
+	limiterKey := requestLimiterKey(c)
+	if handler.recoveryLimiter.tooManyRecent(limiterKey, now, 5, 15*time.Minute) {
+		return handler.respondAuthError(c, fiber.StatusTooManyRequests, "too many recovery attempts")
+	}
+
+	input := forgotPasswordInput{}
+	if err := c.BodyParser(&input); err != nil {
+		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+	}
+
+	code := normalizeRecoveryCode(input.RecoveryCode)
+	if !recoveryCodeRegex.MatchString(code) {
+		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid recovery code")
+	}
+
+	user, err := handler.findUserByRecoveryCode(code)
+	if err != nil {
+		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid recovery code")
+	}
+
+	token, err := handler.buildPasswordResetToken(user.ID, 30*time.Minute)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to create reset token")
+	}
+	handler.recoveryLimiter.reset(limiterKey)
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{
+			"ok":          true,
+			"reset_token": token,
+		})
+	}
+
+	path := "/reset-password?token=" + url.QueryEscape(token)
+	if isHTMX(c) {
+		c.Set("HX-Redirect", path)
+		return c.SendStatus(fiber.StatusOK)
+	}
+	return c.Redirect(path, fiber.StatusSeeOther)
+}
+
+func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
+	input := resetPasswordInput{}
+	if err := c.BodyParser(&input); err != nil {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+	}
+
+	input.Token = strings.TrimSpace(input.Token)
+	input.Password = strings.TrimSpace(input.Password)
+	input.ConfirmPassword = strings.TrimSpace(input.ConfirmPassword)
+	if input.Token == "" || input.Password == "" || input.ConfirmPassword == "" {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+	}
+	if input.Password != input.ConfirmPassword {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "password mismatch")
+	}
+	if err := validatePasswordStrength(input.Password); err != nil {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "weak password")
+	}
+
+	userID, err := handler.parsePasswordResetToken(input.Token)
+	if err != nil {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
+	}
+
+	var user models.User
+	if err := handler.db.First(&user, userID).Error; err != nil {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
+	}
+	recoveryCode, recoveryHash, err := generateRecoveryCodeHash()
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
+	}
+
+	user.PasswordHash = string(passwordHash)
+	user.RecoveryCodeHash = recoveryHash
+	user.MustChangePassword = false
+	if err := handler.db.Save(&user).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to reset password")
+	}
+
+	if err := handler.setAuthCookie(c, &user); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
+	}
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{
+			"ok":            true,
+			"recovery_code": recoveryCode,
+		})
+	}
+
+	return handler.render(c, "recovery_code", fiber.Map{
+		"Title":        localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
+		"RecoveryCode": recoveryCode,
+		"ContinuePath": "/dashboard",
+	})
 }
 
 func (handler *Handler) GetDays(c *fiber.Ctx) error {
@@ -608,7 +839,7 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 			pattern = "Saved at %s"
 		}
 		message := fmt.Sprintf(pattern, timestamp)
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
+		return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
 	}
 
 	return c.JSON(entry)
@@ -787,6 +1018,53 @@ func (handler *Handler) buildToken(user *models.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(handler.secretKey)
+}
+
+func (handler *Handler) buildPasswordResetToken(userID uint, ttl time.Duration) (string, error) {
+	if ttl <= 0 {
+		ttl = 30 * time.Minute
+	}
+
+	now := time.Now()
+	claims := passwordResetClaims{
+		UserID:  userID,
+		Purpose: "password_reset",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatUint(uint64(userID), 10),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(handler.secretKey)
+}
+
+func (handler *Handler) parsePasswordResetToken(rawToken string) (uint, error) {
+	if strings.TrimSpace(rawToken) == "" {
+		return 0, errors.New("missing token")
+	}
+
+	claims := &passwordResetClaims{}
+	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return handler.secretKey, nil
+	})
+	if err != nil || !token.Valid {
+		return 0, errors.New("invalid token")
+	}
+	if claims.Purpose != "password_reset" {
+		return 0, errors.New("invalid token purpose")
+	}
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
+		return 0, errors.New("token expired")
+	}
+	if claims.UserID == 0 {
+		return 0, errors.New("invalid user id")
+	}
+	return claims.UserID, nil
 }
 
 func (handler *Handler) seedBuiltinSymptoms(userID uint) error {
@@ -1027,14 +1305,39 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 	if credentials.Email == "" || credentials.Password == "" {
 		return credentialsInput{}, errors.New("missing credentials")
 	}
-	if len(credentials.Password) < 8 {
-		return credentialsInput{}, errors.New("password too short")
-	}
 	if _, err := mail.ParseAddress(credentials.Email); err != nil {
 		return credentialsInput{}, errors.New("invalid email")
 	}
 
 	return credentials, nil
+}
+
+func validatePasswordStrength(password string) error {
+	if len(password) < 8 {
+		return errors.New("password too short")
+	}
+
+	var hasUpper bool
+	var hasLower bool
+	var hasDigit bool
+	for _, character := range password {
+		if unicode.IsUpper(character) {
+			hasUpper = true
+			continue
+		}
+		if unicode.IsLower(character) {
+			hasLower = true
+			continue
+		}
+		if unicode.IsDigit(character) {
+			hasDigit = true
+		}
+	}
+
+	if hasUpper && hasLower && hasDigit {
+		return nil
+	}
+	return errors.New("weak password")
 }
 
 func parseDayPayload(c *fiber.Ctx) (dayPayload, error) {
@@ -1161,7 +1464,24 @@ func apiError(c *fiber.Ctx, status int, message string) error {
 
 func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message string) error {
 	if strings.HasPrefix(c.Path(), "/api/auth/") && !acceptsJSON(c) && !isHTMX(c) {
-		return c.Redirect("/login?error="+url.QueryEscape(message), fiber.StatusSeeOther)
+		errorParam := "error=" + url.QueryEscape(message)
+		switch c.Path() {
+		case "/api/auth/register":
+			return c.Redirect("/register?"+errorParam, fiber.StatusSeeOther)
+		case "/api/auth/forgot-password":
+			return c.Redirect("/forgot-password?"+errorParam, fiber.StatusSeeOther)
+		case "/api/auth/reset-password":
+			token := strings.TrimSpace(c.FormValue("token"))
+			if token == "" {
+				token = strings.TrimSpace(c.Query("token"))
+			}
+			if token == "" {
+				return c.Redirect("/reset-password?"+errorParam, fiber.StatusSeeOther)
+			}
+			return c.Redirect("/reset-password?token="+url.QueryEscape(token)+"&"+errorParam, fiber.StatusSeeOther)
+		default:
+			return c.Redirect("/login?"+errorParam, fiber.StatusSeeOther)
+		}
 	}
 	return apiError(c, status, message)
 }
@@ -1200,4 +1520,122 @@ func sanitizeRedirectPath(raw string, fallback string) string {
 		return fallback
 	}
 	return candidate
+}
+
+func newAttemptLimiter() *attemptLimiter {
+	return &attemptLimiter{
+		attempts: make(map[string][]time.Time),
+	}
+}
+
+func (limiter *attemptLimiter) tooManyRecent(key string, now time.Time, limit int, window time.Duration) bool {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+
+	pruned := limiter.pruneLocked(key, now, window)
+	return len(pruned) >= limit
+}
+
+func (limiter *attemptLimiter) addFailure(key string, now time.Time, window time.Duration) {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+
+	pruned := limiter.pruneLocked(key, now, window)
+	pruned = append(pruned, now)
+	limiter.attempts[key] = pruned
+}
+
+func (limiter *attemptLimiter) reset(key string) {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	delete(limiter.attempts, key)
+}
+
+func (limiter *attemptLimiter) pruneLocked(key string, now time.Time, window time.Duration) []time.Time {
+	values := limiter.attempts[key]
+	if len(values) == 0 {
+		return []time.Time{}
+	}
+
+	threshold := now.Add(-window)
+	pruned := make([]time.Time, 0, len(values))
+	for _, value := range values {
+		if value.After(threshold) {
+			pruned = append(pruned, value)
+		}
+	}
+
+	if len(pruned) == 0 {
+		delete(limiter.attempts, key)
+		return []time.Time{}
+	}
+
+	limiter.attempts[key] = pruned
+	return pruned
+}
+
+func requestLimiterKey(c *fiber.Ctx) string {
+	key := strings.TrimSpace(c.IP())
+	if key == "" {
+		return "unknown"
+	}
+	return key
+}
+
+func normalizeRecoveryCode(raw string) string {
+	normalized := strings.ToUpper(strings.TrimSpace(raw))
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	if strings.HasPrefix(normalized, "LUME") {
+		normalized = strings.TrimPrefix(normalized, "LUME")
+	}
+	if len(normalized) != 12 {
+		return strings.ToUpper(strings.TrimSpace(raw))
+	}
+	return fmt.Sprintf("LUME-%s-%s-%s", normalized[:4], normalized[4:8], normalized[8:12])
+}
+
+func generateRecoveryCodeHash() (string, string, error) {
+	code, err := generateRecoveryCode()
+	if err != nil {
+		return "", "", err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(code), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+	return code, string(hash), nil
+}
+
+func generateRecoveryCode() (string, error) {
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	randomBytes := make([]byte, 12)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+
+	chars := make([]byte, 12)
+	for index, value := range randomBytes {
+		chars[index] = alphabet[int(value)%len(alphabet)]
+	}
+
+	return fmt.Sprintf("LUME-%s-%s-%s", string(chars[:4]), string(chars[4:8]), string(chars[8:12])), nil
+}
+
+func (handler *Handler) findUserByRecoveryCode(code string) (*models.User, error) {
+	users := make([]models.User, 0)
+	if err := handler.db.Where("recovery_code_hash <> ''").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	for index := range users {
+		hash := strings.TrimSpace(users[index].RecoveryCodeHash)
+		if hash == "" {
+			continue
+		}
+		if bcrypt.CompareHashAndPassword([]byte(hash), []byte(code)) == nil {
+			return &users[index], nil
+		}
+	}
+	return nil, errors.New("recovery code not found")
 }

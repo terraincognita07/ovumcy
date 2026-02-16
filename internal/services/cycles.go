@@ -67,11 +67,12 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 
 	stats.LastPeriodStart = starts[len(starts)-1]
 
-	if stats.MedianCycleLength == 0 {
-		stats.MedianCycleLength = 28
+	predictionCycleLength := stats.MedianCycleLength
+	if predictionCycleLength == 0 {
+		predictionCycleLength = 28
 	}
 
-	stats.NextPeriodStart = dateOnly(stats.LastPeriodStart.AddDate(0, 0, stats.MedianCycleLength))
+	stats.NextPeriodStart = dateOnly(stats.LastPeriodStart.AddDate(0, 0, predictionCycleLength))
 	stats.OvulationDate = dateOnly(stats.NextPeriodStart.AddDate(0, 0, -lutealPhaseDays))
 	stats.FertilityWindowStart = dateOnly(stats.OvulationDate.AddDate(0, 0, -5))
 	stats.FertilityWindowEnd = dateOnly(stats.OvulationDate.AddDate(0, 0, 1))

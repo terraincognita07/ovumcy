@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,12 +17,21 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/terraincognita07/lume/internal/api"
+	"github.com/terraincognita07/lume/internal/cli"
 	"github.com/terraincognita07/lume/internal/db"
 	"github.com/terraincognita07/lume/internal/i18n"
 	"github.com/terraincognita07/lume/internal/services"
 )
 
 func main() {
+	handled, err := tryRunCLICommand()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if handled {
+		return
+	}
+
 	location := mustLoadLocation(getEnv("TZ", "UTC"))
 	time.Local = location
 
@@ -86,6 +97,25 @@ func main() {
 	log.Printf("Lume listening on http://0.0.0.0:%s (db: %s, tz: %s)", port, dbPath, location.String())
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("server exited: %v", err)
+	}
+}
+
+func tryRunCLICommand() (bool, error) {
+	if len(os.Args) < 2 {
+		return false, nil
+	}
+
+	command := strings.TrimSpace(os.Args[1])
+	switch command {
+	case "reset-password":
+		if len(os.Args) != 3 {
+			return true, fmt.Errorf("usage: lume reset-password <email>")
+		}
+		dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
+		email := strings.TrimSpace(os.Args[2])
+		return true, cli.RunResetPasswordCommand(dbPath, email)
+	default:
+		return false, nil
 	}
 }
 

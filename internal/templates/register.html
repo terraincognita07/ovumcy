@@ -1,0 +1,34 @@
+{{define "content"}}
+<section class="mx-auto flex min-h-[72vh] max-w-3xl items-center justify-center">
+  <div class="journal-card journal-hero w-full p-7 sm:p-10">
+    <p class="journal-kicker">{{t .Messages "app.name"}}</p>
+
+    <div>
+      <h1 class="journal-title">{{t .Messages "auth.create_account"}}</h1>
+      <p class="journal-muted mt-2">{{t .Messages "auth.register_subtitle"}}</p>
+    </div>
+
+    {{if .ErrorKey}}
+    <div class="status-error mt-5">{{t .Messages .ErrorKey}}</div>
+    {{end}}
+
+    <form action="/api/auth/register" method="post" class="mt-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <label class="field-label" for="register-email">{{t .Messages "auth.email"}}</label>
+      <input id="register-email" type="email" name="email" required autocomplete="email" class="input-field" />
+
+      <label class="field-label" for="register-password">{{t .Messages "auth.password"}}</label>
+      <input id="register-password" type="password" name="password" required autocomplete="new-password" class="input-field" />
+      <p class="journal-muted text-xs">{{t .Messages "auth.password_requirements"}}</p>
+
+      <button type="submit" class="btn-primary w-full">{{t .Messages "auth.register"}}</button>
+    </form>
+
+    <p class="journal-muted mt-5 text-sm">
+      {{t .Messages "auth.have_account"}}
+      <a href="/login" class="inline-link">{{t .Messages "auth.login"}}</a>
+    </p>
+  </div>
+</section>
+{{end}}

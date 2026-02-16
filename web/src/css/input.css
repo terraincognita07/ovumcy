@@ -8,7 +8,7 @@
     --bg-card: #ffffff;
     --bg-soft: #fff4e8;
     --text-primary: #5a4a3a;
-    --text-muted: #9b8b7a;
+    --text-muted: #6f5f50;
     --accent-primary: #d4a574;
     --accent-secondary: #e8c4a8;
     --accent-strong: #ba8350;
@@ -163,6 +163,8 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-muted);
+    cursor: default;
+    user-select: none;
   }
 
   .journal-card {
@@ -215,6 +217,13 @@
 
   .journal-muted {
     color: var(--text-muted);
+  }
+
+  .inline-link {
+    font-weight: 700;
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .stat-card {
@@ -299,6 +308,11 @@
   .btn-primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 20px rgba(212, 165, 116, 0.35);
+  }
+
+  .btn-loading {
+    opacity: 0.75;
+    pointer-events: none;
   }
 
   .btn-secondary {
@@ -456,7 +470,20 @@
   }
 
   .calendar-cell-today {
-    box-shadow: inset 0 0 0 2px rgba(212, 165, 116, 0.86);
+    box-shadow:
+      inset 0 0 0 2px rgba(212, 165, 116, 0.86),
+      0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .calendar-today-pill {
+    border-radius: 999px;
+    background: rgba(212, 165, 116, 0.22);
+    color: #7f5630;
+    padding: 0.14rem 0.45rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 
   .calendar-day-number {
@@ -544,6 +571,27 @@
     color: #8d4b45;
   }
 
+  .status-transient {
+    animation: status-fade 380ms ease-out 2s forwards;
+  }
+
+  .save-status {
+    min-height: 1.25rem;
+  }
+
+  .recovery-code-box {
+    border-radius: 0.9rem;
+    border: 1px dashed rgba(122, 93, 64, 0.4);
+    background: rgba(255, 248, 240, 0.92);
+    padding: 0.9rem;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: center;
+    color: #6d4b2b;
+  }
+
   .reveal {
     animation: reveal-up 280ms ease-out;
   }
@@ -560,6 +608,13 @@
     }
   }
 
+  @keyframes status-fade {
+    to {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+  }
+
   @media (max-width: 640px) {
     .journal-title {
       font-size: 1.55rem;
@@ -571,6 +626,11 @@
 
     .stat-card {
       padding: 0.9rem;
+    }
+
+    .calendar-cell {
+      min-height: 4.35rem;
+      padding: 0.42rem;
     }
   }
 }

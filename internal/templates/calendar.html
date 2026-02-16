@@ -35,7 +35,9 @@
           class="{{.CellClass}}">
           <div class="flex items-center justify-between">
             <span class="{{.TextClass}}">{{.Day}}</span>
-            {{if .OvulationDot}}
+            {{if .IsToday}}
+            <span class="calendar-today-pill">{{t $.Messages "calendar.tag.today"}}</span>
+            {{else if .OvulationDot}}
             <span class="text-base" title="{{t $.Messages "calendar.ovulation_icon"}}">🌞</span>
             {{end}}
           </div>
@@ -63,8 +65,8 @@
       </div>
     </section>
 
-    <aside id="day-editor" class="journal-card p-4 sm:p-5" hx-get="/calendar/day/{{.Today}}" hx-trigger="load" hx-swap="innerHTML">
-      <p class="journal-muted">{{t .Messages "calendar.loading_day"}}</p>
+    <aside id="day-editor" class="journal-card p-4 sm:p-5">
+      <p class="journal-muted">{{t .Messages "calendar.select_day"}}</p>
     </aside>
   </div>
 </section>

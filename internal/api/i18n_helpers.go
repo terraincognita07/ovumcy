@@ -10,10 +10,15 @@ import (
 )
 
 var authErrorKeys = map[string]string{
-	"invalid input":         "auth.error.invalid_input",
-	"registration disabled": "auth.error.registration_disabled",
-	"invalid credentials":   "auth.error.invalid_credentials",
-	"email already exists":  "auth.error.email_exists",
+	"invalid input":              "auth.error.invalid_input",
+	"registration disabled":      "auth.error.registration_disabled",
+	"invalid credentials":        "auth.error.invalid_credentials",
+	"email already exists":       "auth.error.email_exists",
+	"weak password":              "auth.error.weak_password",
+	"password mismatch":          "auth.error.password_mismatch",
+	"invalid recovery code":      "auth.error.invalid_recovery_code",
+	"too many recovery attempts": "auth.error.too_many_recovery_attempts",
+	"invalid reset token":        "auth.error.invalid_reset_token",
 }
 
 var builtinSymptomKeys = map[string]string{

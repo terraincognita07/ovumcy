@@ -6,7 +6,7 @@
   </div>
 
   {{if .IsOwner}}
-  <form hx-post="/api/days/{{.DateString}}" hx-target="#calendar-save-status" hx-swap="innerHTML" class="space-y-4">
+  <form hx-post="/api/days/{{.DateString}}" hx-target="#calendar-save-status" hx-swap="innerHTML" class="space-y-4" data-save-feedback>
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
     <label class="period-toggle">
@@ -54,8 +54,8 @@
     <label class="field-label" for="calendar-notes">{{t .Messages "dashboard.notes"}}</label>
     <textarea id="calendar-notes" name="notes" rows="4" maxlength="2000" class="textarea-field">{{.Log.Notes}}</textarea>
 
-    <button type="submit" class="btn-primary">{{t .Messages "dashboard.save_day"}}</button>
-    <div id="calendar-save-status" class="text-sm"></div>
+    <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "dashboard.save_day"}}</button>
+    <div id="calendar-save-status" class="save-status text-sm"></div>
   </form>
   {{else}}
   <div class="journal-panel space-y-3 text-sm">

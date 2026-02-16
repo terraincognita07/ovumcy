@@ -32,7 +32,7 @@
       </div>
 
       {{if .IsOwner}}
-      <form hx-post="/api/days/{{.Today}}" hx-target="#save-status" hx-swap="innerHTML" class="space-y-5">
+      <form hx-post="/api/days/{{.Today}}" hx-target="#save-status" hx-swap="innerHTML" class="space-y-5" data-save-feedback>
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
         <label class="period-toggle">
@@ -81,8 +81,8 @@
         <textarea id="today-notes" name="notes" rows="4" maxlength="2000" class="textarea-field">{{.TodayLog.Notes}}</textarea>
 
         <div class="flex flex-wrap items-center gap-3">
-          <button type="submit" class="btn-primary">{{t .Messages "dashboard.save_today"}}</button>
-          <div id="save-status" class="text-sm"></div>
+          <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "dashboard.save_today"}}</button>
+          <div id="save-status" class="save-status text-sm"></div>
         </div>
       </form>
       {{else}}
@@ -98,9 +98,9 @@
       <h2 class="journal-subtitle">{{t .Messages "dashboard.cycle_snapshot"}}</h2>
 
       <dl class="mt-4 space-y-3 text-sm">
-        <div class="stat-row"><dt>{{t .Messages "dashboard.average_cycle"}}</dt><dd>{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}</dd></div>
+        <div class="stat-row"><dt>{{t .Messages "dashboard.average_cycle"}}</dt><dd>{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.median_cycle"}}</dt><dd>{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
-        <div class="stat-row"><dt>{{t .Messages "dashboard.average_period"}}</dt><dd>{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}</dd></div>
+        <div class="stat-row"><dt>{{t .Messages "dashboard.average_period"}}</dt><dd>{{if gt .Stats.AveragePeriodLength 0.0}}{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.last_period_start"}}</dt><dd>{{if .Stats.LastPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.LastPeriodStart "02.01"}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.fertile_window"}}</dt><dd>{{if .Stats.FertilityWindowStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.FertilityWindowStart "02.01"}} - {{formatDate .Stats.FertilityWindowEnd "02.01"}}{{end}}</dd></div>
       </dl>
