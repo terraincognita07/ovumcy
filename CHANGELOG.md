@@ -39,6 +39,13 @@
 - Improved save UX for HTMX forms:
   - Save buttons now show loading state while request is in flight.
   - Success messages auto-clear after display.
+- Added calendar day deletion flow:
+  - New owner-only API endpoints:
+    - `GET /api/days/:date/exists`
+    - `DELETE /api/days/:date`
+  - Day editor now shows a red Delete button only when selected day contains data.
+  - Delete action asks for confirmation and re-renders the side editor.
+  - Calendar grid auto-refreshes after save/delete via `calendar-day-updated` HTMX trigger.
 - Improved calendar "today" visibility with a dedicated today pill and stronger highlight.
 - Improved statistics UX with safer empty-data handling:
   - Average values render as `-` when unavailable instead of `0.0`.
