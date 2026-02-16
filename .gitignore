@@ -34,5 +34,7 @@ node_modules/
 # .vscode/
 
 # Local task notes
+AGENTS.md
+PROJECT_CONTEXT.md
 TASK-delete-and-highlight.md
 BUGFIXES.md
