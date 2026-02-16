@@ -96,6 +96,8 @@
   "calendar.tag.predicted": "Прогноз",
   "calendar.tag.fertile": "Фертильность",
   "calendar.tag.today": "Сегодня",
+  "calendar.delete_day": "Удалить",
+  "calendar.confirm_delete_day": "Удалить этот день? Это действие необратимо.",
   "calendar.select_day": "Выберите день в этом месяце для редактирования.",
   "calendar.legend.actual_period": "Фактические месячные",
   "calendar.legend.predicted_period": "Прогноз месячных",

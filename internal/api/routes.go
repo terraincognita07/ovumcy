@@ -28,8 +28,10 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 
 	days := api.Group("/days", handler.AuthRequired)
 	days.Get("", handler.GetDays)
+	days.Get("/:date/exists", handler.OwnerOnly, handler.CheckDayExists)
 	days.Get("/:date", handler.GetDay)
 	days.Post("/:date", handler.OwnerOnly, handler.UpsertDay)
+	days.Delete("/:date", handler.OwnerOnly, handler.DeleteDay)
 
 	symptoms := api.Group("/symptoms", handler.AuthRequired)
 	symptoms.Get("", handler.GetSymptoms)

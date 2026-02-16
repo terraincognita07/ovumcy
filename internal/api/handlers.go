@@ -415,12 +415,17 @@ func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).SendString("unauthorized")
 	}
-	messages := currentMessages(c)
 
 	day, err := parseDayParam(c.Params("date"), handler.location)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid date")
 	}
+
+	return handler.renderDayEditorPartial(c, user, day)
+}
+
+func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, day time.Time) error {
+	messages := currentMessages(c)
 
 	logEntry, err := handler.fetchLogByDate(user.ID, day)
 	if err != nil {
@@ -446,6 +451,7 @@ func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
 		"Log":               logEntry,
 		"Symptoms":          symptoms,
 		"SelectedSymptomID": symptomIDSet(logEntry.SymptomIDs),
+		"HasDayData":        dayHasData(logEntry),
 		"IsOwner":           isOwner,
 	}
 	return handler.renderPartial(c, "day_editor_partial", payload)
@@ -773,6 +779,25 @@ func (handler *Handler) GetDay(c *fiber.Ctx) error {
 	return c.JSON(logEntry)
 }
 
+func (handler *Handler) CheckDayExists(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	day, err := parseDayParam(c.Params("date"), handler.location)
+	if err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid date")
+	}
+
+	logEntry, err := handler.fetchLogByDate(user.ID, day)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to fetch day")
+	}
+
+	return c.JSON(fiber.Map{"exists": dayHasData(logEntry)})
+}
+
 func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
@@ -833,6 +858,7 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	}
 
 	if isHTMX(c) {
+		c.Set("HX-Trigger", "calendar-day-updated")
 		timestamp := time.Now().In(handler.location).Format("15:04")
 		pattern := translateMessage(currentMessages(c), "common.saved_at")
 		if pattern == "common.saved_at" {
@@ -843,6 +869,29 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(entry)
+}
+
+func (handler *Handler) DeleteDay(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	day, err := parseDayParam(c.Params("date"), handler.location)
+	if err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid date")
+	}
+
+	if err := handler.db.Where("user_id = ? AND date = ?", user.ID, day).Delete(&models.DailyLog{}).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+	}
+
+	if isHTMX(c) {
+		c.Set("HX-Trigger", "calendar-day-updated")
+		return handler.renderDayEditorPartial(c, user, day)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (handler *Handler) GetSymptoms(c *fiber.Ctx) error {
@@ -1378,6 +1427,19 @@ func isValidFlow(flow string) bool {
 	default:
 		return false
 	}
+}
+
+func dayHasData(entry models.DailyLog) bool {
+	if entry.IsPeriod {
+		return true
+	}
+	if len(entry.SymptomIDs) > 0 {
+		return true
+	}
+	if strings.TrimSpace(entry.Notes) != "" {
+		return true
+	}
+	return strings.TrimSpace(entry.Flow) != "" && entry.Flow != models.FlowNone
 }
 
 func parseBoolValue(value string) bool {

@@ -290,7 +290,8 @@
 
   .btn-primary,
   .btn-secondary,
-  .btn-soft {
+  .btn-soft,
+  .btn-danger {
     border-radius: 999px;
     padding: 0.58rem 1.12rem;
     font-size: 0.88rem;
@@ -331,6 +332,17 @@
     border: 1px solid rgba(199, 117, 109, 0.28);
     background: rgba(255, 255, 255, 0.84);
     color: #9f534d;
+  }
+
+  .btn-danger {
+    border: 1px solid rgba(177, 86, 78, 0.4);
+    background: rgba(252, 232, 229, 0.95);
+    color: #9b3d36;
+  }
+
+  .btn-danger:hover {
+    transform: translateY(-1px);
+    background: rgba(250, 215, 209, 0.95);
   }
 
   .period-toggle {
@@ -470,6 +482,7 @@
   }
 
   .calendar-cell-today {
+    border-color: rgba(212, 165, 116, 0.95);
     box-shadow:
       inset 0 0 0 2px rgba(212, 165, 116, 0.86),
       0 0 0 2px rgba(255, 255, 255, 0.8);

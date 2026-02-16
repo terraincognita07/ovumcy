@@ -14,7 +14,14 @@
   </div>
 
   <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-    <section class="journal-card p-4 sm:p-5">
+    <section
+      id="calendar-grid-panel"
+      hx-get="/calendar?month={{.MonthValue}}"
+      hx-trigger="calendar-day-updated from:body"
+      hx-select="#calendar-grid-panel"
+      hx-target="this"
+      hx-swap="outerHTML"
+      class="journal-card p-4 sm:p-5">
       <div class="mb-3 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide journal-muted">
         <span>{{t .Messages "calendar.weekday.sun"}}</span>
         <span>{{t .Messages "calendar.weekday.mon"}}</span>
