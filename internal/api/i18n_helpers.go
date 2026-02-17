@@ -19,6 +19,10 @@ var authErrorKeys = map[string]string{
 	"invalid recovery code":      "auth.error.invalid_recovery_code",
 	"too many recovery attempts": "auth.error.too_many_recovery_attempts",
 	"invalid reset token":        "auth.error.invalid_reset_token",
+	"invalid current password":   "settings.error.invalid_current_password",
+	"new password must differ":   "settings.error.password_unchanged",
+	"invalid settings input":     "settings.error.invalid_input",
+	"invalid password":           "settings.error.invalid_password",
 }
 
 var builtinSymptomKeys = map[string]string{
@@ -64,6 +68,15 @@ func authErrorTranslationKey(message string) string {
 		return ""
 	}
 	return key
+}
+
+func settingsStatusTranslationKey(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "password_changed":
+		return "settings.success.password_changed"
+	default:
+		return ""
+	}
 }
 
 func phaseTranslationKey(phase string) string {

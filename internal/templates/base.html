@@ -35,6 +35,7 @@
           <a href="/dashboard" class="nav-link {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
           <a href="/calendar" class="nav-link {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
+          <a href="/settings" class="nav-link {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
 
           <span class="role-chip" aria-label="{{t .Messages "nav.current_role"}}">⚙ {{roleLabel .Messages .CurrentUser.Role}}</span>
 
@@ -48,6 +49,7 @@
           <a href="/dashboard" class="nav-link block {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
+          <a href="/settings" class="nav-link block {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
           <form action="/api/auth/logout" method="post">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit" class="btn-soft w-full">{{t .Messages "nav.logout"}}</button>
@@ -100,7 +102,7 @@
         resolve(accepted);
       }
 
-      function openConfirm(question) {
+      function openConfirm(question, acceptLabel) {
         if (pendingResolve) {
           pendingResolve(false);
           pendingResolve = null;
@@ -108,7 +110,7 @@
 
         messageNode.textContent = question;
         cancelButton.textContent = document.body.getAttribute("data-confirm-cancel") || "Cancel";
-        acceptButton.textContent = document.body.getAttribute("data-confirm-delete") || "Delete";
+        acceptButton.textContent = acceptLabel || document.body.getAttribute("data-confirm-delete") || "Delete";
         modal.classList.remove("hidden");
         modal.setAttribute("aria-hidden", "false");
         cancelButton.focus();
@@ -142,13 +144,32 @@
         if (!event || !event.detail || !event.detail.question) return;
         var source = event.detail.elt || event.target;
         if (!source || !source.getAttribute) return;
-        var deletePath = source.getAttribute("hx-delete") || source.getAttribute("data-hx-delete") || "";
-        if (!/^\/api\/days\//.test(deletePath)) return;
+        var acceptLabel = source.getAttribute("data-confirm-accept") || "";
         event.preventDefault();
-        openConfirm(event.detail.question).then(function (confirmed) {
+        openConfirm(event.detail.question, acceptLabel).then(function (confirmed) {
           if (confirmed) {
             event.detail.issueRequest(true);
           }
+        });
+      });
+
+      document.addEventListener("submit", function (event) {
+        var form = event.target;
+        if (!form || !form.matches || !form.matches("form[data-confirm]")) return;
+        if (form.dataset.confirmBypass === "1") {
+          form.dataset.confirmBypass = "";
+          return;
+        }
+
+        event.preventDefault();
+        openConfirm(form.getAttribute("data-confirm") || "", form.getAttribute("data-confirm-accept") || "").then(function (confirmed) {
+          if (!confirmed) return;
+          form.dataset.confirmBypass = "1";
+          if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+            return;
+          }
+          form.submit();
         });
       });
     })();

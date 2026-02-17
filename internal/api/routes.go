@@ -15,6 +15,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/calendar", handler.AuthRequired, handler.ShowCalendar)
 	app.Get("/calendar/day/:date", handler.AuthRequired, handler.CalendarDayPanel)
 	app.Get("/stats", handler.AuthRequired, handler.ShowStats)
+	app.Get("/settings", handler.AuthRequired, handler.ShowSettings)
 
 	api := app.Group("/api")
 
@@ -40,4 +41,9 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 
 	stats := api.Group("/stats", handler.AuthRequired)
 	stats.Get("/overview", handler.GetStatsOverview)
+
+	settings := api.Group("/settings", handler.AuthRequired)
+	settings.Post("/change-password", handler.ChangePassword)
+	settings.Post("/regenerate-recovery-code", handler.RegenerateRecoveryCode)
+	settings.Delete("/delete-account", handler.DeleteAccount)
 }
