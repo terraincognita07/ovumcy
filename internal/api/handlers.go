@@ -545,23 +545,9 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 	if !ok {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
-	messages := currentMessages(c)
-
-	data := fiber.Map{
-		"Title":       localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
-		"CurrentUser": user,
-		"ErrorKey":    authErrorTranslationKey(c.Query("error")),
-		"SuccessKey":  settingsStatusTranslationKey(c.Query("status")),
-	}
-	if user.Role == models.RoleOwner {
-		totalEntries, firstDate, lastDate, err := handler.fetchExportSummary(user.ID)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
-		}
-		data["ExportTotalEntries"] = int(totalEntries)
-		data["HasExportData"] = totalEntries > 0
-		data["ExportDateFrom"] = firstDate
-		data["ExportDateTo"] = lastDate
+	data, err := handler.buildSettingsViewData(c, user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
 	}
 	return handler.render(c, "settings", data)
 }
@@ -869,13 +855,14 @@ func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 			"recovery_code": recoveryCode,
 		})
 	}
-	messages := currentMessages(c)
-	return handler.render(c, "settings", fiber.Map{
-		"Title":                 localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
-		"CurrentUser":           user,
-		"SuccessKey":            "settings.success.recovery_code_regenerated",
-		"GeneratedRecoveryCode": recoveryCode,
-	})
+
+	data, err := handler.buildSettingsViewData(c, user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
+	}
+	data["SuccessKey"] = "settings.success.recovery_code_regenerated"
+	data["GeneratedRecoveryCode"] = recoveryCode
+	return handler.render(c, "settings", data)
 }
 
 func (handler *Handler) DeleteAccount(c *fiber.Ctx) error {
@@ -1456,6 +1443,29 @@ func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error)
 	return symptoms, err
 }
 
+func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User) (fiber.Map, error) {
+	messages := currentMessages(c)
+	data := fiber.Map{
+		"Title":       localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
+		"CurrentUser": user,
+		"ErrorKey":    authErrorTranslationKey(c.Query("error")),
+		"SuccessKey":  settingsStatusTranslationKey(c.Query("status")),
+	}
+
+	if user.Role == models.RoleOwner {
+		totalEntries, firstDate, lastDate, err := handler.fetchExportSummary(user.ID)
+		if err != nil {
+			return nil, err
+		}
+		data["ExportTotalEntries"] = int(totalEntries)
+		data["HasExportData"] = totalEntries > 0
+		data["ExportDateFrom"] = firstDate
+		data["ExportDateTo"] = lastDate
+	}
+
+	return data, nil
+}
+
 func (handler *Handler) fetchExportData(userID uint) ([]models.DailyLog, map[uint]string, error) {
 	logs := make([]models.DailyLog, 0)
 	if err := handler.db.Where("user_id = ?", userID).Order("date ASC").Find(&logs).Error; err != nil {
@@ -1511,17 +1521,17 @@ func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Ti
 
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
-	err := handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).First(&entry).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	result := handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).Limit(1).Find(&entry)
+	if result.Error != nil {
+		return models.DailyLog{}, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return models.DailyLog{
 			UserID:     userID,
 			Date:       day,
 			Flow:       models.FlowNone,
 			SymptomIDs: []uint{},
 		}, nil
-	}
-	if err != nil {
-		return models.DailyLog{}, err
 	}
 	return entry, nil
 }
