@@ -34,7 +34,7 @@ Commercial period trackers like Flo and Clue have been caught:
 ✅ **Statistics** - Cycle length, regularity, symptom patterns
 ✅ **Partner view** (optional) - Share calendar without private details
 ✅ **Telegram alerts** (optional) - Period reminders
-✅ **Export data** - Your data, your backup
+✅ **Export data (CSV/JSON)** - Your data, your backup
 
 ---
 

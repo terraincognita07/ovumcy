@@ -42,6 +42,10 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	stats := api.Group("/stats", handler.AuthRequired)
 	stats.Get("/overview", handler.GetStatsOverview)
 
+	export := api.Group("/export", handler.AuthRequired, handler.OwnerOnly)
+	export.Get("/csv", handler.ExportCSV)
+	export.Get("/json", handler.ExportJSON)
+
 	settings := api.Group("/settings", handler.AuthRequired)
 	settings.Post("/change-password", handler.ChangePassword)
 	settings.Post("/regenerate-recovery-code", handler.RegenerateRecoveryCode)

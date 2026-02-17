@@ -54,6 +54,27 @@
     {{end}}
   </section>
 
+  {{if eq .CurrentUser.Role "owner"}}
+  <section
+    class="journal-card p-5 sm:p-6 space-y-3"
+    data-export-section
+    data-export-success="{{t .Messages "settings.export_success"}}"
+    data-export-failed="{{t .Messages "settings.export_failed"}}">
+    <h2 class="journal-subtitle">📊 {{t .Messages "settings.export_data"}}</h2>
+    <div class="flex flex-wrap gap-2">
+      <a href="/api/export/csv" data-export-link class="btn-secondary inline-flex items-center justify-center"><span class="mr-2" aria-hidden="true">📊</span><span>{{t .Messages "settings.export_csv"}}</span></a>
+      <a href="/api/export/json" data-export-link class="btn-secondary inline-flex items-center justify-center"><span class="mr-2" aria-hidden="true">🧾</span><span>{{t .Messages "settings.export_json"}}</span></a>
+    </div>
+    <p class="journal-muted text-sm">{{printf (t .Messages "settings.export_summary_total") .ExportTotalEntries}}</p>
+    {{if .HasExportData}}
+    <p class="journal-muted text-sm">{{printf (t .Messages "settings.export_summary_range") .ExportDateFrom .ExportDateTo}}</p>
+    {{else}}
+    <p class="journal-muted text-sm">{{t .Messages "settings.export_summary_range_empty"}}</p>
+    {{end}}
+    <p class="journal-muted mt-3 text-xs">{{t .Messages "settings.export_data_hint"}}</p>
+  </section>
+  {{end}}
+
   <section class="journal-card border border-red-200 p-5 sm:p-6">
     <h2 class="journal-subtitle text-red-700">⚠️ {{t .Messages "settings.danger_zone.title"}}</h2>
     <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.danger_zone.subtitle"}}</p>
@@ -75,4 +96,76 @@
     </form>
   </section>
 </section>
+{{if eq .CurrentUser.Role "owner"}}
+<script>
+  (function () {
+    var section = document.querySelector("[data-export-section]");
+    if (!section) return;
+
+    var successMessage = section.getAttribute("data-export-success") || "Data exported successfully";
+    var failedMessage = section.getAttribute("data-export-failed") || "Failed to export data";
+    var links = section.querySelectorAll("a[data-export-link]");
+    if (!links.length) return;
+
+    function parseFilenameFromDisposition(disposition, fallbackName) {
+      if (!disposition) return fallbackName;
+      var match = disposition.match(/filename\*?=(?:UTF-8'')?\"?([^\";]+)\"?/i);
+      if (!match || !match[1]) return fallbackName;
+      try {
+        return decodeURIComponent(match[1]);
+      } catch (_) {
+        return match[1];
+      }
+    }
+
+    async function handleExport(event) {
+      event.preventDefault();
+      var link = event.currentTarget;
+      var endpoint = link.getAttribute("href");
+      if (!endpoint) return;
+
+      link.classList.add("btn-loading");
+      link.setAttribute("aria-disabled", "true");
+
+      try {
+        var response = await fetch(endpoint, { credentials: "same-origin" });
+        if (!response.ok) {
+          throw new Error("request_failed");
+        }
+
+        var blob = await response.blob();
+        var extension = endpoint.endsWith("/json") ? "json" : "csv";
+        var fallbackName = "lume-export." + extension;
+        var filename = parseFilenameFromDisposition(response.headers.get("Content-Disposition") || "", fallbackName);
+
+        var objectURL = URL.createObjectURL(blob);
+        var downloadLink = document.createElement("a");
+        downloadLink.href = objectURL;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+        window.setTimeout(function () {
+          URL.revokeObjectURL(objectURL);
+        }, 500);
+
+        if (typeof window.showToast === "function") {
+          window.showToast(successMessage, "success");
+        }
+      } catch (_) {
+        if (typeof window.showToast === "function") {
+          window.showToast(failedMessage, "error");
+        }
+      } finally {
+        link.classList.remove("btn-loading");
+        link.removeAttribute("aria-disabled");
+      }
+    }
+
+    links.forEach(function (link) {
+      link.addEventListener("click", handleExport);
+    });
+  })();
+</script>
+{{end}}
 {{end}}

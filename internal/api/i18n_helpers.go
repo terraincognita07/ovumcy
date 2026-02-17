@@ -23,6 +23,7 @@ var authErrorKeys = map[string]string{
 	"new password must differ":   "settings.error.password_unchanged",
 	"invalid settings input":     "settings.error.invalid_input",
 	"invalid password":           "settings.error.invalid_password",
+	"period flow is required":    "calendar.error.period_flow_required",
 }
 
 var builtinSymptomKeys = map[string]string{

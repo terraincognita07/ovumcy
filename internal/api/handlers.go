@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -98,6 +99,24 @@ type changePasswordInput struct {
 
 type deleteAccountInput struct {
 	Password string `json:"password" form:"password"`
+}
+
+type exportJSONSymptomFlags struct {
+	Cramps   bool `json:"cramps"`
+	Headache bool `json:"headache"`
+	Acne     bool `json:"acne"`
+	Mood     bool `json:"mood"`
+	Bloating bool `json:"bloating"`
+	Fatigue  bool `json:"fatigue"`
+}
+
+type exportJSONEntry struct {
+	Date          string                 `json:"date"`
+	Period        bool                   `json:"period"`
+	Flow          string                 `json:"flow"`
+	Symptoms      exportJSONSymptomFlags `json:"symptoms"`
+	OtherSymptoms []string               `json:"other_symptoms"`
+	Notes         string                 `json:"notes"`
 }
 
 type attemptLimiter struct {
@@ -533,6 +552,16 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 		"ErrorKey":    authErrorTranslationKey(c.Query("error")),
 		"SuccessKey":  settingsStatusTranslationKey(c.Query("status")),
 	}
+	if user.Role == models.RoleOwner {
+		totalEntries, firstDate, lastDate, err := handler.fetchExportSummary(user.ID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
+		}
+		data["ExportTotalEntries"] = int(totalEntries)
+		data["HasExportData"] = totalEntries > 0
+		data["ExportDateFrom"] = firstDate
+		data["ExportDateTo"] = lastDate
+	}
 	return handler.render(c, "settings", data)
 }
 
@@ -963,6 +992,9 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	if !isValidFlow(payload.Flow) {
 		return apiError(c, fiber.StatusBadRequest, "invalid flow value")
 	}
+	if payload.IsPeriod && payload.Flow == models.FlowNone {
+		return apiError(c, fiber.StatusBadRequest, "period flow is required")
+	}
 
 	if !payload.IsPeriod {
 		payload.Flow = models.FlowNone
@@ -1141,6 +1173,112 @@ func (handler *Handler) GetStatsOverview(c *fiber.Ctx) error {
 	return c.JSON(stats)
 }
 
+func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	logs, symptomNames, err := handler.fetchExportData(user.ID)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
+	}
+
+	var output bytes.Buffer
+	writer := csv.NewWriter(&output)
+	if err := writer.Write([]string{
+		"Date",
+		"Period",
+		"Flow",
+		"Cramps",
+		"Headache",
+		"Acne",
+		"Mood",
+		"Bloating",
+		"Fatigue",
+		"Other",
+		"Notes",
+	}); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
+	}
+
+	for _, logEntry := range logs {
+		cramps, headache, acne, mood, bloating, fatigue, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
+		if err := writer.Write([]string{
+			dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02"),
+			csvYesNo(logEntry.IsPeriod),
+			csvFlowLabel(logEntry.Flow),
+			csvYesNo(cramps),
+			csvYesNo(headache),
+			csvYesNo(acne),
+			csvYesNo(mood),
+			csvYesNo(bloating),
+			csvYesNo(fatigue),
+			strings.Join(other, "; "),
+			logEntry.Notes,
+		}); err != nil {
+			return apiError(c, fiber.StatusInternalServerError, "failed to build export")
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
+	}
+
+	filename := fmt.Sprintf("lume-export-%s.csv", time.Now().In(handler.location).Format("2006-01-02"))
+	c.Set(fiber.HeaderContentType, "text/csv")
+	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", filename))
+	return c.Send(output.Bytes())
+}
+
+func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	logs, symptomNames, err := handler.fetchExportData(user.ID)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
+	}
+
+	entries := make([]exportJSONEntry, 0, len(logs))
+	for _, logEntry := range logs {
+		cramps, headache, acne, mood, bloating, fatigue, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
+		entries = append(entries, exportJSONEntry{
+			Date:   dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02"),
+			Period: logEntry.IsPeriod,
+			Flow:   normalizeExportFlow(logEntry.Flow),
+			Symptoms: exportJSONSymptomFlags{
+				Cramps:   cramps,
+				Headache: headache,
+				Acne:     acne,
+				Mood:     mood,
+				Bloating: bloating,
+				Fatigue:  fatigue,
+			},
+			OtherSymptoms: other,
+			Notes:         logEntry.Notes,
+		})
+	}
+
+	payload := fiber.Map{
+		"exported_at": time.Now().In(handler.location).Format(time.RFC3339),
+		"entries":     entries,
+	}
+
+	serialized, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
+	}
+
+	filename := fmt.Sprintf("lume-export-%s.json", time.Now().In(handler.location).Format("2006-01-02"))
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", filename))
+	return c.Send(serialized)
+}
+
 func (handler *Handler) render(c *fiber.Ctx, name string, data fiber.Map) error {
 	tmpl, ok := handler.templates[name]
 	if !ok {
@@ -1292,6 +1430,50 @@ func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error)
 	symptoms := make([]models.SymptomType, 0)
 	err := handler.db.Where("user_id = ?", userID).Order("is_builtin DESC, name ASC").Find(&symptoms).Error
 	return symptoms, err
+}
+
+func (handler *Handler) fetchExportData(userID uint) ([]models.DailyLog, map[uint]string, error) {
+	logs := make([]models.DailyLog, 0)
+	if err := handler.db.Where("user_id = ?", userID).Order("date ASC").Find(&logs).Error; err != nil {
+		return nil, nil, err
+	}
+
+	symptoms, err := handler.fetchSymptoms(userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	symptomNames := make(map[uint]string, len(symptoms))
+	for _, symptom := range symptoms {
+		symptomNames[symptom.ID] = symptom.Name
+	}
+
+	return logs, symptomNames, nil
+}
+
+func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, error) {
+	var total int64
+	if err := handler.db.Model(&models.DailyLog{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return 0, "", "", err
+	}
+	if total == 0 {
+		return 0, "", "", nil
+	}
+
+	var first models.DailyLog
+	if err := handler.db.Select("date").Where("user_id = ?", userID).Order("date ASC").First(&first).Error; err != nil {
+		return 0, "", "", err
+	}
+
+	var last models.DailyLog
+	if err := handler.db.Select("date").Where("user_id = ?", userID).Order("date DESC").First(&last).Error; err != nil {
+		return 0, "", "", err
+	}
+
+	return total,
+		dateAtLocation(first.Date, handler.location).Format("2006-01-02"),
+		dateAtLocation(last.Date, handler.location).Format("2006-01-02"),
+		nil
 }
 
 func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Time) ([]models.DailyLog, error) {
@@ -1586,6 +1768,103 @@ func dayHasData(entry models.DailyLog) bool {
 		return true
 	}
 	return strings.TrimSpace(entry.Flow) != "" && entry.Flow != models.FlowNone
+}
+
+func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (bool, bool, bool, bool, bool, bool, []string) {
+	var hasCramps bool
+	var hasHeadache bool
+	var hasAcne bool
+	var hasMood bool
+	var hasBloating bool
+	var hasFatigue bool
+
+	otherSet := make(map[string]struct{})
+	for _, symptomID := range symptomIDs {
+		name, ok := symptomNames[symptomID]
+		if !ok {
+			continue
+		}
+
+		switch exportSymptomColumn(name) {
+		case "cramps":
+			hasCramps = true
+		case "headache":
+			hasHeadache = true
+		case "acne":
+			hasAcne = true
+		case "mood":
+			hasMood = true
+		case "bloating":
+			hasBloating = true
+		case "fatigue":
+			hasFatigue = true
+		default:
+			trimmed := strings.TrimSpace(name)
+			if trimmed != "" {
+				otherSet[trimmed] = struct{}{}
+			}
+		}
+	}
+
+	other := make([]string, 0, len(otherSet))
+	for name := range otherSet {
+		other = append(other, name)
+	}
+	sort.Strings(other)
+
+	return hasCramps, hasHeadache, hasAcne, hasMood, hasBloating, hasFatigue, other
+}
+
+func exportSymptomColumn(name string) string {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "cramps":
+		return "cramps"
+	case "headache":
+		return "headache"
+	case "acne":
+		return "acne"
+	case "mood", "mood swings":
+		return "mood"
+	case "bloating":
+		return "bloating"
+	case "fatigue":
+		return "fatigue"
+	default:
+		return "other"
+	}
+}
+
+func csvYesNo(value bool) string {
+	if value {
+		return "Yes"
+	}
+	return "No"
+}
+
+func csvFlowLabel(flow string) string {
+	switch strings.ToLower(strings.TrimSpace(flow)) {
+	case models.FlowLight:
+		return "Light"
+	case models.FlowMedium:
+		return "Medium"
+	case models.FlowHeavy:
+		return "Heavy"
+	default:
+		return "None"
+	}
+}
+
+func normalizeExportFlow(flow string) string {
+	switch strings.ToLower(strings.TrimSpace(flow)) {
+	case models.FlowLight:
+		return models.FlowLight
+	case models.FlowMedium:
+		return models.FlowMedium
+	case models.FlowHeavy:
+		return models.FlowHeavy
+	default:
+		return models.FlowNone
+	}
 }
 
 func parseBoolValue(value string) bool {

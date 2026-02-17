@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-02-17
+
+### Data export
+- Added owner-only CSV export endpoint:
+  - `GET /api/export/csv`
+- Added owner-only JSON export endpoint:
+  - `GET /api/export/json`
+- Added "Export Data" action on Settings page with RU/EN localization.
+- Added export note in Settings clarifying scope:
+  - only manually tracked entries are exported;
+  - predictions (fertile window/ovulation) are not included.
+- Added export section summary on Settings:
+  - total tracked entries;
+  - tracked date range.
+- Added toast feedback after successful/failed export download in Settings.
+
+### Data integrity
+- Enforced day log validation for period entries:
+  - saving a day with `is_period=true` and `flow=none` is now rejected.
+- Added localized error message for missing flow when marking a period day.
+
 ## 2026-02-16
 
 ### Critical bug fixes

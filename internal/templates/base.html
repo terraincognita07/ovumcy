@@ -174,6 +174,44 @@
       });
     })();
 
+    (function () {
+      var stack = null;
+
+      function getStack() {
+        if (stack) return stack;
+        stack = document.createElement("div");
+        stack.style.position = "fixed";
+        stack.style.right = "1rem";
+        stack.style.bottom = "1rem";
+        stack.style.zIndex = "10000";
+        stack.style.display = "flex";
+        stack.style.flexDirection = "column";
+        stack.style.gap = "0.5rem";
+        stack.style.maxWidth = "22rem";
+        document.body.appendChild(stack);
+        return stack;
+      }
+
+      function showToast(message, kind) {
+        if (!message) return;
+        var container = getStack();
+        var toast = document.createElement("div");
+        toast.className = (kind === "error" ? "status-error" : "status-ok") + " reveal";
+        toast.textContent = message;
+        container.appendChild(toast);
+        window.setTimeout(function () {
+          toast.style.opacity = "0";
+          toast.style.transform = "translateY(4px)";
+          toast.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+          window.setTimeout(function () {
+            toast.remove();
+          }, 220);
+        }, 2200);
+      }
+
+      window.showToast = showToast;
+    })();
+
     document.body.addEventListener("htmx:configRequest", function (event) {
       var tokenMeta = document.querySelector('meta[name="csrf-token"]');
       if (!tokenMeta) return;
