@@ -11,7 +11,7 @@
   <script defer src="/static/js/htmx.min.js"></script>
   <script defer src="/static/js/chart-lite.js"></script>
 </head>
-<body>
+<body data-confirm-cancel="{{t .Messages "common.cancel"}}" data-confirm-delete="{{t .Messages "calendar.delete_day"}}">
   <div class="app-shell" x-data="{ mobileMenu: false }">
     <header class="paper-header">
       <div class="container-main flex items-center justify-between py-4">
@@ -62,7 +62,97 @@
     </main>
   </div>
 
+  <div
+    id="confirm-modal"
+    class="hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="confirm-modal-message"
+    style="position: fixed; inset: 0; z-index: 9999; background: rgba(22, 16, 12, 0.52); padding: 1rem;">
+    <div style="min-height: 100%; display: flex; align-items: center; justify-content: center;">
+      <section class="journal-card" style="width: min(32rem, 100%); padding: 1.25rem;">
+        <p id="confirm-modal-message" class="journal-subtitle text-sm"></p>
+        <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button id="confirm-modal-cancel" type="button" class="btn-secondary"></button>
+          <button id="confirm-modal-accept" type="button" class="btn-danger"></button>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <script>
+    (function () {
+      var modal = document.getElementById("confirm-modal");
+      var messageNode = document.getElementById("confirm-modal-message");
+      var cancelButton = document.getElementById("confirm-modal-cancel");
+      var acceptButton = document.getElementById("confirm-modal-accept");
+      if (!modal || !messageNode || !cancelButton || !acceptButton) return;
+
+      var pendingResolve = null;
+
+      function closeConfirm(accepted) {
+        if (!pendingResolve) return;
+        var resolve = pendingResolve;
+        pendingResolve = null;
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden", "true");
+        resolve(accepted);
+      }
+
+      function openConfirm(question) {
+        if (pendingResolve) {
+          pendingResolve(false);
+          pendingResolve = null;
+        }
+
+        messageNode.textContent = question;
+        cancelButton.textContent = document.body.getAttribute("data-confirm-cancel") || "Cancel";
+        acceptButton.textContent = document.body.getAttribute("data-confirm-delete") || "Delete";
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden", "false");
+        cancelButton.focus();
+
+        return new Promise(function (resolve) {
+          pendingResolve = resolve;
+        });
+      }
+
+      cancelButton.addEventListener("click", function () {
+        closeConfirm(false);
+      });
+
+      acceptButton.addEventListener("click", function () {
+        closeConfirm(true);
+      });
+
+      modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+          closeConfirm(false);
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeConfirm(false);
+        }
+      });
+
+      document.body.addEventListener("htmx:confirm", function (event) {
+        if (!event || !event.detail || !event.detail.question) return;
+        var source = event.detail.elt || event.target;
+        if (!source || !source.getAttribute) return;
+        var deletePath = source.getAttribute("hx-delete") || source.getAttribute("data-hx-delete") || "";
+        if (!/^\/api\/days\//.test(deletePath)) return;
+        event.preventDefault();
+        openConfirm(event.detail.question).then(function (confirmed) {
+          if (confirmed) {
+            event.detail.issueRequest(true);
+          }
+        });
+      });
+    })();
+
     document.body.addEventListener("htmx:configRequest", function (event) {
       var tokenMeta = document.querySelector('meta[name="csrf-token"]');
       if (!tokenMeta) return;
@@ -101,6 +191,17 @@
       if (!target || !target.classList) return;
       if (!target.classList.contains("save-status")) return;
       if (!target.querySelector(".status-ok")) return;
+
+      var dayEditor = document.getElementById("day-editor");
+      var form = target.closest("form[data-save-feedback]");
+      if (dayEditor && form && form.closest("#day-editor")) {
+        var postPath = form.getAttribute("hx-post") || "";
+        var match = postPath.match(/\/api\/days\/(\d{4}-\d{2}-\d{2})$/);
+        if (match) {
+          htmx.ajax("GET", "/calendar/day/" + match[1], { target: "#day-editor", swap: "innerHTML" });
+        }
+      }
+
       window.setTimeout(function () {
         if (target.querySelector(".status-ok")) {
           target.innerHTML = "";
