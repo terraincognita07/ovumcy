@@ -10,20 +10,24 @@ import (
 )
 
 var authErrorKeys = map[string]string{
-	"invalid input":              "auth.error.invalid_input",
-	"registration disabled":      "auth.error.registration_disabled",
-	"invalid credentials":        "auth.error.invalid_credentials",
-	"email already exists":       "auth.error.email_exists",
-	"weak password":              "auth.error.weak_password",
-	"password mismatch":          "auth.error.password_mismatch",
-	"invalid recovery code":      "auth.error.invalid_recovery_code",
-	"too many recovery attempts": "auth.error.too_many_recovery_attempts",
-	"invalid reset token":        "auth.error.invalid_reset_token",
-	"invalid current password":   "settings.error.invalid_current_password",
-	"new password must differ":   "settings.error.password_unchanged",
-	"invalid settings input":     "settings.error.invalid_input",
-	"invalid password":           "settings.error.invalid_password",
-	"period flow is required":    "calendar.error.period_flow_required",
+	"invalid input":                     "auth.error.invalid_input",
+	"registration disabled":             "auth.error.registration_disabled",
+	"invalid credentials":               "auth.error.invalid_credentials",
+	"email already exists":              "auth.error.email_exists",
+	"weak password":                     "auth.error.weak_password",
+	"password mismatch":                 "auth.error.password_mismatch",
+	"invalid recovery code":             "auth.error.invalid_recovery_code",
+	"too many recovery attempts":        "auth.error.too_many_recovery_attempts",
+	"too_many_login_attempts":           "auth.error.too_many_login_attempts",
+	"too many login attempts":           "auth.error.too_many_login_attempts",
+	"too_many_forgot_password_attempts": "auth.error.too_many_forgot_password_attempts",
+	"too many forgot password attempts": "auth.error.too_many_forgot_password_attempts",
+	"invalid reset token":               "auth.error.invalid_reset_token",
+	"invalid current password":          "settings.error.invalid_current_password",
+	"new password must differ":          "settings.error.password_unchanged",
+	"invalid settings input":            "settings.error.invalid_input",
+	"invalid password":                  "settings.error.invalid_password",
+	"period flow is required":           "calendar.error.period_flow_required",
 }
 
 var builtinSymptomKeys = map[string]string{

@@ -1,0 +1,36 @@
+{{define "content"}}
+<section class="mx-auto max-w-3xl space-y-6">
+  <div>
+    <p class="journal-muted text-sm">
+      <a href="/" class="inline-link">{{t .Messages "common.home"}}</a>
+      <span aria-hidden="true"> &gt; </span>
+      <span>{{t .Messages "privacy.title"}}</span>
+    </p>
+    <h1 class="journal-title">{{t .Messages "privacy.title"}}</h1>
+    <p class="journal-muted mt-2">{{t .Messages "privacy.subtitle"}}</p>
+  </div>
+
+  <section class="journal-card p-5 sm:p-6 space-y-3">
+    <h2 class="journal-subtitle">🛡️ {{t .Messages "privacy.zero_collection.title"}}</h2>
+    <p class="journal-muted">{{t .Messages "privacy.zero_collection.body"}}</p>
+  </section>
+
+  <section class="journal-card p-5 sm:p-6 space-y-3">
+    <h2 class="journal-subtitle">🗄️ {{t .Messages "privacy.your_data.title"}}</h2>
+    <p class="journal-muted">{{t .Messages "privacy.your_data.body"}}</p>
+  </section>
+
+  <section class="journal-card p-5 sm:p-6 space-y-3">
+    <h2 class="journal-subtitle">🔌 {{t .Messages "privacy.third_parties.title"}}</h2>
+    <p class="journal-muted">{{t .Messages "privacy.third_parties.body"}}</p>
+  </section>
+
+  <section class="journal-card p-5 sm:p-6 space-y-3">
+    <h2 class="journal-subtitle">📜 {{t .Messages "privacy.open_source.title"}}</h2>
+    <p class="journal-muted">{{t .Messages "privacy.open_source.body"}}</p>
+    <p>
+      <a href="https://github.com/terraincognita07/lume" target="_blank" rel="noopener noreferrer" class="inline-link">{{t .Messages "privacy.open_source.link"}}</a>
+    </p>
+  </section>
+</section>
+{{end}}

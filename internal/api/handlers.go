@@ -209,6 +209,7 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		"calendar",
 		"stats",
 		"settings",
+		"privacy",
 	}
 	for _, page := range pages {
 		templatePath := filepath.Join(templateDir, page+".html")
@@ -565,6 +566,26 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 	return handler.render(c, "settings", data)
 }
 
+func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
+	messages := currentMessages(c)
+
+	metaDescription := translateMessage(messages, "meta.description.privacy")
+	if metaDescription == "meta.description.privacy" {
+		metaDescription = "Lume Privacy Policy - Zero data collection, self-hosted period tracker."
+	}
+
+	data := fiber.Map{
+		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Lume | Privacy Policy"),
+		"MetaDescription": metaDescription,
+	}
+
+	if user, err := handler.authenticateRequest(c); err == nil {
+		data["CurrentUser"] = user
+	}
+
+	return handler.render(c, "privacy", data)
+}
+
 func (handler *Handler) Register(c *fiber.Ctx) error {
 	credentials, err := parseCredentials(c)
 	if err != nil {
@@ -671,27 +692,30 @@ func (handler *Handler) Logout(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ForgotPassword(c *fiber.Ctx) error {
+	const recoveryAttemptsLimit = 8
+	const recoveryAttemptsWindow = 15 * time.Minute
+
 	now := time.Now().In(handler.location)
 	limiterKey := requestLimiterKey(c)
-	if handler.recoveryLimiter.tooManyRecent(limiterKey, now, 5, 15*time.Minute) {
+	if handler.recoveryLimiter.tooManyRecent(limiterKey, now, recoveryAttemptsLimit, recoveryAttemptsWindow) {
 		return handler.respondAuthError(c, fiber.StatusTooManyRequests, "too many recovery attempts")
 	}
 
 	input := forgotPasswordInput{}
 	if err := c.BodyParser(&input); err != nil {
-		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		handler.recoveryLimiter.addFailure(limiterKey, now, recoveryAttemptsWindow)
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
 	}
 
 	code := normalizeRecoveryCode(input.RecoveryCode)
 	if !recoveryCodeRegex.MatchString(code) {
-		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		handler.recoveryLimiter.addFailure(limiterKey, now, recoveryAttemptsWindow)
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid recovery code")
 	}
 
 	user, err := handler.findUserByRecoveryCode(code)
 	if err != nil {
-		handler.recoveryLimiter.addFailure(limiterKey, now, 15*time.Minute)
+		handler.recoveryLimiter.addFailure(limiterKey, now, recoveryAttemptsWindow)
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid recovery code")
 	}
 

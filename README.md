@@ -72,15 +72,33 @@ go run cmd/lume/main.go
 
 ## Configuration
 
-Edit \docker-compose.yml\ or set environment variables:
+Edit `docker-compose.yml` or set environment variables:
 
-\\\nv
-TZ=Europe/Belgrade              # Your timezone
-DEFAULT_LANGUAGE=ru             # ru or en
-SECRET_KEY=change_me_production # JWT secret
-TELEGRAM_BOT_TOKEN=             # Optional: for reminders
-TELEGRAM_CHAT_ID=               # Optional: your chat ID
-\\\
+```env
+# Core
+TZ=UTC
+DEFAULT_LANGUAGE=ru
+SECRET_KEY=change_me_in_production
+DB_PATH=data/lume.db
+PORT=8080
+
+# Optional notifications
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+
+# Rate limits (self-host safe defaults)
+RATE_LIMIT_LOGIN_MAX=8
+RATE_LIMIT_LOGIN_WINDOW=15m
+RATE_LIMIT_FORGOT_PASSWORD_MAX=8
+RATE_LIMIT_FORGOT_PASSWORD_WINDOW=1h
+RATE_LIMIT_API_MAX=300
+RATE_LIMIT_API_WINDOW=1m
+
+# Reverse proxy trust (enable only behind your own proxy)
+TRUST_PROXY_ENABLED=false
+PROXY_HEADER=X-Forwarded-For
+TRUSTED_PROXIES=127.0.0.1,::1
+```
 
 ---
 

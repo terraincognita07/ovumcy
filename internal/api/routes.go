@@ -10,6 +10,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/register", handler.ShowRegisterPage)
 	app.Get("/forgot-password", handler.ShowForgotPasswordPage)
 	app.Get("/reset-password", handler.ShowResetPasswordPage)
+	app.Get("/privacy", handler.ShowPrivacyPage)
 	app.Get("/", handler.AuthRequired, handler.ShowDashboard)
 	app.Get("/dashboard", handler.AuthRequired, handler.ShowDashboard)
 	app.Get("/calendar", handler.AuthRequired, handler.ShowCalendar)

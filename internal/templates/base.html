@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{if .MetaDescription}}<meta name="description" content="{{.MetaDescription}}">{{end}}
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
   <link rel="stylesheet" href="/static/css/tailwind.css">
@@ -62,6 +63,12 @@
     <main class="container-main py-8 sm:py-10">
       {{template "content" .}}
     </main>
+
+    <footer class="container-main pb-8 pt-2">
+      <nav class="flex items-center justify-center">
+        <a href="/privacy" class="nav-link text-sm {{if isActiveRoute .CurrentPath "/privacy"}}nav-link-active{{end}}">{{t .Messages "nav.privacy"}}</a>
+      </nav>
+    </footer>
   </div>
 
   <div
