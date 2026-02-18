@@ -13,7 +13,7 @@
     </div>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]" x-data="{ selectedDate: '' }">
     <div
       id="calendar-grid-refresh"
       hx-get="/calendar?month={{.MonthValue}}"
@@ -44,6 +44,8 @@
             hx-get="/calendar/day/{{.DateString}}"
             hx-target="#day-editor"
             hx-swap="innerHTML"
+            @click="selectedDate = '{{.DateString}}'"
+            :class="{ 'selected': selectedDate === '{{.DateString}}' }"
             class="{{.CellClass}}">
             <div class="flex items-center justify-between">
               <span class="{{.TextClass}}">{{.Day}}</span>

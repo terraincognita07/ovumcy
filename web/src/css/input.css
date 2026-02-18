@@ -470,12 +470,16 @@
 
   .symptom-label {
     display: block;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif !important;
+    font-weight: 600;
+    text-align: left;
+    letter-spacing: 0;
+    word-spacing: normal;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
   }
 
   .panel-danger-zone {
@@ -524,6 +528,8 @@
   }
 
   .calendar-cell {
+    display: block;
+    width: 100%;
     min-height: 5.2rem;
     border-radius: 0.9rem;
     border: 1px solid var(--line-soft);
@@ -545,6 +551,13 @@
     box-shadow:
       inset 0 0 0 2px rgba(212, 165, 116, 0.78),
       0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .calendar-cell.selected {
+    border-color: rgba(72, 122, 209, 0.95);
+    box-shadow:
+      inset 0 0 0 2px rgba(72, 122, 209, 0.72),
+      0 0 0 2px rgba(255, 255, 255, 0.84);
   }
 
   .calendar-cell-period {

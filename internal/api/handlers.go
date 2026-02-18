@@ -60,9 +60,11 @@ type CalendarDay struct {
 }
 
 type SymptomCount struct {
-	Name  string
-	Icon  string
-	Count int
+	Name             string
+	Icon             string
+	Count            int
+	TotalDays        int
+	FrequencySummary string
 }
 
 type credentialsInput struct {
@@ -568,6 +570,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	if !ok {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
+	language := currentLanguage(c)
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
@@ -602,6 +605,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 		"CurrentUser":       user,
 		"Stats":             stats,
 		"Today":             today.Format("2006-01-02"),
+		"FormattedDate":     localizedDashboardDate(language, today),
 		"TodayLog":          todayLog,
 		"TodayHasData":      dayHasData(todayLog),
 		"Symptoms":          symptoms,
@@ -700,6 +704,7 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 		"Date":              day,
 		"DateString":        day.Format("2006-01-02"),
 		"DateLabel":         localizedDateLabel(currentLanguage(c), day),
+		"IsFutureDate":      day.After(dateAtLocation(time.Now().In(handler.location), handler.location)),
 		"NoDataLabel":       translateMessage(messages, "common.not_available"),
 		"Log":               logEntry,
 		"Symptoms":          symptoms,
@@ -715,6 +720,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	if !ok {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
+	language := currentLanguage(c)
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
@@ -761,6 +767,9 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		symptomCounts, err = handler.calculateSymptomFrequencies(user.ID, symptomLogs)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom stats")
+		}
+		for index := range symptomCounts {
+			symptomCounts[index].FrequencySummary = localizedSymptomFrequencySummary(language, symptomCounts[index].Count, symptomCounts[index].TotalDays)
 		}
 	}
 
@@ -1429,6 +1438,7 @@ func (handler *Handler) CreateSymptom(c *fiber.Ctx) error {
 	payload.Name = strings.TrimSpace(payload.Name)
 	payload.Icon = strings.TrimSpace(payload.Icon)
 	payload.Color = strings.TrimSpace(payload.Color)
+	payload.Name = normalizeLegacySymptomName(payload.Name)
 
 	if payload.Name == "" || len(payload.Name) > 80 {
 		return apiError(c, fiber.StatusBadRequest, "invalid symptom name")
@@ -1790,6 +1800,9 @@ func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error)
 	if err := handler.db.Where("user_id = ?", userID).Find(&symptoms).Error; err != nil {
 		return nil, err
 	}
+	for index := range symptoms {
+		symptoms[index].Name = normalizeLegacySymptomName(symptoms[index].Name)
+	}
 
 	builtinOrder := make(map[string]int)
 	for index, symptom := range models.DefaultBuiltinSymptoms() {
@@ -1819,6 +1832,13 @@ func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error)
 }
 
 func (handler *Handler) ensureBuiltinSymptoms(userID uint) error {
+	if err := handler.db.
+		Model(&models.SymptomType{}).
+		Where("user_id = ? AND lower(trim(name)) = ?", userID, "fatique").
+		Update("name", "Fatigue").Error; err != nil {
+		return err
+	}
+
 	existing := make([]models.SymptomType, 0)
 	if err := handler.db.Where("user_id = ?", userID).Find(&existing).Error; err != nil {
 		return err
@@ -2126,6 +2146,7 @@ func (handler *Handler) calculateSymptomFrequencies(userID uint, logs []models.D
 	if len(logs) == 0 {
 		return []SymptomCount{}, nil
 	}
+	totalDays := len(logs)
 
 	counts := make(map[uint]int)
 	for _, logEntry := range logs {
@@ -2150,7 +2171,7 @@ func (handler *Handler) calculateSymptomFrequencies(userID uint, logs []models.D
 	result := make([]SymptomCount, 0, len(counts))
 	for id, count := range counts {
 		if symptom, ok := symptomByID[id]; ok {
-			result = append(result, SymptomCount{Name: symptom.Name, Icon: symptom.Icon, Count: count})
+			result = append(result, SymptomCount{Name: symptom.Name, Icon: symptom.Icon, Count: count, TotalDays: totalDays})
 		}
 	}
 
@@ -2369,6 +2390,13 @@ func dayHasData(entry models.DailyLog) bool {
 	return strings.TrimSpace(entry.Flow) != "" && entry.Flow != models.FlowNone
 }
 
+func normalizeLegacySymptomName(name string) string {
+	if strings.EqualFold(strings.TrimSpace(name), "fatique") {
+		return "Fatigue"
+	}
+	return name
+}
+
 func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (exportSymptomFlags, []string) {
 	flags := exportSymptomFlags{}
 	otherSet := make(map[string]struct{})
@@ -2439,7 +2467,7 @@ func exportSymptomColumn(name string) string {
 		return "mood"
 	case "bloating":
 		return "bloating"
-	case "fatigue":
+	case "fatigue", "fatique":
 		return "fatigue"
 	case "breast tenderness":
 		return "breast_tenderness"

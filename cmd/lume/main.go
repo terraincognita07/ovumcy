@@ -36,7 +36,7 @@ func main() {
 		return
 	}
 
-	location := mustLoadLocation(getEnv("TZ", "UTC"))
+	location := mustLoadLocation(getEnv("TZ", "Local"))
 	time.Local = location
 
 	secretKey := getEnv("SECRET_KEY", "change_me_in_production")

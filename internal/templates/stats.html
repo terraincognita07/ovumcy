@@ -67,7 +67,7 @@
           {{range .SymptomCounts}}
           <li class="journal-panel flex items-center justify-between gap-3">
             <span class="inline-flex items-center gap-2"><span>{{.Icon}}</span><span>{{symptomLabel $.Messages .Name}}</span></span>
-            <span class="font-semibold">{{.Count}}</span>
+            <span class="font-semibold">{{.FrequencySummary}}</span>
           </li>
           {{end}}
         </ul>

@@ -22,12 +22,12 @@
     </article>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[1.55fr_1fr]">
+  <div class="grid gap-6 lg:grid-cols-[1.55fr_1fr]" x-data="{ isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}} }">
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-5 flex items-center justify-between gap-3">
         <div>
           <h2 class="journal-subtitle">{{t .Messages "dashboard.today_editor"}}</h2>
-          <p class="journal-muted">{{.Today}}</p>
+          <p class="journal-muted">{{.FormattedDate}}</p>
         </div>
       </div>
 
@@ -36,27 +36,27 @@
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
         <label class="period-toggle">
-          <input type="checkbox" name="is_period" value="true" {{if .TodayLog.IsPeriod}}checked{{end}}>
+          <input type="checkbox" name="is_period" value="true" x-model="isPeriod" {{if .TodayLog.IsPeriod}}checked{{end}}>
           <span>🩸 {{t .Messages "dashboard.period_day"}}</span>
         </label>
 
-        <fieldset class="space-y-3">
+        <fieldset class="space-y-3" x-cloak x-show="isPeriod">
           <legend class="field-label">{{t .Messages "dashboard.flow"}}</legend>
           <div class="grid gap-2 sm:grid-cols-4">
             <label class="choice-option">
-              <input type="radio" name="flow" value="none" class="choice-input" {{if eq .TodayLog.Flow "none"}}checked{{end}}>
+              <input type="radio" name="flow" value="none" class="choice-input" :disabled="!isPeriod" {{if eq .TodayLog.Flow "none"}}checked{{end}}>
               <span class="radio-tile"><span class="radio-icon">🌫️</span><span>{{flowLabel .Messages "none"}}</span></span>
             </label>
             <label class="choice-option">
-              <input type="radio" name="flow" value="light" class="choice-input" {{if eq .TodayLog.Flow "light"}}checked{{end}}>
+              <input type="radio" name="flow" value="light" class="choice-input" :disabled="!isPeriod" {{if eq .TodayLog.Flow "light"}}checked{{end}}>
               <span class="radio-tile"><span class="radio-icon">🌷</span><span>{{flowLabel .Messages "light"}}</span></span>
             </label>
             <label class="choice-option">
-              <input type="radio" name="flow" value="medium" class="choice-input" {{if eq .TodayLog.Flow "medium"}}checked{{end}}>
+              <input type="radio" name="flow" value="medium" class="choice-input" :disabled="!isPeriod" {{if eq .TodayLog.Flow "medium"}}checked{{end}}>
               <span class="radio-tile"><span class="radio-icon">🌺</span><span>{{flowLabel .Messages "medium"}}</span></span>
             </label>
             <label class="choice-option">
-              <input type="radio" name="flow" value="heavy" class="choice-input" {{if eq .TodayLog.Flow "heavy"}}checked{{end}}>
+              <input type="radio" name="flow" value="heavy" class="choice-input" :disabled="!isPeriod" {{if eq .TodayLog.Flow "heavy"}}checked{{end}}>
               <span class="radio-tile"><span class="radio-icon">🔥</span><span>{{flowLabel .Messages "heavy"}}</span></span>
             </label>
           </div>
@@ -107,9 +107,10 @@
     </section>
 
     <section class="journal-card p-5 sm:p-6">
-      <h2 class="journal-subtitle">{{t .Messages "dashboard.cycle_snapshot"}}</h2>
+      <h2 class="journal-subtitle" x-show="isPeriod">{{t .Messages "dashboard.cycle_snapshot"}}</h2>
+      <h2 class="journal-subtitle" x-cloak x-show="!isPeriod">{{t .Messages "dashboard.symptoms_notes"}}</h2>
 
-      <dl class="mt-4 space-y-3 text-sm">
+      <dl class="mt-4 space-y-3 text-sm" x-show="isPeriod">
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_cycle"}}</dt><dd>{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.median_cycle"}}</dt><dd>{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_period"}}</dt><dd>{{if gt .Stats.AveragePeriodLength 0.0}}{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>

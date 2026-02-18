@@ -4,6 +4,10 @@ import "github.com/gofiber/fiber/v2"
 
 func RegisterRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/healthz", handler.Health)
+	app.Get("/favicon.ico", func(c *fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) })
+	app.Get("/.well-known/appspecific/com.chrome.devtools.json", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusNoContent)
+	})
 	app.Get("/lang/:lang", handler.SetLanguage)
 
 	app.Get("/login", handler.ShowLoginPage)

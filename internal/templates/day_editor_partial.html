@@ -5,6 +5,10 @@
     <p class="journal-muted text-xs">{{t .Messages "daylog.title"}}</p>
   </div>
 
+  {{if .IsFutureDate}}
+  <div class="journal-panel text-sm">{{t .Messages "warning.future_date"}}</div>
+  {{end}}
+
   {{if .IsOwner}}
   <form hx-post="/api/days/{{.DateString}}" hx-target="#calendar-save-status" hx-swap="innerHTML" class="space-y-4" data-save-feedback>
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
