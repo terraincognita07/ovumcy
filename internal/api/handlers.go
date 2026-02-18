@@ -52,6 +52,7 @@ type CalendarDay struct {
 	IsPredicted  bool
 	IsFertility  bool
 	IsOvulation  bool
+	HasData      bool
 	CellClass    string
 	TextClass    string
 	BadgeClass   string
@@ -97,17 +98,49 @@ type changePasswordInput struct {
 	NewPassword     string `json:"new_password" form:"new_password"`
 }
 
+type cycleSettingsInput struct {
+	CycleLength  int `json:"cycle_length" form:"cycle_length"`
+	PeriodLength int `json:"period_length" form:"period_length"`
+}
+
 type deleteAccountInput struct {
 	Password string `json:"password" form:"password"`
 }
 
+type exportSymptomFlags struct {
+	Cramps           bool
+	Headache         bool
+	Acne             bool
+	Mood             bool
+	Bloating         bool
+	Fatigue          bool
+	BreastTenderness bool
+	BackPain         bool
+	Nausea           bool
+	Spotting         bool
+	Irritability     bool
+	Insomnia         bool
+	FoodCravings     bool
+	Diarrhea         bool
+	Constipation     bool
+}
+
 type exportJSONSymptomFlags struct {
-	Cramps   bool `json:"cramps"`
-	Headache bool `json:"headache"`
-	Acne     bool `json:"acne"`
-	Mood     bool `json:"mood"`
-	Bloating bool `json:"bloating"`
-	Fatigue  bool `json:"fatigue"`
+	Cramps           bool `json:"cramps"`
+	Headache         bool `json:"headache"`
+	Acne             bool `json:"acne"`
+	Mood             bool `json:"mood"`
+	Bloating         bool `json:"bloating"`
+	Fatigue          bool `json:"fatigue"`
+	BreastTenderness bool `json:"breast_tenderness"`
+	BackPain         bool `json:"back_pain"`
+	Nausea           bool `json:"nausea"`
+	Spotting         bool `json:"spotting"`
+	Irritability     bool `json:"irritability"`
+	Insomnia         bool `json:"insomnia"`
+	FoodCravings     bool `json:"food_cravings"`
+	Diarrhea         bool `json:"diarrhea"`
+	Constipation     bool `json:"constipation"`
 }
 
 type exportJSONEntry struct {
@@ -570,6 +603,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 		"Stats":             stats,
 		"Today":             today.Format("2006-01-02"),
 		"TodayLog":          todayLog,
+		"TodayHasData":      dayHasData(todayLog),
 		"Symptoms":          symptoms,
 		"SelectedSymptomID": symptomIDSet(todayLog.SymptomIDs),
 		"IsOwner":           user.Role == models.RoleOwner,
@@ -720,20 +754,25 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 
 	symptomCounts := make([]SymptomCount, 0)
 	if user.Role == models.RoleOwner {
-		symptomCounts, err = handler.calculateSymptomFrequencies(user.ID, logs)
+		symptomLogs, loadErr := handler.fetchAllLogsForUser(user.ID)
+		if loadErr != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom logs")
+		}
+		symptomCounts, err = handler.calculateSymptomFrequencies(user.ID, symptomLogs)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom stats")
 		}
 	}
 
 	data := fiber.Map{
-		"Title":         localizedPageTitle(messages, "meta.title.stats", "Lume | Stats"),
-		"CurrentUser":   user,
-		"Stats":         stats,
-		"ChartData":     chartPayload,
-		"ChartBaseline": baselineCycleLength,
-		"SymptomCounts": symptomCounts,
-		"IsOwner":       user.Role == models.RoleOwner,
+		"Title":           localizedPageTitle(messages, "meta.title.stats", "Lume | Stats"),
+		"CurrentUser":     user,
+		"Stats":           stats,
+		"ChartData":       chartPayload,
+		"ChartBaseline":   baselineCycleLength,
+		"TrendPointCount": len(lengths),
+		"SymptomCounts":   symptomCounts,
+		"IsOwner":         user.Role == models.RoleOwner,
 	}
 
 	return handler.render(c, "stats", data)
@@ -1033,6 +1072,39 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 	return redirectOrJSON(c, "/settings?status=password_changed")
 }
 
+func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	input := cycleSettingsInput{}
+	if err := c.BodyParser(&input); err != nil {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
+	}
+	if !isValidOnboardingCycleLength(input.CycleLength) {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 35")
+	}
+	if !isValidOnboardingPeriodLength(input.PeriodLength) {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
+	}
+
+	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
+		"cycle_length":  input.CycleLength,
+		"period_length": input.PeriodLength,
+	}).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to update cycle settings")
+	}
+
+	user.CycleLength = input.CycleLength
+	user.PeriodLength = input.PeriodLength
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{"ok": true})
+	}
+	return redirectOrJSON(c, "/settings?success=cycle_updated")
+}
+
 func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
@@ -1245,6 +1317,10 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		}
 	}
 
+	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+	}
+
 	if isHTMX(c) {
 		c.Set("HX-Trigger", "calendar-day-updated")
 		timestamp := time.Now().In(handler.location).Format("15:04")
@@ -1259,6 +1335,44 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	return c.JSON(entry)
 }
 
+func (handler *Handler) DeleteDailyLog(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	day, err := parseDayParam(c.Query("date"), handler.location)
+	if err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid date")
+	}
+
+	if err := handler.deleteDailyLogByDate(user.ID, day); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+	}
+	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+	}
+
+	source := strings.ToLower(strings.TrimSpace(c.Query("source")))
+	if isHTMX(c) {
+		c.Set("HX-Trigger", "calendar-day-updated")
+		switch source {
+		case "calendar":
+			return handler.renderDayEditorPartial(c, user, day)
+		case "dashboard":
+			c.Set("HX-Redirect", "/dashboard")
+			return c.SendStatus(fiber.StatusOK)
+		default:
+			return c.SendStatus(fiber.StatusNoContent)
+		}
+	}
+
+	if source == "dashboard" {
+		return redirectOrJSON(c, "/dashboard")
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (handler *Handler) DeleteDay(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
@@ -1270,8 +1384,11 @@ func (handler *Handler) DeleteDay(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid date")
 	}
 
-	if err := handler.db.Where("user_id = ? AND date = ?", user.ID, day).Delete(&models.DailyLog{}).Error; err != nil {
+	if err := handler.deleteDailyLogByDate(user.ID, day); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+	}
+	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
 	}
 
 	if isHTMX(c) {
@@ -1407,6 +1524,15 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 		"Mood",
 		"Bloating",
 		"Fatigue",
+		"Breast tenderness",
+		"Back pain",
+		"Nausea",
+		"Spotting",
+		"Irritability",
+		"Insomnia",
+		"Food cravings",
+		"Diarrhea",
+		"Constipation",
 		"Other",
 		"Notes",
 	}); err != nil {
@@ -1414,17 +1540,26 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 	}
 
 	for _, logEntry := range logs {
-		cramps, headache, acne, mood, bloating, fatigue, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
+		flags, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
 		if err := writer.Write([]string{
 			dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02"),
 			csvYesNo(logEntry.IsPeriod),
 			csvFlowLabel(logEntry.Flow),
-			csvYesNo(cramps),
-			csvYesNo(headache),
-			csvYesNo(acne),
-			csvYesNo(mood),
-			csvYesNo(bloating),
-			csvYesNo(fatigue),
+			csvYesNo(flags.Cramps),
+			csvYesNo(flags.Headache),
+			csvYesNo(flags.Acne),
+			csvYesNo(flags.Mood),
+			csvYesNo(flags.Bloating),
+			csvYesNo(flags.Fatigue),
+			csvYesNo(flags.BreastTenderness),
+			csvYesNo(flags.BackPain),
+			csvYesNo(flags.Nausea),
+			csvYesNo(flags.Spotting),
+			csvYesNo(flags.Irritability),
+			csvYesNo(flags.Insomnia),
+			csvYesNo(flags.FoodCravings),
+			csvYesNo(flags.Diarrhea),
+			csvYesNo(flags.Constipation),
 			strings.Join(other, "; "),
 			logEntry.Notes,
 		}); err != nil {
@@ -1456,18 +1591,27 @@ func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
 
 	entries := make([]exportJSONEntry, 0, len(logs))
 	for _, logEntry := range logs {
-		cramps, headache, acne, mood, bloating, fatigue, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
+		flags, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
 		entries = append(entries, exportJSONEntry{
 			Date:   dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02"),
 			Period: logEntry.IsPeriod,
 			Flow:   normalizeExportFlow(logEntry.Flow),
 			Symptoms: exportJSONSymptomFlags{
-				Cramps:   cramps,
-				Headache: headache,
-				Acne:     acne,
-				Mood:     mood,
-				Bloating: bloating,
-				Fatigue:  fatigue,
+				Cramps:           flags.Cramps,
+				Headache:         flags.Headache,
+				Acne:             flags.Acne,
+				Mood:             flags.Mood,
+				Bloating:         flags.Bloating,
+				Fatigue:          flags.Fatigue,
+				BreastTenderness: flags.BreastTenderness,
+				BackPain:         flags.BackPain,
+				Nausea:           flags.Nausea,
+				Spotting:         flags.Spotting,
+				Irritability:     flags.Irritability,
+				Insomnia:         flags.Insomnia,
+				FoodCravings:     flags.FoodCravings,
+				Diarrhea:         flags.Diarrhea,
+				Constipation:     flags.Constipation,
 			},
 			OtherSymptoms: other,
 			Notes:         logEntry.Notes,
@@ -1638,18 +1782,100 @@ func (handler *Handler) seedBuiltinSymptoms(userID uint) error {
 }
 
 func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error) {
+	if err := handler.ensureBuiltinSymptoms(userID); err != nil {
+		return nil, err
+	}
+
 	symptoms := make([]models.SymptomType, 0)
-	err := handler.db.Where("user_id = ?", userID).Order("is_builtin DESC, name ASC").Find(&symptoms).Error
-	return symptoms, err
+	if err := handler.db.Where("user_id = ?", userID).Find(&symptoms).Error; err != nil {
+		return nil, err
+	}
+
+	builtinOrder := make(map[string]int)
+	for index, symptom := range models.DefaultBuiltinSymptoms() {
+		builtinOrder[strings.ToLower(strings.TrimSpace(symptom.Name))] = index
+	}
+
+	sort.Slice(symptoms, func(i, j int) bool {
+		left := symptoms[i]
+		right := symptoms[j]
+		if left.IsBuiltin != right.IsBuiltin {
+			return left.IsBuiltin
+		}
+		if left.IsBuiltin && right.IsBuiltin {
+			leftIndex, leftHas := builtinOrder[strings.ToLower(strings.TrimSpace(left.Name))]
+			rightIndex, rightHas := builtinOrder[strings.ToLower(strings.TrimSpace(right.Name))]
+			switch {
+			case leftHas && rightHas && leftIndex != rightIndex:
+				return leftIndex < rightIndex
+			case leftHas != rightHas:
+				return leftHas
+			}
+		}
+		return strings.ToLower(strings.TrimSpace(left.Name)) < strings.ToLower(strings.TrimSpace(right.Name))
+	})
+
+	return symptoms, nil
+}
+
+func (handler *Handler) ensureBuiltinSymptoms(userID uint) error {
+	existing := make([]models.SymptomType, 0)
+	if err := handler.db.Where("user_id = ?", userID).Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingByName := make(map[string]struct{}, len(existing))
+	for _, symptom := range existing {
+		key := strings.ToLower(strings.TrimSpace(symptom.Name))
+		if key != "" {
+			existingByName[key] = struct{}{}
+		}
+	}
+
+	missing := make([]models.SymptomType, 0)
+	for _, symptom := range models.DefaultBuiltinSymptoms() {
+		key := strings.ToLower(strings.TrimSpace(symptom.Name))
+		if _, ok := existingByName[key]; ok {
+			continue
+		}
+		missing = append(missing, models.SymptomType{
+			UserID:    userID,
+			Name:      symptom.Name,
+			Icon:      symptom.Icon,
+			Color:     symptom.Color,
+			IsBuiltin: true,
+		})
+	}
+
+	if len(missing) == 0 {
+		return nil
+	}
+	return handler.db.Create(&missing).Error
 }
 
 func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User) (fiber.Map, error) {
 	messages := currentMessages(c)
+	status := strings.TrimSpace(c.Query("success"))
+	if status == "" {
+		status = strings.TrimSpace(c.Query("status"))
+	}
+
+	cycleLength := user.CycleLength
+	if !isValidOnboardingCycleLength(cycleLength) {
+		cycleLength = 28
+	}
+	periodLength := user.PeriodLength
+	if !isValidOnboardingPeriodLength(periodLength) {
+		periodLength = 5
+	}
+
 	data := fiber.Map{
-		"Title":       localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
-		"CurrentUser": user,
-		"ErrorKey":    authErrorTranslationKey(c.Query("error")),
-		"SuccessKey":  settingsStatusTranslationKey(c.Query("status")),
+		"Title":        localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
+		"CurrentUser":  user,
+		"ErrorKey":     authErrorTranslationKey(c.Query("error")),
+		"SuccessKey":   settingsStatusTranslationKey(status),
+		"CycleLength":  cycleLength,
+		"PeriodLength": periodLength,
 	}
 
 	if user.Role == models.RoleOwner {
@@ -1719,6 +1945,12 @@ func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Ti
 	return logs, err
 }
 
+func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, error) {
+	logs := make([]models.DailyLog, 0)
+	err := handler.db.Where("user_id = ?", userID).Order("date ASC").Find(&logs).Error
+	return logs, err
+}
+
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
 	result := handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).Limit(1).Find(&entry)
@@ -1734,6 +1966,29 @@ func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.Daily
 		}, nil
 	}
 	return entry, nil
+}
+
+func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {
+	return handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).Delete(&models.DailyLog{}).Error
+}
+
+func (handler *Handler) refreshUserLastPeriodStart(userID uint) error {
+	periodLogs := make([]models.DailyLog, 0)
+	if err := handler.db.
+		Select("date", "is_period").
+		Where("user_id = ? AND is_period = ?", userID, true).
+		Order("date ASC").
+		Find(&periodLogs).Error; err != nil {
+		return err
+	}
+
+	starts := services.DetectCycleStarts(periodLogs)
+	if len(starts) == 0 {
+		return handler.db.Model(&models.User{}).Where("id = ?", userID).Update("last_period_start", nil).Error
+	}
+
+	latest := dateAtLocation(starts[len(starts)-1], handler.location)
+	return handler.db.Model(&models.User{}).Where("id = ?", userID).Update("last_period_start", latest).Error
 }
 
 func (handler *Handler) validateSymptomIDs(userID uint, ids []uint) ([]uint, error) {
@@ -1786,8 +2041,11 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 	gridEnd := monthEnd.AddDate(0, 0, 6-int(monthEnd.Weekday()))
 
 	periodMap := make(map[string]bool)
+	hasDataMap := make(map[string]bool)
 	for _, logEntry := range logs {
-		periodMap[dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02")] = logEntry.IsPeriod
+		key := dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02")
+		periodMap[key] = logEntry.IsPeriod
+		hasDataMap[key] = dayHasData(logEntry)
 	}
 
 	predictedPeriodMap := make(map[string]bool)
@@ -1821,6 +2079,7 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 		isFertility := fertilityMap[key]
 		isToday := key == todayKey
 		isOvulation := key == ovulationKey
+		hasData := hasDataMap[key]
 
 		cellClass := "calendar-cell"
 		textClass := "calendar-day-number"
@@ -1853,6 +2112,7 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 			IsPredicted:  isPredicted,
 			IsFertility:  isFertility,
 			IsOvulation:  isOvulation,
+			HasData:      hasData,
 			CellClass:    cellClass,
 			TextClass:    textClass,
 			BadgeClass:   badgeClass,
@@ -1909,6 +2169,12 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 		return stats
 	}
 
+	latestLoggedPeriodStart := time.Time{}
+	detectedStarts := services.DetectCycleStarts(logs)
+	if len(detectedStarts) > 0 {
+		latestLoggedPeriodStart = dateAtLocation(detectedStarts[len(detectedStarts)-1], handler.location)
+	}
+
 	cycleLength := 0
 	if isValidOnboardingCycleLength(user.CycleLength) {
 		cycleLength = user.CycleLength
@@ -1928,9 +2194,14 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 		if periodLength > 0 {
 			stats.AveragePeriodLength = float64(periodLength)
 		}
-		if user.LastPeriodStart != nil {
+		switch {
+		case !latestLoggedPeriodStart.IsZero():
+			stats.LastPeriodStart = latestLoggedPeriodStart
+		case user.LastPeriodStart != nil:
 			stats.LastPeriodStart = dateAtLocation(*user.LastPeriodStart, handler.location)
 		}
+	} else if !latestLoggedPeriodStart.IsZero() {
+		stats.LastPeriodStart = latestLoggedPeriodStart
 	}
 
 	if !stats.LastPeriodStart.IsZero() && cycleLength > 0 && (!reliableCycleData || stats.NextPeriodStart.IsZero()) {
@@ -1941,26 +2212,53 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 	}
 
 	today := dateAtLocation(now.In(handler.location), handler.location)
-	if !stats.LastPeriodStart.IsZero() && stats.CurrentCycleDay <= 0 && !today.Before(stats.LastPeriodStart) {
+	if !stats.LastPeriodStart.IsZero() && !today.Before(stats.LastPeriodStart) {
 		stats.CurrentCycleDay = int(today.Sub(stats.LastPeriodStart).Hours()/24) + 1
+	} else {
+		stats.CurrentCycleDay = 0
 	}
 
-	if strings.TrimSpace(stats.CurrentPhase) == "" || stats.CurrentPhase == "unknown" {
-		if !stats.OvulationDate.IsZero() {
-			switch {
-			case sameCalendarDay(today, stats.OvulationDate):
-				stats.CurrentPhase = "ovulation"
-			case betweenCalendarDaysInclusive(today, stats.FertilityWindowStart, stats.FertilityWindowEnd):
-				stats.CurrentPhase = "fertile"
-			case today.Before(stats.OvulationDate):
-				stats.CurrentPhase = "follicular"
-			default:
-				stats.CurrentPhase = "luteal"
-			}
+	stats.CurrentPhase = handler.detectCurrentPhase(stats, logs, today)
+
+	return stats
+}
+
+func (handler *Handler) detectCurrentPhase(stats services.CycleStats, logs []models.DailyLog, today time.Time) string {
+	periodByDate := make(map[string]bool, len(logs))
+	for _, logEntry := range logs {
+		if logEntry.IsPeriod {
+			periodByDate[dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02")] = true
+		}
+	}
+	if periodByDate[today.Format("2006-01-02")] {
+		return "menstrual"
+	}
+
+	periodLength := int(stats.AveragePeriodLength + 0.5)
+	if periodLength <= 0 {
+		periodLength = 5
+	}
+	if !stats.LastPeriodStart.IsZero() {
+		periodEnd := dateAtLocation(stats.LastPeriodStart.AddDate(0, 0, periodLength-1), handler.location)
+		if betweenCalendarDaysInclusive(today, stats.LastPeriodStart, periodEnd) {
+			return "menstrual"
 		}
 	}
 
-	return stats
+	if !stats.OvulationDate.IsZero() {
+		switch {
+		case sameCalendarDay(today, stats.OvulationDate):
+			return "ovulation"
+		case betweenCalendarDaysInclusive(today, stats.FertilityWindowStart, stats.FertilityWindowEnd):
+			return "fertile"
+		case today.Before(stats.OvulationDate):
+			return "follicular"
+		default:
+			return "luteal"
+		}
+	}
+
+	return "unknown"
 }
 
 func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
@@ -2071,15 +2369,10 @@ func dayHasData(entry models.DailyLog) bool {
 	return strings.TrimSpace(entry.Flow) != "" && entry.Flow != models.FlowNone
 }
 
-func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (bool, bool, bool, bool, bool, bool, []string) {
-	var hasCramps bool
-	var hasHeadache bool
-	var hasAcne bool
-	var hasMood bool
-	var hasBloating bool
-	var hasFatigue bool
-
+func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (exportSymptomFlags, []string) {
+	flags := exportSymptomFlags{}
 	otherSet := make(map[string]struct{})
+
 	for _, symptomID := range symptomIDs {
 		name, ok := symptomNames[symptomID]
 		if !ok {
@@ -2088,17 +2381,35 @@ func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (bo
 
 		switch exportSymptomColumn(name) {
 		case "cramps":
-			hasCramps = true
+			flags.Cramps = true
 		case "headache":
-			hasHeadache = true
+			flags.Headache = true
 		case "acne":
-			hasAcne = true
+			flags.Acne = true
 		case "mood":
-			hasMood = true
+			flags.Mood = true
 		case "bloating":
-			hasBloating = true
+			flags.Bloating = true
 		case "fatigue":
-			hasFatigue = true
+			flags.Fatigue = true
+		case "breast_tenderness":
+			flags.BreastTenderness = true
+		case "back_pain":
+			flags.BackPain = true
+		case "nausea":
+			flags.Nausea = true
+		case "spotting":
+			flags.Spotting = true
+		case "irritability":
+			flags.Irritability = true
+		case "insomnia":
+			flags.Insomnia = true
+		case "food_cravings":
+			flags.FoodCravings = true
+		case "diarrhea":
+			flags.Diarrhea = true
+		case "constipation":
+			flags.Constipation = true
 		default:
 			trimmed := strings.TrimSpace(name)
 			if trimmed != "" {
@@ -2113,7 +2424,7 @@ func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (bo
 	}
 	sort.Strings(other)
 
-	return hasCramps, hasHeadache, hasAcne, hasMood, hasBloating, hasFatigue, other
+	return flags, other
 }
 
 func exportSymptomColumn(name string) string {
@@ -2130,6 +2441,24 @@ func exportSymptomColumn(name string) string {
 		return "bloating"
 	case "fatigue":
 		return "fatigue"
+	case "breast tenderness":
+		return "breast_tenderness"
+	case "back pain":
+		return "back_pain"
+	case "nausea":
+		return "nausea"
+	case "spotting":
+		return "spotting"
+	case "irritability":
+		return "irritability"
+	case "insomnia":
+		return "insomnia"
+	case "food cravings":
+		return "food_cravings"
+	case "diarrhea":
+		return "diarrhea"
+	case "constipation":
+		return "constipation"
 	default:
 		return "other"
 	}
@@ -2309,7 +2638,7 @@ func (handler *Handler) respondSettingsError(c *fiber.Ctx, status int, message s
 		}
 		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("<div class=\"status-error\">%s</div>", template.HTMLEscapeString(rendered)))
 	}
-	if strings.HasPrefix(c.Path(), "/api/settings/") && !acceptsJSON(c) {
+	if (strings.HasPrefix(c.Path(), "/api/settings/") || strings.HasPrefix(c.Path(), "/settings/")) && !acceptsJSON(c) {
 		errorParam := "error=" + url.QueryEscape(message)
 		return c.Redirect("/settings?"+errorParam, fiber.StatusSeeOther)
 	}

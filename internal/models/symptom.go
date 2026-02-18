@@ -24,5 +24,13 @@ func DefaultBuiltinSymptoms() []BuiltinSymptom {
 		{Name: "Fatigue", Icon: "😴", Color: "#95A5A6"},
 		{Name: "Breast tenderness", Icon: "💔", Color: "#E91E63"},
 		{Name: "Acne", Icon: "🔴", Color: "#E74C3C"},
+		{Name: "Back pain", Icon: "🦴", Color: "#8E6E53"},
+		{Name: "Nausea", Icon: "🤢", Color: "#7CB342"},
+		{Name: "Spotting", Icon: "🩹", Color: "#C55A7A"},
+		{Name: "Irritability", Icon: "😤", Color: "#FF7043"},
+		{Name: "Insomnia", Icon: "🌙", Color: "#5C6BC0"},
+		{Name: "Food cravings", Icon: "🍫", Color: "#A1887F"},
+		{Name: "Diarrhea", Icon: "🚽", Color: "#26A69A"},
+		{Name: "Constipation", Icon: "🪨", Color: "#8D6E63"},
 	}
 }

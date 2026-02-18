@@ -40,11 +40,17 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 	if stats.AveragePeriodLength != 6 {
 		t.Fatalf("expected average period length 6, got %.2f", stats.AveragePeriodLength)
 	}
-	if stats.LastPeriodStart.Format("2006-01-02") != "2026-02-07" {
-		t.Fatalf("expected last period start 2026-02-07, got %s", stats.LastPeriodStart.Format("2006-01-02"))
+	if stats.LastPeriodStart.Format("2006-01-02") != "2026-02-16" {
+		t.Fatalf("expected last period start 2026-02-16, got %s", stats.LastPeriodStart.Format("2006-01-02"))
 	}
-	if stats.NextPeriodStart.Format("2006-01-02") != "2026-03-08" {
-		t.Fatalf("expected next period start 2026-03-08, got %s", stats.NextPeriodStart.Format("2006-01-02"))
+	if stats.NextPeriodStart.Format("2006-01-02") != "2026-03-17" {
+		t.Fatalf("expected next period start 2026-03-17, got %s", stats.NextPeriodStart.Format("2006-01-02"))
+	}
+	if stats.CurrentCycleDay != 2 {
+		t.Fatalf("expected current cycle day 2, got %d", stats.CurrentCycleDay)
+	}
+	if stats.CurrentPhase != "menstrual" {
+		t.Fatalf("expected menstrual phase, got %s", stats.CurrentPhase)
 	}
 }
 

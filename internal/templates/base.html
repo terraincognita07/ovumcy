@@ -13,8 +13,8 @@
   <script defer src="/static/js/chart-lite.js"></script>
 </head>
 <body
-  data-confirm-cancel="{{t .Messages "common.cancel"}}"
-  data-confirm-delete="{{t .Messages "calendar.delete_day"}}"
+  data-confirm-cancel="{{t .Messages "confirm.no"}}"
+  data-confirm-delete="{{t .Messages "confirm.yes"}}"
   data-request-failed="{{t .Messages "common.error.request_failed"}}">
   <div class="app-shell" x-data="{ mobileMenu: false }">
     <header class="paper-header">
@@ -238,10 +238,8 @@
       if (!form) return;
       var button = form.querySelector('[data-save-button]');
       if (!button) return;
-      var savingLabel = button.getAttribute("data-saving-label") || "Saving...";
-      button.dataset.originalLabel = button.textContent;
-      button.textContent = savingLabel;
       button.disabled = true;
+      button.setAttribute("aria-busy", "true");
       button.classList.add("btn-loading");
     });
 
@@ -250,8 +248,8 @@
       if (!form) return;
       var button = form.querySelector('[data-save-button]');
       if (!button) return;
-      button.textContent = button.dataset.originalLabel || button.textContent;
       button.disabled = false;
+      button.removeAttribute("aria-busy");
       button.classList.remove("btn-loading");
     });
 

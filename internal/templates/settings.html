@@ -13,6 +13,58 @@
   <div class="status-error flex items-center gap-2"><span aria-hidden="true">⚠️</span><span>{{t .Messages .ErrorKey}}</span></div>
   {{end}}
 
+  {{if eq .CurrentUser.Role "owner"}}
+  <section class="journal-card p-5 sm:p-6" x-data="{ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}} }">
+    <h2 class="journal-subtitle">🗓️ {{t .Messages "settings.cycle.title"}}</h2>
+
+    <form
+      action="/settings/cycle"
+      method="post"
+      hx-post="/settings/cycle"
+      hx-target="#settings-cycle-status"
+      hx-swap="innerHTML"
+      class="mt-5 space-y-6"
+      data-save-feedback>
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <label class="field-label" for="settings-cycle-length">{{t .Messages "settings.cycle.cycle_length"}}</label>
+          <span class="journal-muted text-sm"><span x-text="cycleLength"></span> {{t .Messages "common.days_short"}}</span>
+        </div>
+        <input
+          id="settings-cycle-length"
+          type="range"
+          min="21"
+          max="35"
+          name="cycle_length"
+          x-model.number="cycleLength"
+          class="w-full">
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <label class="field-label" for="settings-period-length">{{t .Messages "settings.cycle.period_length"}}</label>
+          <span class="journal-muted text-sm"><span x-text="periodLength"></span> {{t .Messages "common.days_short"}}</span>
+        </div>
+        <input
+          id="settings-period-length"
+          type="range"
+          min="2"
+          max="7"
+          name="period_length"
+          x-model.number="periodLength"
+          class="w-full">
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "settings.cycle.save"}}</button>
+      </div>
+      <div id="settings-cycle-status" class="save-status text-sm"></div>
+    </form>
+  </section>
+  {{end}}
+
   <section class="journal-card p-5 sm:p-6">
     <h2 class="journal-subtitle">🔒 {{t .Messages "settings.change_password.title"}}</h2>
     <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.change_password.subtitle"}}</p>

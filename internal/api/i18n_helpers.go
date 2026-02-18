@@ -39,12 +39,20 @@ var authErrorKeys = map[string]string{
 
 var builtinSymptomKeys = map[string]string{
 	"acne":              "symptoms.acne",
+	"back pain":         "symptom.back_pain",
 	"bloating":          "symptoms.bloating",
 	"breast tenderness": "symptoms.breast_tenderness",
+	"constipation":      "symptom.constipation",
 	"cramps":            "symptoms.cramps",
+	"diarrhea":          "symptom.diarrhea",
 	"fatigue":           "symptoms.fatigue",
+	"food cravings":     "symptom.food_cravings",
 	"headache":          "symptoms.headache",
+	"insomnia":          "symptom.insomnia",
+	"irritability":      "symptom.irritability",
 	"mood swings":       "symptoms.mood_swings",
+	"nausea":            "symptom.nausea",
+	"spotting":          "symptom.spotting",
 }
 
 var monthNames = map[string][]string{
@@ -86,6 +94,8 @@ func settingsStatusTranslationKey(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
 	case "password_changed":
 		return "settings.success.password_changed"
+	case "cycle_updated":
+		return "settings.success.cycle_updated"
 	default:
 		return ""
 	}

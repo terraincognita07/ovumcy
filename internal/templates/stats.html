@@ -5,7 +5,7 @@
     <p class="journal-muted mt-2">{{t .Messages "stats.subtitle"}}</p>
   </div>
 
-  {{if le .Stats.AverageCycleLength 0.0}}
+  {{if lt .TrendPointCount 3}}
   <div class="journal-panel text-sm journal-muted">{{t .Messages "stats.data_notice"}}</div>
   {{end}}
 
