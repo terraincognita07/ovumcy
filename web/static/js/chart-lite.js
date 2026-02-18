@@ -19,11 +19,14 @@
 
     var labels = chartData.labels || [];
     var values = chartData.values || [];
+    var baseline = Number(chartData.baseline || 0);
+    var hasBaseline = Number.isFinite(baseline) && baseline > 0;
     var emptyText = container.getAttribute("data-empty-text") || "Not enough cycle data yet.";
     var daySuffix = container.getAttribute("data-days-suffix") || "d";
+    var baselineLabel = container.getAttribute("data-baseline-label") || "Baseline";
     container.innerHTML = "";
 
-    if (!values.length) {
+    if (!values.length && !hasBaseline) {
       container.innerHTML = '<div class="flex h-full items-center justify-center text-sm journal-muted">' + emptyText + "</div>";
       return;
     }
@@ -40,8 +43,13 @@
     var width = canvas.width - padding.left - padding.right;
     var height = canvas.height - padding.top - padding.bottom;
 
-    var maxValue = Math.max.apply(null, values);
-    var minValue = Math.min.apply(null, values);
+    var rangeValues = values.slice();
+    if (hasBaseline) {
+      rangeValues.push(baseline);
+    }
+
+    var maxValue = Math.max.apply(null, rangeValues);
+    var minValue = Math.min.apply(null, rangeValues);
     if (maxValue === minValue) {
       maxValue += 1;
       minValue -= 1;
@@ -50,6 +58,7 @@
     var gridColor = cssVar("--chart-grid", "rgba(172, 136, 96, 0.26)");
     var lineColor = cssVar("--chart-line", "#c4895a");
     var dotColor = cssVar("--chart-dot", "#b9753e");
+    var baselineColor = cssVar("--chart-baseline", "#9f8a75");
     var labelColor = cssVar("--text-muted", "#9b8b7a");
 
     function x(index) {
@@ -74,27 +83,54 @@
       context.stroke();
     }
 
-    context.strokeStyle = lineColor;
-    context.lineWidth = 3;
-    context.beginPath();
-    for (var p = 0; p < values.length; p++) {
-      var px = x(p);
-      var py = y(values[p]);
-      if (p === 0) {
-        context.moveTo(px, py);
-      } else {
-        context.lineTo(px, py);
-      }
-    }
-    context.stroke();
-
-    context.fillStyle = dotColor;
-    for (var j = 0; j < values.length; j++) {
-      var cx = x(j);
-      var cy = y(values[j]);
+    if (hasBaseline) {
+      var baselineY = y(baseline);
+      context.save();
+      context.setLineDash([6, 4]);
+      context.strokeStyle = baselineColor;
+      context.lineWidth = 2;
       context.beginPath();
-      context.arc(cx, cy, 4.2, 0, Math.PI * 2);
-      context.fill();
+      context.moveTo(padding.left, baselineY);
+      context.lineTo(padding.left + width, baselineY);
+      context.stroke();
+      context.restore();
+
+      context.fillStyle = baselineColor;
+      context.font = "10px Quicksand, Nunito, sans-serif";
+      context.textAlign = "right";
+      context.textBaseline = "bottom";
+      context.fillText(
+        baselineLabel + " " + String(baseline.toFixed(0)) + daySuffix,
+        padding.left + width - 8,
+        Math.max(padding.top + 12, baselineY - 6)
+      );
+    }
+
+    if (values.length) {
+      context.strokeStyle = lineColor;
+      context.lineWidth = 3;
+      context.beginPath();
+      for (var p = 0; p < values.length; p++) {
+        var px = x(p);
+        var py = y(values[p]);
+        if (p === 0) {
+          context.moveTo(px, py);
+        } else {
+          context.lineTo(px, py);
+        }
+      }
+      context.stroke();
+    }
+
+    if (values.length) {
+      context.fillStyle = dotColor;
+      for (var j = 0; j < values.length; j++) {
+        var cx = x(j);
+        var cy = y(values[j]);
+        context.beginPath();
+        context.arc(cx, cy, 4.2, 0, Math.PI * 2);
+        context.fill();
+      }
     }
 
     context.fillStyle = labelColor;

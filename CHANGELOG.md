@@ -2,6 +2,35 @@
 
 ## 2026-02-17
 
+### Onboarding
+- Added first-login 3-step onboarding flow for owner accounts:
+  - `GET /onboarding`
+  - `POST /onboarding/step1`
+  - `POST /onboarding/step2`
+  - `POST /onboarding/complete`
+- Added onboarding gate in auth flow:
+  - successful login redirects to `/onboarding` until onboarding is completed;
+  - protected pages redirect to onboarding for owner users with incomplete onboarding.
+- Extended `User` model and runtime schema (AutoMigrate) with:
+  - `onboarding_completed`
+  - `cycle_length`
+  - `period_length`
+  - `last_period_start`
+- Added onboarding UI template with Alpine.js + HTMX step transitions and progress bar.
+- Added RU/EN locale keys for onboarding content.
+- Completing onboarding now creates or updates the first period day record in `daily_logs` using Step 1 date.
+- Added onboarding welcome screen and back navigation between onboarding steps.
+- Fixed onboarding step HTMX transition state and removed stray `OK` text on successful step save.
+- Added cycle stats baseline fallback to onboarding preferences (`cycle_length`, `period_length`, `last_period_start`) while there is not enough real cycle history.
+- Added baseline visualization to Stats cycle trend chart:
+  - chart now renders onboarding baseline as a dashed line;
+  - chart legend now distinguishes actual cycle points from baseline.
+- Fixed HTMX save feedback regression for Dashboard/Calendar day forms:
+  - successful day save now always shows visible toast feedback;
+  - HTMX error responses now render inline in save status blocks;
+  - calendar grid refresh is explicitly triggered after successful calendar day save.
+- Added onboarding validation tests for date and slider bounds, plus stats-baseline tests for sparse/reliable data cases.
+
 ### Data export
 - Added owner-only CSV export endpoint:
   - `GET /api/export/csv`

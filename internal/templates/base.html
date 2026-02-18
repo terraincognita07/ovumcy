@@ -12,11 +12,14 @@
   <script defer src="/static/js/htmx.min.js"></script>
   <script defer src="/static/js/chart-lite.js"></script>
 </head>
-<body data-confirm-cancel="{{t .Messages "common.cancel"}}" data-confirm-delete="{{t .Messages "calendar.delete_day"}}">
+<body
+  data-confirm-cancel="{{t .Messages "common.cancel"}}"
+  data-confirm-delete="{{t .Messages "calendar.delete_day"}}"
+  data-request-failed="{{t .Messages "common.error.request_failed"}}">
   <div class="app-shell" x-data="{ mobileMenu: false }">
     <header class="paper-header">
       <div class="container-main flex items-center justify-between py-4">
-        <a href="{{if .CurrentUser}}/dashboard{{else}}/login{{end}}" class="brand-mark">{{t .Messages "app.name"}}</a>
+        <a href="{{if .CurrentUser}}{{if .HideNavigation}}/onboarding{{else}}/dashboard{{end}}{{else}}/login{{end}}" class="brand-mark">{{t .Messages "app.name"}}</a>
 
         <div class="flex items-center gap-3">
           <div class="lang-switch" role="group" aria-label="{{t .Messages "lang.switch"}}">
@@ -24,13 +27,13 @@
             <a href="/lang/en?next={{urlquery .CurrentPath}}" class="lang-link {{if eq .Lang "en"}}lang-link-active{{end}}">{{t .Messages "lang.en"}}</a>
           </div>
 
-          {{if .CurrentUser}}
+          {{if and .CurrentUser (not .HideNavigation)}}
           <button type="button" class="menu-toggle sm:hidden" @click="mobileMenu = !mobileMenu">{{t .Messages "nav.menu"}}</button>
           {{end}}
         </div>
       </div>
 
-      {{if .CurrentUser}}
+      {{if and .CurrentUser (not .HideNavigation)}}
       <div class="container-main pb-4">
         <nav class="hidden items-center gap-2 sm:flex">
           <a href="/dashboard" class="nav-link {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
@@ -256,11 +259,19 @@
       var target = event.detail.target;
       if (!target || !target.classList) return;
       if (!target.classList.contains("save-status")) return;
-      if (!target.querySelector(".status-ok")) return;
+      var successNode = target.querySelector(".status-ok");
+      if (!successNode) return;
+
+      if (window.showToast) {
+        window.showToast(successNode.textContent || "", "ok");
+      }
 
       var dayEditor = document.getElementById("day-editor");
       var form = target.closest("form[data-save-feedback]");
       if (dayEditor && form && form.closest("#day-editor")) {
+        if (window.htmx && typeof window.htmx.trigger === "function") {
+          window.htmx.trigger(document.body, "calendar-day-updated");
+        }
         var postPath = form.getAttribute("hx-post") || "";
         var match = postPath.match(/\/api\/days\/(\d{4}-\d{2}-\d{2})$/);
         if (match) {
@@ -273,6 +284,21 @@
           target.innerHTML = "";
         }
       }, 2000);
+    });
+
+    document.body.addEventListener("htmx:responseError", function (event) {
+      var target = event && event.detail ? event.detail.target : null;
+      if (!target || !target.classList || !target.classList.contains("save-status")) return;
+
+      var xhr = event.detail.xhr;
+      var responseText = xhr && typeof xhr.responseText === "string" ? xhr.responseText : "";
+      if (responseText && responseText.indexOf("status-error") !== -1) {
+        target.innerHTML = responseText;
+        return;
+      }
+
+      var fallback = document.body.getAttribute("data-request-failed") || "Request failed. Please try again.";
+      target.innerHTML = '<div class="status-error">' + fallback + '</div>';
     });
   </script>
 </body>

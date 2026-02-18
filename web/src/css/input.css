@@ -501,11 +501,13 @@
     border-radius: 999px;
     background: rgba(212, 165, 116, 0.22);
     color: #7f5630;
-    padding: 0.14rem 0.45rem;
-    font-size: 0.62rem;
+    padding: 0.1rem 0.34rem;
+    font-size: 0.56rem;
     font-weight: 700;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.01em;
     text-transform: uppercase;
+    line-height: 1.05;
+    white-space: nowrap;
   }
 
   .calendar-day-number {
@@ -520,12 +522,14 @@
 
   .calendar-tag {
     border-radius: 999px;
-    padding: 0.12rem 0.43rem;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    padding: 0.08rem 0.3rem;
+    font-size: 0.53rem;
+    font-weight: 600;
+    letter-spacing: 0;
     text-transform: uppercase;
     color: #fff;
+    line-height: 1.05;
+    white-space: nowrap;
   }
 
   .calendar-tag-period {

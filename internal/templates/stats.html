@@ -37,11 +37,24 @@
         <h2 class="journal-subtitle">{{t .Messages "stats.cycle_trend"}}</h2>
         <span class="journal-muted text-xs">{{t .Messages "stats.last_12_cycles"}}</span>
       </div>
+      <div class="mb-3 flex flex-wrap items-center gap-3 text-xs journal-muted">
+        <span class="inline-flex items-center gap-2">
+          <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: var(--chart-dot, #b9753e);"></span>
+          {{t .Messages "stats.legend.actual"}}
+        </span>
+        {{if gt .ChartBaseline 0}}
+        <span class="inline-flex items-center gap-2 border-l border-[rgba(172,136,96,0.28)] pl-3">
+          <span class="inline-block w-6 border-t-2 border-dashed" style="border-color: var(--chart-baseline, #9f8a75);"></span>
+          {{t .Messages "stats.legend.baseline"}}: {{.ChartBaseline}} {{t .Messages "common.days_short"}}
+        </span>
+        {{end}}
+      </div>
       <div
         id="cycle-chart"
         data-chart='{{toJSON .ChartData}}'
         data-empty-text='{{t .Messages "stats.no_cycle_data"}}'
         data-days-suffix='{{t .Messages "common.days_short"}}'
+        data-baseline-label='{{t .Messages "stats.legend.baseline"}}'
         class="chart-shell">
       </div>
     </section>

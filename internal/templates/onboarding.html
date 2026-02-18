@@ -1,0 +1,200 @@
+{{define "content"}}
+<section
+  class="mx-auto max-w-4xl"
+  x-data='onboardingFlow({
+    minDate: "{{.MinDate}}",
+    maxDate: "{{.MaxDate}}",
+    lastPeriodStart: "{{.LastPeriodStart}}",
+    cycleLength: {{.CycleLength}},
+    periodLength: {{.PeriodLength}},
+    lang: "{{.Lang}}"
+  })'
+  x-cloak
+>
+  <div class="journal-card journal-hero p-6 sm:p-8">
+    <div class="space-y-3" x-show="step > 0" x-transition>
+      <p class="journal-kicker" x-show="step === 1">{{t .Messages "onboarding.progress.step1"}}</p>
+      <p class="journal-kicker" x-show="step === 2">{{t .Messages "onboarding.progress.step2"}}</p>
+      <p class="journal-kicker" x-show="step === 3">{{t .Messages "onboarding.progress.step3"}}</p>
+
+      <div class="journal-panel space-y-2">
+        <div class="h-2 overflow-hidden rounded-full bg-[rgba(232,196,168,0.35)]">
+          <div
+            class="h-full rounded-full transition-all duration-300"
+            :style="`width: ${(step / 3) * 100}%; background: linear-gradient(135deg, #D4A574, #E8C4A8);`"></div>
+        </div>
+      </div>
+    </div>
+
+    <div x-show="step === 0" x-transition class="mt-2 space-y-5">
+      <p class="journal-kicker">{{t .Messages "onboarding.welcome.kicker"}}</p>
+      <h1 class="journal-title">{{t .Messages "onboarding.welcome.title"}}</h1>
+      <p class="journal-muted">{{t .Messages "onboarding.welcome.subtitle"}}</p>
+
+      <div class="journal-panel">
+        <p class="journal-muted text-sm">{{t .Messages "onboarding.welcome.details"}}</p>
+      </div>
+
+      <button type="button" class="btn-primary" @click="step = 1">{{t .Messages "onboarding.button.begin"}}</button>
+    </div>
+
+    <div x-show="step === 1" x-transition class="mt-6 space-y-4">
+      <h1 class="journal-title">{{t .Messages "onboarding.step1.title"}}</h1>
+      <p class="journal-muted">{{t .Messages "onboarding.step1.subtitle"}}</p>
+
+      <form
+        hx-post="/onboarding/step1"
+        hx-target="#onboarding-step1-status"
+        hx-swap="innerHTML"
+        x-on:htmx:after-request="if ($event.detail.successful) { step = 2; }"
+        class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="last_period_start" :value="selectedDate">
+
+        <label class="field-label" for="last-period-start">{{t .Messages "onboarding.step1.field"}}</label>
+        <input
+          id="last-period-start"
+          type="date"
+          class="input-field"
+          x-model="selectedDate"
+          min="{{.MinDate}}"
+          max="{{.MaxDate}}"
+          required>
+
+        <div class="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
+          <template x-for="day in dayOptions" :key="day.value">
+            <button
+              type="button"
+              class="check-chip check-chip-sm justify-center"
+              :style="selectedDate === day.value ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              @click="selectedDate = day.value"
+              x-text="day.label"></button>
+          </template>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" class="btn-secondary" @click="step = 0">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="submit" class="btn-primary" :disabled="!selectedDate">{{t .Messages "onboarding.button.next"}}</button>
+        </div>
+        <div id="onboarding-step1-status" class="save-status text-sm"></div>
+      </form>
+    </div>
+
+    <div x-show="step === 2" x-transition class="mt-6 space-y-4">
+      <h1 class="journal-title">{{t .Messages "onboarding.step2.title"}}</h1>
+
+      <form
+        hx-post="/onboarding/step2"
+        hx-target="#onboarding-step2-status"
+        hx-swap="innerHTML"
+        x-on:htmx:after-request="if ($event.detail.successful) { step = 3; }"
+        class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="field-label" for="cycle-length">{{t .Messages "onboarding.step2.cycle_length"}}</label>
+            <span class="journal-muted text-sm"><span x-text="cycleLength"></span> {{t .Messages "common.days_short"}}</span>
+          </div>
+          <input
+            id="cycle-length"
+            type="range"
+            min="21"
+            max="35"
+            name="cycle_length"
+            x-model.number="cycleLength"
+            class="w-full">
+          <p class="journal-muted text-sm">{{t .Messages "onboarding.step2.hint"}}</p>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="field-label" for="period-length">{{t .Messages "onboarding.step2.period_length"}}</label>
+            <span class="journal-muted text-sm"><span x-text="periodLength"></span> {{t .Messages "common.days_short"}}</span>
+          </div>
+          <input
+            id="period-length"
+            type="range"
+            min="2"
+            max="7"
+            name="period_length"
+            x-model.number="periodLength"
+            class="w-full">
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" class="btn-secondary" @click="step = 1">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.next"}}</button>
+        </div>
+        <div id="onboarding-step2-status" class="save-status text-sm"></div>
+      </form>
+    </div>
+
+    <div x-show="step === 3" x-transition class="mt-6 space-y-4">
+      <h1 class="journal-title">{{t .Messages "onboarding.step3.title"}}</h1>
+      <p class="journal-muted">{{t .Messages "onboarding.step3.message"}}</p>
+
+      <form hx-post="/onboarding/complete" hx-target="#onboarding-step3-status" hx-swap="innerHTML">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" class="btn-secondary" @click="step = 2">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.start"}}</button>
+        </div>
+        <div id="onboarding-step3-status" class="save-status mt-3 text-sm"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  function onboardingFlow(config) {
+    var safeConfig = config || {};
+    var lang = safeConfig.lang || "en";
+
+    return {
+      step: 0,
+      selectedDate: safeConfig.lastPeriodStart || "",
+      cycleLength: Number(safeConfig.cycleLength || 28),
+      periodLength: Number(safeConfig.periodLength || 5),
+      dayOptions: [],
+      init() {
+        this.dayOptions = this.buildDayOptions(safeConfig.minDate, safeConfig.maxDate, lang);
+      },
+      buildDayOptions(minDateRaw, maxDateRaw, locale) {
+        var minDate = this.parseDate(minDateRaw);
+        var maxDate = this.parseDate(maxDateRaw);
+        if (!minDate || !maxDate || minDate > maxDate) {
+          return [];
+        }
+
+        var result = [];
+        var formatter = new Intl.DateTimeFormat(locale || "en", {
+          day: "numeric",
+          month: "short"
+        });
+
+        for (var cursor = new Date(maxDate); cursor >= minDate; cursor.setDate(cursor.getDate() - 1)) {
+          var current = new Date(cursor);
+          result.push({
+            value: this.formatDateValue(current),
+            label: formatter.format(current)
+          });
+        }
+        return result;
+      },
+      parseDate(value) {
+        if (!value) return null;
+        var parsed = new Date(value + "T00:00:00");
+        if (isNaN(parsed.getTime())) return null;
+        return parsed;
+      },
+      formatDateValue(value) {
+        var year = value.getFullYear();
+        var month = String(value.getMonth() + 1).padStart(2, "0");
+        var day = String(value.getDate()).padStart(2, "0");
+        return year + "-" + month + "-" + day;
+      }
+    };
+  }
+</script>
+{{end}}

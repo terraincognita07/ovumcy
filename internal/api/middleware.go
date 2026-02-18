@@ -54,6 +54,16 @@ func (handler *Handler) AuthRequired(c *fiber.Ctx) error {
 	}
 
 	c.Locals(contextUserKey, user)
+	if requiresOnboarding(user) && !isOnboardingPath(c.Path()) {
+		if strings.HasPrefix(c.Path(), "/api/") {
+			if c.Path() == "/api/auth/logout" {
+				return c.Next()
+			}
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "onboarding required"})
+		}
+		return c.Redirect("/onboarding", fiber.StatusSeeOther)
+	}
+
 	return c.Next()
 }
 
@@ -112,4 +122,9 @@ func (handler *Handler) setLanguageCookie(c *fiber.Ctx, language string) {
 		SameSite: "Lax",
 		Expires:  time.Now().AddDate(1, 0, 0),
 	})
+}
+
+func isOnboardingPath(path string) bool {
+	cleanPath := strings.TrimSpace(path)
+	return cleanPath == "/onboarding" || strings.HasPrefix(cleanPath, "/onboarding/")
 }

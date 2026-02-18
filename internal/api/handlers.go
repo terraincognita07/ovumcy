@@ -205,6 +205,7 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		"recovery_code",
 		"forgot_password",
 		"reset_password",
+		"onboarding",
 		"dashboard",
 		"calendar",
 		"stats",
@@ -271,8 +272,8 @@ func (handler *Handler) SetLanguage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
-	if _, err := handler.authenticateRequest(c); err == nil {
-		return c.Redirect("/dashboard", fiber.StatusSeeOther)
+	if user, err := handler.authenticateRequest(c); err == nil {
+		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
 	errorKey := authErrorTranslationKey(c.Query("error"))
@@ -289,8 +290,8 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
-	if _, err := handler.authenticateRequest(c); err == nil {
-		return c.Redirect("/dashboard", fiber.StatusSeeOther)
+	if user, err := handler.authenticateRequest(c); err == nil {
+		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
 	errorKey := authErrorTranslationKey(c.Query("error"))
@@ -343,6 +344,192 @@ func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 	return handler.render(c, "reset_password", data)
 }
 
+func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return c.Redirect("/login", fiber.StatusSeeOther)
+	}
+	if !requiresOnboarding(user) {
+		return c.Redirect("/dashboard", fiber.StatusSeeOther)
+	}
+
+	now := dateAtLocation(time.Now().In(handler.location), handler.location)
+	messages := currentMessages(c)
+
+	lastPeriodStart := ""
+	if user.LastPeriodStart != nil {
+		lastPeriodStart = dateAtLocation(*user.LastPeriodStart, handler.location).Format("2006-01-02")
+	}
+
+	cycleLength := user.CycleLength
+	if cycleLength < 21 || cycleLength > 35 {
+		cycleLength = 28
+	}
+	periodLength := user.PeriodLength
+	if periodLength < 2 || periodLength > 7 {
+		periodLength = 5
+	}
+
+	data := fiber.Map{
+		"Title":           localizedPageTitle(messages, "meta.title.onboarding", "Lume | Onboarding"),
+		"CurrentUser":     user,
+		"HideNavigation":  true,
+		"MinDate":         now.AddDate(0, 0, -60).Format("2006-01-02"),
+		"MaxDate":         now.Format("2006-01-02"),
+		"LastPeriodStart": lastPeriodStart,
+		"CycleLength":     cycleLength,
+		"PeriodLength":    periodLength,
+	}
+	return handler.render(c, "onboarding", data)
+}
+
+func (handler *Handler) OnboardingStep1(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+	if !requiresOnboarding(user) {
+		return redirectOrJSON(c, "/dashboard")
+	}
+
+	input := struct {
+		LastPeriodStart string `json:"last_period_start" form:"last_period_start"`
+	}{}
+	if err := c.BodyParser(&input); err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid input")
+	}
+
+	parsedDay, err := parseDayParam(strings.TrimSpace(input.LastPeriodStart), handler.location)
+	if err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid last period start")
+	}
+
+	today := dateAtLocation(time.Now().In(handler.location), handler.location)
+	minDate := today.AddDate(0, 0, -60)
+	if parsedDay.After(today) || parsedDay.Before(minDate) {
+		return apiError(c, fiber.StatusBadRequest, "last period start must be within last 60 days")
+	}
+
+	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Update("last_period_start", parsedDay).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to save onboarding step")
+	}
+	user.LastPeriodStart = &parsedDay
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{"ok": true})
+	}
+	if isHTMX(c) {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+	return c.Redirect("/onboarding", fiber.StatusSeeOther)
+}
+
+func (handler *Handler) OnboardingStep2(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+	if !requiresOnboarding(user) {
+		return redirectOrJSON(c, "/dashboard")
+	}
+
+	input := struct {
+		CycleLength  int `json:"cycle_length" form:"cycle_length"`
+		PeriodLength int `json:"period_length" form:"period_length"`
+	}{}
+	if err := c.BodyParser(&input); err != nil {
+		return apiError(c, fiber.StatusBadRequest, "invalid input")
+	}
+	if input.CycleLength < 21 || input.CycleLength > 35 {
+		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 35")
+	}
+	if input.PeriodLength < 2 || input.PeriodLength > 7 {
+		return apiError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
+	}
+
+	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
+		"cycle_length":  input.CycleLength,
+		"period_length": input.PeriodLength,
+	}).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to save onboarding step")
+	}
+	user.CycleLength = input.CycleLength
+	user.PeriodLength = input.PeriodLength
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{"ok": true})
+	}
+	if isHTMX(c) {
+		return c.SendStatus(fiber.StatusNoContent)
+	}
+	return c.Redirect("/onboarding", fiber.StatusSeeOther)
+}
+
+func (handler *Handler) OnboardingComplete(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+	if !requiresOnboarding(user) {
+		return redirectOrJSON(c, "/dashboard")
+	}
+	if user.LastPeriodStart == nil {
+		return apiError(c, fiber.StatusBadRequest, "complete onboarding steps first")
+	}
+
+	startDay := dateAtLocation(*user.LastPeriodStart, handler.location)
+	if err := handler.db.Transaction(func(tx *gorm.DB) error {
+		var current models.User
+		if err := tx.First(&current, user.ID).Error; err != nil {
+			return err
+		}
+		if current.LastPeriodStart == nil {
+			return errors.New("complete onboarding steps first")
+		}
+		startDay = dateAtLocation(*current.LastPeriodStart, handler.location)
+
+		var entry models.DailyLog
+		result := tx.Where("user_id = ? AND date = ?", current.ID, startDay).First(&entry)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			entry = models.DailyLog{
+				UserID:     current.ID,
+				Date:       startDay,
+				IsPeriod:   true,
+				Flow:       models.FlowMedium,
+				SymptomIDs: []uint{},
+			}
+			if err := tx.Create(&entry).Error; err != nil {
+				return err
+			}
+		} else if result.Error != nil {
+			return result.Error
+		} else {
+			updates := map[string]any{"is_period": true}
+			if strings.TrimSpace(entry.Flow) == "" || entry.Flow == models.FlowNone {
+				updates["flow"] = models.FlowMedium
+			}
+			if err := tx.Model(&entry).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Model(&models.User{}).Where("id = ?", current.ID).Update("onboarding_completed", true).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "complete onboarding steps first") {
+			return apiError(c, fiber.StatusBadRequest, "complete onboarding steps first")
+		}
+		return apiError(c, fiber.StatusInternalServerError, "failed to finish onboarding")
+	}
+
+	user.OnboardingCompleted = true
+	user.LastPeriodStart = &startDay
+	return redirectOrJSON(c, "/dashboard")
+}
+
 func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
@@ -359,6 +546,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	}
 
 	stats := services.BuildCycleStats(allLogs, now, handler.lutealPhaseDays)
+	stats = handler.applyUserCycleBaseline(user, allLogs, stats, now)
 	todayLog, err := handler.fetchLogByDate(user.ID, today)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load today log")
@@ -418,6 +606,7 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
 	}
 	stats := services.BuildCycleStats(statsLogs, now, handler.lutealPhaseDays)
+	stats = handler.applyUserCycleBaseline(user, statsLogs, stats, now)
 
 	days := handler.buildCalendarDays(monthStart, logs, stats, now)
 
@@ -501,6 +690,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	}
 
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 	lengths := services.CycleLengths(logs)
 	if len(lengths) > 12 {
 		lengths = lengths[len(lengths)-12:]
@@ -515,9 +705,17 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		labels = append(labels, fmt.Sprintf(cycleLabelPattern, index+1))
 	}
 
+	baselineCycleLength := 0
+	if user.Role == models.RoleOwner && isValidOnboardingCycleLength(user.CycleLength) {
+		baselineCycleLength = user.CycleLength
+	}
+
 	chartPayload := fiber.Map{
 		"labels": labels,
 		"values": lengths,
+	}
+	if baselineCycleLength > 0 {
+		chartPayload["baseline"] = baselineCycleLength
 	}
 
 	symptomCounts := make([]SymptomCount, 0)
@@ -533,6 +731,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		"CurrentUser":   user,
 		"Stats":         stats,
 		"ChartData":     chartPayload,
+		"ChartBaseline": baselineCycleLength,
 		"SymptomCounts": symptomCounts,
 		"IsOwner":       user.Role == models.RoleOwner,
 	}
@@ -620,7 +819,7 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 	return handler.render(c, "recovery_code", fiber.Map{
 		"Title":        localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
 		"RecoveryCode": recoveryCode,
-		"ContinuePath": "/dashboard",
+		"ContinuePath": postLoginRedirectPath(&user),
 	})
 }
 
@@ -662,7 +861,7 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
-	return redirectOrJSON(c, "/dashboard")
+	return redirectOrJSON(c, postLoginRedirectPath(&user))
 }
 
 func (handler *Handler) Logout(c *fiber.Ctx) error {
@@ -785,7 +984,7 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 	return handler.render(c, "recovery_code", fiber.Map{
 		"Title":        localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
 		"RecoveryCode": recoveryCode,
-		"ContinuePath": "/dashboard",
+		"ContinuePath": postLoginRedirectPath(&user),
 	})
 }
 
@@ -1181,6 +1380,7 @@ func (handler *Handler) GetStatsOverview(c *fiber.Ctx) error {
 	}
 
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 	return c.JSON(stats)
 }
 
@@ -1704,6 +1904,65 @@ func (handler *Handler) calculateSymptomFrequencies(userID uint, logs []models.D
 	return result, nil
 }
 
+func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.DailyLog, stats services.CycleStats, now time.Time) services.CycleStats {
+	if user == nil || user.Role != models.RoleOwner {
+		return stats
+	}
+
+	cycleLength := 0
+	if isValidOnboardingCycleLength(user.CycleLength) {
+		cycleLength = user.CycleLength
+	}
+
+	periodLength := 0
+	if isValidOnboardingPeriodLength(user.PeriodLength) {
+		periodLength = user.PeriodLength
+	}
+
+	reliableCycleData := len(services.CycleLengths(logs)) >= 2
+	if !reliableCycleData {
+		if cycleLength > 0 {
+			stats.AverageCycleLength = float64(cycleLength)
+			stats.MedianCycleLength = cycleLength
+		}
+		if periodLength > 0 {
+			stats.AveragePeriodLength = float64(periodLength)
+		}
+		if user.LastPeriodStart != nil {
+			stats.LastPeriodStart = dateAtLocation(*user.LastPeriodStart, handler.location)
+		}
+	}
+
+	if !stats.LastPeriodStart.IsZero() && cycleLength > 0 && (!reliableCycleData || stats.NextPeriodStart.IsZero()) {
+		stats.NextPeriodStart = dateAtLocation(stats.LastPeriodStart.AddDate(0, 0, cycleLength), handler.location)
+		stats.OvulationDate = dateAtLocation(stats.NextPeriodStart.AddDate(0, 0, -handler.lutealPhaseDays), handler.location)
+		stats.FertilityWindowStart = dateAtLocation(stats.OvulationDate.AddDate(0, 0, -5), handler.location)
+		stats.FertilityWindowEnd = dateAtLocation(stats.OvulationDate.AddDate(0, 0, 1), handler.location)
+	}
+
+	today := dateAtLocation(now.In(handler.location), handler.location)
+	if !stats.LastPeriodStart.IsZero() && stats.CurrentCycleDay <= 0 && !today.Before(stats.LastPeriodStart) {
+		stats.CurrentCycleDay = int(today.Sub(stats.LastPeriodStart).Hours()/24) + 1
+	}
+
+	if strings.TrimSpace(stats.CurrentPhase) == "" || stats.CurrentPhase == "unknown" {
+		if !stats.OvulationDate.IsZero() {
+			switch {
+			case sameCalendarDay(today, stats.OvulationDate):
+				stats.CurrentPhase = "ovulation"
+			case betweenCalendarDaysInclusive(today, stats.FertilityWindowStart, stats.FertilityWindowEnd):
+				stats.CurrentPhase = "fertile"
+			case today.Before(stats.OvulationDate):
+				stats.CurrentPhase = "follicular"
+			default:
+				stats.CurrentPhase = "luteal"
+			}
+		}
+	}
+
+	return stats
+}
+
 func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 	credentials := credentialsInput{}
 	if err := c.BodyParser(&credentials); err != nil {
@@ -1721,6 +1980,14 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 	}
 
 	return credentials, nil
+}
+
+func isValidOnboardingCycleLength(value int) bool {
+	return value >= 21 && value <= 35
+}
+
+func isValidOnboardingPeriodLength(value int) bool {
+	return value >= 2 && value <= 7
 }
 
 func validatePasswordStrength(password string) error {
@@ -1929,6 +2196,17 @@ func parseMonthQuery(raw string, now time.Time, location *time.Location) (time.T
 	return time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, location), nil
 }
 
+func sameCalendarDay(a time.Time, b time.Time) bool {
+	return a.Format("2006-01-02") == b.Format("2006-01-02")
+}
+
+func betweenCalendarDaysInclusive(day time.Time, start time.Time, end time.Time) bool {
+	if start.IsZero() || end.IsZero() {
+		return false
+	}
+	return (day.Equal(start) || day.After(start)) && (day.Equal(end) || day.Before(end))
+}
+
 func sanitizeLogForPartner(entry models.DailyLog) models.DailyLog {
 	entry.Notes = ""
 	entry.SymptomIDs = []uint{}
@@ -1957,6 +2235,20 @@ func removeUint(values []uint, needle uint) []uint {
 		}
 	}
 	return filtered
+}
+
+func postLoginRedirectPath(user *models.User) string {
+	if requiresOnboarding(user) {
+		return "/onboarding"
+	}
+	return "/dashboard"
+}
+
+func requiresOnboarding(user *models.User) bool {
+	if user == nil {
+		return false
+	}
+	return user.Role == models.RoleOwner && !user.OnboardingCompleted
 }
 
 func redirectOrJSON(c *fiber.Ctx, path string) error {
