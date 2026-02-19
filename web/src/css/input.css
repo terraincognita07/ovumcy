@@ -477,9 +477,9 @@
     word-spacing: normal;
     line-height: 1.25;
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
     word-break: normal;
-    hyphens: auto;
+    hyphens: none;
   }
 
   .panel-danger-zone {

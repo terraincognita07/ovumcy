@@ -243,9 +243,10 @@
   "symptom.back_pain": "Боль в спине",
   "symptom.nausea": "Тошнота",
   "symptom.spotting": "Мажущие выделения",
-  "symptom.irritability": "Раздражительность",
+  "symptom.irritability": "Раздражение",
   "symptom.insomnia": "Бессонница",
   "symptom.food_cravings": "Тяга к еде",
   "symptom.diarrhea": "Диарея",
-  "symptom.constipation": "Запор"
+  "symptom.constipation": "Запор",
+  "symptom.swelling": "Отёчность"
 }

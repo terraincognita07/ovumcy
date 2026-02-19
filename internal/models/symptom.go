@@ -32,5 +32,6 @@ func DefaultBuiltinSymptoms() []BuiltinSymptom {
 		{Name: "Food cravings", Icon: "🍫", Color: "#A1887F"},
 		{Name: "Diarrhea", Icon: "🚽", Color: "#26A69A"},
 		{Name: "Constipation", Icon: "🪨", Color: "#8D6E63"},
+		{Name: "Swelling", Icon: "💧", Color: "#64B5F6"},
 	}
 }

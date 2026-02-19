@@ -17,7 +17,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -30,6 +29,10 @@ import (
 
 var hexColorRegex = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 var recoveryCodeRegex = regexp.MustCompile(`^LUME-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$`)
+var passwordLengthRegex = regexp.MustCompile(`^.{8,}$`)
+var passwordUpperRegex = regexp.MustCompile(`\p{Lu}`)
+var passwordLowerRegex = regexp.MustCompile(`\p{Ll}`)
+var passwordDigitRegex = regexp.MustCompile(`\d`)
 
 type Handler struct {
 	db              *gorm.DB
@@ -329,6 +332,11 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
+	var usersCount int64
+	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
+	}
+
 	errorKey := authErrorTranslationKey(c.Query("error"))
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.register")
@@ -336,8 +344,9 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		title = "Lume | Sign Up"
 	}
 	data := fiber.Map{
-		"Title":    title,
-		"ErrorKey": errorKey,
+		"Title":         title,
+		"ErrorKey":      errorKey,
+		"IsFirstLaunch": usersCount == 0,
 	}
 	return handler.render(c, "register", data)
 }
@@ -688,6 +697,10 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day")
 	}
+	hasDayData, err := handler.dayHasDataForDate(user.ID, day)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day state")
+	}
 
 	isOwner := user.Role == models.RoleOwner
 	symptoms := make([]models.SymptomType, 0)
@@ -709,7 +722,7 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 		"Log":               logEntry,
 		"Symptoms":          symptoms,
 		"SelectedSymptomID": symptomIDSet(logEntry.SymptomIDs),
-		"HasDayData":        dayHasData(logEntry),
+		"HasDayData":        hasDayData,
 		"IsOwner":           isOwner,
 	}
 	return handler.renderPartial(c, "day_editor_partial", payload)
@@ -792,6 +805,20 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 	if !ok {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
+
+	successStatus := strings.TrimSpace(c.Query("success"))
+	if successStatus == "" {
+		successStatus = strings.TrimSpace(c.Query("status"))
+	}
+	if strings.TrimSpace(c.Query("error")) != "" && successStatus != "" {
+		queryKey := "success"
+		if strings.TrimSpace(c.Query("success")) == "" {
+			queryKey = "status"
+		}
+		path := "/settings?" + queryKey + "=" + url.QueryEscape(successStatus)
+		return c.Redirect(path, fiber.StatusSeeOther)
+	}
+
 	data, err := handler.buildSettingsViewData(c, user)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
@@ -1256,12 +1283,12 @@ func (handler *Handler) CheckDayExists(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid date")
 	}
 
-	logEntry, err := handler.fetchLogByDate(user.ID, day)
+	exists, err := handler.dayHasDataForDate(user.ID, day)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch day")
 	}
 
-	return c.JSON(fiber.Map{"exists": dayHasData(logEntry)})
+	return c.JSON(fiber.Map{"exists": exists})
 }
 
 func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
@@ -1300,12 +1327,17 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid symptom ids")
 	}
 
+	dayStart, dayEnd := dayRange(day, handler.location)
+
 	var entry models.DailyLog
-	result := handler.db.Where("user_id = ? AND date = ?", user.ID, day).First(&entry)
+	result := handler.db.
+		Where("user_id = ? AND date >= ? AND date < ?", user.ID, dayStart, dayEnd).
+		Order("date DESC").
+		First(&entry)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		entry = models.DailyLog{
 			UserID:   user.ID,
-			Date:     day,
+			Date:     dayStart,
 			IsPeriod: payload.IsPeriod,
 			Flow:     payload.Flow,
 			Notes:    payload.Notes,
@@ -1879,20 +1911,31 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User) (
 	if status == "" {
 		status = strings.TrimSpace(c.Query("status"))
 	}
+	errorKey := ""
+	if status == "" {
+		errorKey = authErrorTranslationKey(c.Query("error"))
+	}
 
-	cycleLength := user.CycleLength
+	persisted := models.User{}
+	if err := handler.db.Select("cycle_length", "period_length").First(&persisted, user.ID).Error; err != nil {
+		return nil, err
+	}
+
+	cycleLength := persisted.CycleLength
 	if !isValidOnboardingCycleLength(cycleLength) {
 		cycleLength = 28
 	}
-	periodLength := user.PeriodLength
+	periodLength := persisted.PeriodLength
 	if !isValidOnboardingPeriodLength(periodLength) {
 		periodLength = 5
 	}
+	user.CycleLength = cycleLength
+	user.PeriodLength = periodLength
 
 	data := fiber.Map{
 		"Title":        localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
 		"CurrentUser":  user,
-		"ErrorKey":     authErrorTranslationKey(c.Query("error")),
+		"ErrorKey":     errorKey,
 		"SuccessKey":   settingsStatusTranslationKey(status),
 		"CycleLength":  cycleLength,
 		"PeriodLength": periodLength,
@@ -1958,8 +2001,10 @@ func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, 
 
 func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Time) ([]models.DailyLog, error) {
 	logs := make([]models.DailyLog, 0)
+	fromDate, _ := dayRange(from, handler.location)
+	_, toDateExclusive := dayRange(to, handler.location)
 	err := handler.db.
-		Where("user_id = ? AND date >= ? AND date <= ?", userID, dateAtLocation(from, handler.location), dateAtLocation(to, handler.location)).
+		Where("user_id = ? AND date >= ? AND date < ?", userID, fromDate, toDateExclusive).
 		Order("date ASC").
 		Find(&logs).Error
 	return logs, err
@@ -1973,14 +2018,19 @@ func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, err
 
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
-	result := handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).Limit(1).Find(&entry)
+	dayStart, dayEnd := dayRange(day, handler.location)
+	result := handler.db.
+		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
+		Order("date DESC").
+		Limit(1).
+		Find(&entry)
 	if result.Error != nil {
 		return models.DailyLog{}, result.Error
 	}
 	if result.RowsAffected == 0 {
 		return models.DailyLog{
 			UserID:     userID,
-			Date:       day,
+			Date:       dayStart,
 			Flow:       models.FlowNone,
 			SymptomIDs: []uint{},
 		}, nil
@@ -1989,7 +2039,25 @@ func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.Daily
 }
 
 func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {
-	return handler.db.Where("user_id = ? AND date = ?", userID, dateAtLocation(day, handler.location)).Delete(&models.DailyLog{}).Error
+	dayStart, dayEnd := dayRange(day, handler.location)
+	return handler.db.Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).Delete(&models.DailyLog{}).Error
+}
+
+func (handler *Handler) dayHasDataForDate(userID uint, day time.Time) (bool, error) {
+	dayStart, dayEnd := dayRange(day, handler.location)
+	entries := make([]models.DailyLog, 0)
+	if err := handler.db.
+		Select("is_period", "flow", "symptom_ids", "notes").
+		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
+		Find(&entries).Error; err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if dayHasData(entry) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (handler *Handler) refreshUserLastPeriodStart(userID uint) error {
@@ -2310,28 +2378,13 @@ func isValidOnboardingPeriodLength(value int) bool {
 }
 
 func validatePasswordStrength(password string) error {
-	if len(password) < 8 {
+	if !passwordLengthRegex.MatchString(password) {
 		return errors.New("password too short")
 	}
 
-	var hasUpper bool
-	var hasLower bool
-	var hasDigit bool
-	for _, character := range password {
-		if unicode.IsUpper(character) {
-			hasUpper = true
-			continue
-		}
-		if unicode.IsLower(character) {
-			hasLower = true
-			continue
-		}
-		if unicode.IsDigit(character) {
-			hasDigit = true
-		}
-	}
-
-	if hasUpper && hasLower && hasDigit {
+	if passwordUpperRegex.MatchString(password) &&
+		passwordLowerRegex.MatchString(password) &&
+		passwordDigitRegex.MatchString(password) {
 		return nil
 	}
 	return errors.New("weak password")
@@ -2574,6 +2627,11 @@ func dateAtLocation(value time.Time, location *time.Location) time.Time {
 	localized := value.In(location)
 	year, month, day := localized.Date()
 	return time.Date(year, month, day, 0, 0, 0, 0, location)
+}
+
+func dayRange(value time.Time, location *time.Location) (time.Time, time.Time) {
+	start := dateAtLocation(value, location)
+	return start, start.AddDate(0, 0, 1)
 }
 
 func symptomIDSet(ids []uint) map[uint]bool {

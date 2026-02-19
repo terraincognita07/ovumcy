@@ -54,6 +54,7 @@ var builtinSymptomKeys = map[string]string{
 	"mood swings":       "symptoms.mood_swings",
 	"nausea":            "symptom.nausea",
 	"spotting":          "symptom.spotting",
+	"swelling":          "symptom.swelling",
 }
 
 var monthNames = map[string][]string{
