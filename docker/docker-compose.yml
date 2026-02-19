@@ -10,6 +10,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:?set_SECRET_KEY_in_environment}
       - DEFAULT_LANGUAGE=ru
       - DB_PATH=/app/data/lume.db
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
     volumes:
       - ../data:/app/data
     ports:

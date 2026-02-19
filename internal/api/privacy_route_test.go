@@ -76,7 +76,7 @@ func newTestAppWithPrivacyRoute(t *testing.T) *fiber.App {
 		t.Fatalf("init i18n: %v", err)
 	}
 
-	handler, err := NewHandler(database, "test-secret-key", templatesDir, time.UTC, i18nManager)
+	handler, err := NewHandler(database, "test-secret-key", templatesDir, time.UTC, i18nManager, false)
 	if err != nil {
 		t.Fatalf("init handler: %v", err)
 	}

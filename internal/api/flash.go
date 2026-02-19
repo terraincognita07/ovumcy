@@ -10,10 +10,18 @@ import (
 )
 
 func SetFlashCookie(c *fiber.Ctx, payload FlashPayload) {
-	setFlashCookie(c, payload)
+	writeFlashCookie(c, payload, false)
 }
 
-func setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
+func SetFlashCookieWithSecure(c *fiber.Ctx, payload FlashPayload, secure bool) {
+	writeFlashCookie(c, payload, secure)
+}
+
+func (handler *Handler) setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
+	writeFlashCookie(c, payload, handler.cookieSecure)
+}
+
+func writeFlashCookie(c *fiber.Ctx, payload FlashPayload, secure bool) {
 	payload.AuthError = strings.TrimSpace(payload.AuthError)
 	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
 	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
@@ -23,7 +31,7 @@ func setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
 		payload.SettingsError == "" &&
 		payload.SettingsSuccess == "" &&
 		payload.LoginEmail == "" {
-		clearFlashCookie(c)
+		clearFlashCookie(c, secure)
 		return
 	}
 
@@ -38,18 +46,18 @@ func setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
 		Value:    encoded,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   false,
+		Secure:   secure,
 		SameSite: "Lax",
 		Expires:  time.Now().Add(5 * time.Minute),
 	})
 }
 
-func popFlashCookie(c *fiber.Ctx) FlashPayload {
+func (handler *Handler) popFlashCookie(c *fiber.Ctx) FlashPayload {
 	raw := strings.TrimSpace(c.Cookies(flashCookieName))
 	if raw == "" {
 		return FlashPayload{}
 	}
-	clearFlashCookie(c)
+	clearFlashCookie(c, handler.cookieSecure)
 
 	decoded, err := base64.RawURLEncoding.DecodeString(raw)
 	if err != nil {
@@ -67,13 +75,13 @@ func popFlashCookie(c *fiber.Ctx) FlashPayload {
 	return payload
 }
 
-func clearFlashCookie(c *fiber.Ctx) {
+func clearFlashCookie(c *fiber.Ctx, secure bool) {
 	c.Cookie(&fiber.Cookie{
 		Name:     flashCookieName,
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   false,
+		Secure:   secure,
 		SameSite: "Lax",
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})

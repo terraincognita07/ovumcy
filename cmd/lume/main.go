@@ -44,6 +44,7 @@ func main() {
 	dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
 	port := getEnv("PORT", "8080")
 	defaultLanguage := getEnv("DEFAULT_LANGUAGE", "ru")
+	cookieSecure := getEnvBool("COOKIE_SECURE", false)
 
 	loginLimitMax := getEnvInt("RATE_LIMIT_LOGIN_MAX", 8)
 	loginLimitWindow := getEnvDuration("RATE_LIMIT_LOGIN_WINDOW", 15*time.Minute)
@@ -66,7 +67,7 @@ func main() {
 		log.Fatalf("i18n init failed: %v", err)
 	}
 
-	handler, err := api.NewHandler(database, secretKey, filepath.Join("internal", "templates"), location, i18nManager)
+	handler, err := api.NewHandler(database, secretKey, filepath.Join("internal", "templates"), location, i18nManager, cookieSecure)
 	if err != nil {
 		log.Fatalf("handler init failed: %v", err)
 	}
@@ -93,7 +94,7 @@ func main() {
 			RedirectPath: "/login",
 			ErrorCode:    "too_many_login_attempts",
 			MessageKey:   "auth.error.too_many_login_attempts",
-		}),
+		}, cookieSecure),
 	}))
 	app.Use("/api/auth/forgot-password", limiter.New(limiter.Config{
 		Max:        forgotLimitMax,
@@ -102,7 +103,7 @@ func main() {
 			RedirectPath: "/forgot-password",
 			ErrorCode:    "too_many_forgot_password_attempts",
 			MessageKey:   "auth.error.too_many_forgot_password_attempts",
-		}),
+		}, cookieSecure),
 	}))
 	app.Use("/api", limiter.New(limiter.Config{
 		Max:          apiLimitMax,
@@ -115,7 +116,7 @@ func main() {
 		CookieName:     "lume_csrf",
 		CookieSameSite: "Lax",
 		CookieHTTPOnly: false,
-		CookieSecure:   false,
+		CookieSecure:   cookieSecure,
 		ContextKey:     "csrf",
 	}))
 
@@ -270,7 +271,7 @@ type authRateLimitConfig struct {
 	MessageKey   string
 }
 
-func newAuthRateLimitHandler(i18nManager *i18n.Manager, config authRateLimitConfig) fiber.Handler {
+func newAuthRateLimitHandler(i18nManager *i18n.Manager, config authRateLimitConfig, cookieSecure bool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		logRateLimitHit(c)
 
@@ -294,7 +295,7 @@ func newAuthRateLimitHandler(i18nManager *i18n.Manager, config authRateLimitConf
 			return c.Status(fiber.StatusTooManyRequests).JSON(payload)
 		}
 
-		return redirectWithErrorCode(c, config.RedirectPath, config.ErrorCode)
+		return redirectWithErrorCode(c, config.RedirectPath, config.ErrorCode, cookieSecure)
 	}
 }
 
@@ -385,10 +386,10 @@ func retryAfterSeconds(c *fiber.Ctx) int {
 	return seconds
 }
 
-func redirectWithErrorCode(c *fiber.Ctx, path string, errorCode string) error {
+func redirectWithErrorCode(c *fiber.Ctx, path string, errorCode string, cookieSecure bool) error {
 	if strings.TrimSpace(path) == "" {
 		path = "/login"
 	}
-	api.SetFlashCookie(c, api.FlashPayload{AuthError: errorCode})
+	api.SetFlashCookieWithSecure(c, api.FlashPayload{AuthError: errorCode}, cookieSecure)
 	return c.Redirect(path, fiber.StatusSeeOther)
 }

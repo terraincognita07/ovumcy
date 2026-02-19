@@ -32,6 +32,7 @@ type Handler struct {
 	db              *gorm.DB
 	secretKey       []byte
 	location        *time.Location
+	cookieSecure    bool
 	lutealPhaseDays int
 	i18n            *i18n.Manager
 	templates       map[string]*template.Template
@@ -127,7 +128,7 @@ type passwordResetClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewHandler(database *gorm.DB, secret string, templateDir string, location *time.Location, i18nManager *i18n.Manager) (*Handler, error) {
+func NewHandler(database *gorm.DB, secret string, templateDir string, location *time.Location, i18nManager *i18n.Manager, cookieSecure bool) (*Handler, error) {
 	if location == nil {
 		location = time.Local
 	}
@@ -236,6 +237,7 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		db:              database,
 		secretKey:       []byte(secret),
 		location:        location,
+		cookieSecure:    cookieSecure,
 		lutealPhaseDays: 14,
 		i18n:            i18nManager,
 		templates:       templates,
@@ -292,7 +294,7 @@ func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User, rememberM
 		Value:    token,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   false,
+		Secure:   handler.cookieSecure,
 		SameSite: "Lax",
 	}
 	if rememberMe {
@@ -308,7 +310,7 @@ func (handler *Handler) clearAuthCookie(c *fiber.Ctx) {
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   false,
+		Secure:   handler.cookieSecure,
 		SameSite: "Lax",
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})

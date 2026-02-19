@@ -35,7 +35,7 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
-	flash := popFlashCookie(c)
+	flash := handler.popFlashCookie(c)
 	errorSource := strings.TrimSpace(flash.AuthError)
 	if errorSource == "" {
 		errorSource = strings.TrimSpace(c.Query("error"))
@@ -70,7 +70,7 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
 	}
 
-	flash := popFlashCookie(c)
+	flash := handler.popFlashCookie(c)
 	errorSource := strings.TrimSpace(flash.AuthError)
 	if errorSource == "" {
 		errorSource = strings.TrimSpace(c.Query("error"))
@@ -90,7 +90,7 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
-	flash := popFlashCookie(c)
+	flash := handler.popFlashCookie(c)
 	errorSource := strings.TrimSpace(flash.AuthError)
 	if errorSource == "" {
 		errorSource = strings.TrimSpace(c.Query("error"))
@@ -110,7 +110,7 @@ func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 
 func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 	token := strings.TrimSpace(c.Query("token"))
-	flash := popFlashCookie(c)
+	flash := handler.popFlashCookie(c)
 	errorSource := strings.TrimSpace(flash.AuthError)
 	if errorSource == "" {
 		errorSource = strings.TrimSpace(c.Query("error"))
@@ -382,7 +382,7 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
 
-	flash := popFlashCookie(c)
+	flash := handler.popFlashCookie(c)
 
 	data, err := handler.buildSettingsViewData(c, user, flash)
 	if err != nil {

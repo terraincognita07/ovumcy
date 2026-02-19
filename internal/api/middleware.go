@@ -119,7 +119,7 @@ func (handler *Handler) setLanguageCookie(c *fiber.Ctx, language string) {
 		Value:    handler.i18n.NormalizeLanguage(language),
 		Path:     "/",
 		HTTPOnly: false,
-		Secure:   false,
+		Secure:   handler.cookieSecure,
 		SameSite: "Lax",
 		Expires:  time.Now().AddDate(1, 0, 0),
 	})

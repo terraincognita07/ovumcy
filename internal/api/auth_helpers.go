@@ -32,27 +32,27 @@ func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message strin
 		flash := FlashPayload{AuthError: message}
 		switch c.Path() {
 		case "/api/auth/register":
-			setFlashCookie(c, flash)
+			handler.setFlashCookie(c, flash)
 			return c.Redirect("/register", fiber.StatusSeeOther)
 		case "/api/auth/login":
 			flash.LoginEmail = normalizeLoginEmail(c.FormValue("email"))
-			setFlashCookie(c, flash)
+			handler.setFlashCookie(c, flash)
 			return c.Redirect("/login", fiber.StatusSeeOther)
 		case "/api/auth/forgot-password":
-			setFlashCookie(c, flash)
+			handler.setFlashCookie(c, flash)
 			return c.Redirect("/forgot-password", fiber.StatusSeeOther)
 		case "/api/auth/reset-password":
 			token := strings.TrimSpace(c.FormValue("token"))
 			if token == "" {
 				token = strings.TrimSpace(c.Query("token"))
 			}
-			setFlashCookie(c, flash)
+			handler.setFlashCookie(c, flash)
 			if token == "" {
 				return c.Redirect("/reset-password", fiber.StatusSeeOther)
 			}
 			return c.Redirect("/reset-password?token="+url.QueryEscape(token), fiber.StatusSeeOther)
 		default:
-			setFlashCookie(c, flash)
+			handler.setFlashCookie(c, flash)
 			return c.Redirect("/login", fiber.StatusSeeOther)
 		}
 	}
@@ -70,7 +70,7 @@ func (handler *Handler) respondSettingsError(c *fiber.Ctx, status int, message s
 		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("<div class=\"status-error\">%s</div>", template.HTMLEscapeString(rendered)))
 	}
 	if (strings.HasPrefix(c.Path(), "/api/settings/") || strings.HasPrefix(c.Path(), "/settings/")) && !acceptsJSON(c) {
-		setFlashCookie(c, FlashPayload{SettingsError: message})
+		handler.setFlashCookie(c, FlashPayload{SettingsError: message})
 		return c.Redirect("/settings", fiber.StatusSeeOther)
 	}
 	return apiError(c, status, message)

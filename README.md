@@ -80,6 +80,7 @@ DEFAULT_LANGUAGE=ru
 SECRET_KEY=replace_with_at_least_32_random_characters
 DB_PATH=data/lume.db
 PORT=8080
+COOKIE_SECURE=false
 
 # Rate limits (self-host safe defaults)
 RATE_LIMIT_LOGIN_MAX=8
@@ -94,6 +95,8 @@ TRUST_PROXY_ENABLED=false
 PROXY_HEADER=X-Forwarded-For
 TRUSTED_PROXIES=127.0.0.1,::1
 ```
+
+Set `COOKIE_SECURE=true` when Lume is served over HTTPS.
 
 ---
 

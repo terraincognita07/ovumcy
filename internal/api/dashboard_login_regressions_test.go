@@ -597,7 +597,7 @@ func TestFetchLogByDateFindsZuluStoredRowForLocalCalendarDay(t *testing.T) {
 	}
 
 	moscow := time.FixedZone("UTC+3", 3*60*60)
-	handler, err := NewHandler(database, "test-secret-key", templatesDir, moscow, i18nManager)
+	handler, err := NewHandler(database, "test-secret-key", templatesDir, moscow, i18nManager, false)
 	if err != nil {
 		t.Fatalf("init handler: %v", err)
 	}
