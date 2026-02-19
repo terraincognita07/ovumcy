@@ -398,6 +398,7 @@ func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
 	if metaDescription == "meta.description.privacy" {
 		metaDescription = "Lume Privacy Policy - Zero data collection, self-hosted period tracker."
 	}
+	backFallback := "/login"
 
 	data := fiber.Map{
 		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Lume | Privacy Policy"),
@@ -406,7 +407,9 @@ func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
 
 	if user, err := handler.authenticateRequest(c); err == nil {
 		data["CurrentUser"] = user
+		backFallback = "/dashboard"
 	}
+	data["BackPath"] = sanitizeRedirectPath(c.Query("back"), backFallback)
 
 	return handler.render(c, "privacy", data)
 }

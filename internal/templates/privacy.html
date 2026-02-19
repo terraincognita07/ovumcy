@@ -7,7 +7,6 @@
       <span>{{t .Messages "privacy.title"}}</span>
     </p>
     <h1 class="journal-title">{{t .Messages "privacy.title"}}</h1>
-    <p class="journal-muted mt-2">{{t .Messages "privacy.subtitle"}}</p>
   </div>
 
   <section class="journal-card p-5 sm:p-6 space-y-3">
@@ -32,5 +31,9 @@
       <a href="https://github.com/terraincognita07/lume" target="_blank" rel="noopener noreferrer" class="inline-link">{{t .Messages "privacy.open_source.link"}}</a>
     </p>
   </section>
+
+  <p class="pt-1">
+    <a href="{{.BackPath}}" class="inline-link">{{t .Messages "common.back"}}</a>
+  </p>
 </section>
 {{end}}
