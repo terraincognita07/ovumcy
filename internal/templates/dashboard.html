@@ -22,7 +22,23 @@
     </article>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[1.55fr_1fr]" x-data="{ isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}} }">
+  <div
+    class="grid gap-6 lg:grid-cols-[1.55fr_1fr]"
+    x-data="{
+      isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}},
+      activeSymptoms: [],
+      notesPreview: '',
+      syncSymptoms() {
+        this.activeSymptoms = Array.from(this.$root.querySelectorAll(`input[name='symptom_ids']:checked`))
+          .map((input) => (input.dataset.symptomLabel || '').trim())
+          .filter((label) => label.length > 0);
+      },
+      init() {
+        const notesField = this.$root.querySelector('#today-notes');
+        this.notesPreview = notesField ? notesField.value : '';
+        this.syncSymptoms();
+      }
+    }">
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-5 flex items-center justify-between gap-3">
         <div>
@@ -67,7 +83,14 @@
           <div class="symptom-grid">
             {{range .Symptoms}}
             <label class="choice-option">
-              <input type="checkbox" name="symptom_ids" value="{{.ID}}" class="choice-input" {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
+              <input
+                type="checkbox"
+                name="symptom_ids"
+                value="{{.ID}}"
+                class="choice-input"
+                data-symptom-label="{{symptomLabel $.Messages .Name}}"
+                @change="syncSymptoms"
+                {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
               <span class="check-chip">
                 <span class="symptom-icon">{{.Icon}}</span>
                 <span class="symptom-label">{{symptomLabel $.Messages .Name}}</span>
@@ -78,7 +101,7 @@
         </fieldset>
 
         <label class="field-label" for="today-notes">{{t .Messages "dashboard.notes"}}</label>
-        <textarea id="today-notes" name="notes" rows="4" maxlength="2000" class="textarea-field">{{.TodayLog.Notes}}</textarea>
+        <textarea id="today-notes" name="notes" rows="4" maxlength="2000" class="textarea-field" x-model="notesPreview">{{.TodayLog.Notes}}</textarea>
 
         <div class="flex flex-wrap items-center gap-3">
           <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "dashboard.save_today"}}</button>
@@ -117,6 +140,24 @@
         <div class="stat-row"><dt>{{t .Messages "dashboard.last_period_start"}}</dt><dd>{{if .Stats.LastPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.LastPeriodStart "02.01"}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.fertile_window"}}</dt><dd>{{if .Stats.FertilityWindowStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.FertilityWindowStart "02.01"}} - {{formatDate .Stats.FertilityWindowEnd "02.01"}}{{end}}</dd></div>
       </dl>
+
+      <div class="mt-4 space-y-4 text-sm" x-cloak x-show="!isPeriod">
+        <div>
+          <p class="journal-muted">{{t .Messages "dashboard.symptoms"}}</p>
+          <ul class="mt-2 space-y-1" x-show="activeSymptoms.length > 0">
+            <template x-for="(symptom, index) in activeSymptoms" :key="index">
+              <li x-text="symptom"></li>
+            </template>
+          </ul>
+          <p class="mt-2" x-show="activeSymptoms.length === 0">{{.NoDataLabel}}</p>
+        </div>
+
+        <div>
+          <p class="journal-muted">{{t .Messages "dashboard.notes"}}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words" x-show="notesPreview.trim().length > 0" x-text="notesPreview"></p>
+          <p class="mt-2" x-show="notesPreview.trim().length === 0">{{.NoDataLabel}}</p>
+        </div>
+      </div>
     </section>
   </div>
 </section>

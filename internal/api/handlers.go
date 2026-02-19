@@ -315,6 +315,12 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 	}
 
 	errorKey := authErrorTranslationKey(c.Query("error"))
+	email := strings.ToLower(strings.TrimSpace(c.Query("email")))
+	if email != "" {
+		if _, err := mail.ParseAddress(email); err != nil {
+			email = ""
+		}
+	}
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.login")
 	if title == "meta.title.login" {
@@ -323,6 +329,7 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 	data := fiber.Map{
 		"Title":    title,
 		"ErrorKey": errorKey,
+		"Email":    email,
 	}
 	return handler.render(c, "login", data)
 }
@@ -2696,6 +2703,17 @@ func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message strin
 		switch c.Path() {
 		case "/api/auth/register":
 			return c.Redirect("/register?"+errorParam, fiber.StatusSeeOther)
+		case "/api/auth/login":
+			email := strings.ToLower(strings.TrimSpace(c.FormValue("email")))
+			if email != "" {
+				if _, err := mail.ParseAddress(email); err != nil {
+					email = ""
+				}
+			}
+			if email != "" {
+				return c.Redirect("/login?"+errorParam+"&email="+url.QueryEscape(email), fiber.StatusSeeOther)
+			}
+			return c.Redirect("/login?"+errorParam, fiber.StatusSeeOther)
 		case "/api/auth/forgot-password":
 			return c.Redirect("/forgot-password?"+errorParam, fiber.StatusSeeOther)
 		case "/api/auth/reset-password":

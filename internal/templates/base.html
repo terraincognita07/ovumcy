@@ -95,6 +95,54 @@
 
   <script>
     (function () {
+      function normalizeLanguage(raw) {
+        if (!raw) return "";
+        var normalized = String(raw).trim().toLowerCase().replace(/_/g, "-");
+        if (!normalized) return "";
+        if (normalized.indexOf("-") !== -1) {
+          normalized = normalized.split("-")[0];
+        }
+        if (normalized !== "en" && normalized !== "ru") {
+          return "";
+        }
+        return normalized;
+      }
+
+      function readCookie(name) {
+        var cookies = document.cookie ? document.cookie.split(";") : [];
+        for (var i = 0; i < cookies.length; i++) {
+          var part = cookies[i].trim();
+          if (part.indexOf(name + "=") !== 0) continue;
+          return decodeURIComponent(part.substring(name.length + 1));
+        }
+        return "";
+      }
+
+      function languageFromHref(href) {
+        if (!href) return "";
+        var match = href.match(/\/lang\/([^/?#]+)/i);
+        if (!match || !match[1]) return "";
+        return match[1];
+      }
+
+      function applyHTMLLanguage(raw) {
+        var lang = normalizeLanguage(raw);
+        if (!lang) return;
+        document.documentElement.setAttribute("lang", lang);
+      }
+
+      applyHTMLLanguage(readCookie("lume_lang") || document.documentElement.getAttribute("lang"));
+
+      document.addEventListener("click", function (event) {
+        var target = event.target;
+        if (!target || !target.closest) return;
+        var link = target.closest("a.lang-link");
+        if (!link) return;
+        applyHTMLLanguage(languageFromHref(link.getAttribute("href")));
+      });
+    })();
+
+    (function () {
       var modal = document.getElementById("confirm-modal");
       var messageNode = document.getElementById("confirm-modal-message");
       var cancelButton = document.getElementById("confirm-modal-cancel");

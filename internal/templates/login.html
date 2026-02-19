@@ -12,17 +12,60 @@
     <div class="status-error mt-5">{{t .Messages .ErrorKey}}</div>
     {{end}}
 
-    <form action="/api/auth/login" method="post" class="mt-5 space-y-4">
+    <form
+      id="login-form"
+      action="/api/auth/login"
+      method="post"
+      class="mt-5 space-y-4"
+      data-required-message="{{t .Messages "validation.required"}}"
+      data-email-message="{{t .Messages "validation.email"}}">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <label class="field-label" for="login-email">{{t .Messages "auth.email"}}</label>
-      <input id="login-email" type="email" name="email" required autocomplete="email" class="input-field" />
+      <input id="login-email" type="email" name="email" value="{{.Email}}" required autocomplete="email" class="input-field" />
 
       <label class="field-label" for="login-password">{{t .Messages "auth.password"}}</label>
       <input id="login-password" type="password" name="password" required autocomplete="current-password" class="input-field" />
 
       <button type="submit" class="btn-primary w-full">{{t .Messages "auth.login"}}</button>
     </form>
+
+    <script>
+      (function () {
+        var form = document.getElementById("login-form");
+        if (!form) return;
+
+        var requiredMessage = form.getAttribute("data-required-message") || "Please fill out this field.";
+        var emailMessage = form.getAttribute("data-email-message") || "Please enter a valid email address.";
+
+        function updateValidityMessage(input) {
+          if (!input || typeof input.setCustomValidity !== "function") return;
+          input.setCustomValidity("");
+          if (!input.validity) return;
+
+          if (input.validity.valueMissing) {
+            input.setCustomValidity(requiredMessage);
+            return;
+          }
+          if (input.type === "email" && input.validity.typeMismatch) {
+            input.setCustomValidity(emailMessage);
+          }
+        }
+
+        var fields = form.querySelectorAll("input[required]");
+        for (var index = 0; index < fields.length; index++) {
+          fields[index].addEventListener("invalid", function () {
+            updateValidityMessage(this);
+          });
+          fields[index].addEventListener("input", function () {
+            this.setCustomValidity("");
+          });
+          fields[index].addEventListener("blur", function () {
+            updateValidityMessage(this);
+          });
+        }
+      })();
+    </script>
 
     <div class="mt-5 space-y-2 text-sm">
       <p class="journal-muted">

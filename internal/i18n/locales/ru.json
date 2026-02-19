@@ -31,6 +31,8 @@
   "auth.register_subtitle": "Первый вход: создайте основной аккаунт для запуска Lume.",
   "auth.email": "Email",
   "auth.password": "Пароль",
+  "validation.required": "Заполните это поле.",
+  "validation.email": "Введите корректный email адрес.",
   "auth.new_password": "Новый пароль",
   "auth.confirm_password": "Подтвердите пароль",
   "auth.password_requirements": "Минимум 8 символов: заглавная, строчная буква и цифра.",

@@ -31,6 +31,8 @@
   "auth.register_subtitle": "First launch detected. Create the main account to begin.",
   "auth.email": "Email",
   "auth.password": "Password",
+  "validation.required": "Please fill out this field.",
+  "validation.email": "Please enter a valid email address.",
   "auth.new_password": "New password",
   "auth.confirm_password": "Confirm password",
   "auth.password_requirements": "Minimum 8 characters with uppercase, lowercase, and a number.",
