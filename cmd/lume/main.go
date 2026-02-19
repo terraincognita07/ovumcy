@@ -111,14 +111,7 @@ func main() {
 		LimitReached: newAPIRateLimitHandler(i18nManager),
 	}))
 	app.Use(handler.LanguageMiddleware)
-	app.Use(csrf.New(csrf.Config{
-		KeyLookup:      "form:csrf_token",
-		CookieName:     "lume_csrf",
-		CookieSameSite: "Lax",
-		CookieHTTPOnly: false,
-		CookieSecure:   cookieSecure,
-		ContextKey:     "csrf",
-	}))
+	app.Use(csrf.New(csrfMiddlewareConfig(cookieSecure)))
 
 	app.Static("/static", filepath.Join("web", "static"))
 	api.RegisterRoutes(app, handler)
@@ -263,6 +256,17 @@ func parseCSV(value string) []string {
 		}
 	}
 	return result
+}
+
+func csrfMiddlewareConfig(cookieSecure bool) csrf.Config {
+	return csrf.Config{
+		KeyLookup:      "form:csrf_token",
+		CookieName:     "lume_csrf",
+		CookieSameSite: "Lax",
+		CookieHTTPOnly: false,
+		CookieSecure:   cookieSecure,
+		ContextKey:     "csrf",
+	}
 }
 
 type authRateLimitConfig struct {

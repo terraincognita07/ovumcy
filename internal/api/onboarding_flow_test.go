@@ -217,6 +217,11 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 
 func newOnboardingTestApp(t *testing.T) (*fiber.App, *gorm.DB) {
 	t.Helper()
+	return newOnboardingTestAppWithCookieSecure(t, false)
+}
+
+func newOnboardingTestAppWithCookieSecure(t *testing.T, cookieSecure bool) (*fiber.App, *gorm.DB) {
+	t.Helper()
 
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -246,7 +251,7 @@ func newOnboardingTestApp(t *testing.T) (*fiber.App, *gorm.DB) {
 		t.Fatalf("init i18n: %v", err)
 	}
 
-	handler, err := NewHandler(database, "test-secret-key", templatesDir, time.UTC, i18nManager, false)
+	handler, err := NewHandler(database, "test-secret-key", templatesDir, time.UTC, i18nManager, cookieSecure)
 	if err != nil {
 		t.Fatalf("init handler: %v", err)
 	}
