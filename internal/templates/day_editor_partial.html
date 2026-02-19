@@ -10,15 +10,21 @@
   {{end}}
 
   {{if .IsOwner}}
-  <form hx-post="/api/days/{{.DateString}}" hx-target="#calendar-save-status" hx-swap="innerHTML" class="space-y-4" data-save-feedback>
+  <form
+    hx-post="/api/days/{{.DateString}}"
+    hx-target="#calendar-save-status"
+    hx-swap="innerHTML"
+    class="space-y-4"
+    data-save-feedback
+    x-data="{ isPeriod: {{if .Log.IsPeriod}}true{{else}}false{{end}} }">
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
     <label class="period-toggle">
-      <input type="checkbox" name="is_period" value="true" {{if .Log.IsPeriod}}checked{{end}}>
+      <input type="checkbox" name="is_period" value="true" x-model="isPeriod" {{if .Log.IsPeriod}}checked{{end}}>
       <span>🩸 {{t .Messages "dashboard.period_day"}}</span>
     </label>
 
-    <fieldset class="space-y-2">
+    <fieldset class="space-y-2" x-cloak x-show="isPeriod" :disabled="!isPeriod">
       <legend class="field-label">{{t .Messages "dashboard.flow"}}</legend>
       <div class="grid grid-cols-2 gap-2">
         <label class="choice-option">

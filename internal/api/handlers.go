@@ -1334,12 +1334,13 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid symptom ids")
 	}
 
-	dayStart, dayEnd := dayRange(day, handler.location)
+	dayStart, _ := dayRange(day, handler.location)
+	dayKey := dayStart.Format("2006-01-02")
 
 	var entry models.DailyLog
 	result := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", user.ID, dayStart, dayEnd).
-		Order("date DESC").
+		Where("user_id = ? AND substr(date, 1, 10) = ?", user.ID, dayKey).
+		Order("date DESC, id DESC").
 		First(&entry)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		entry = models.DailyLog{
@@ -2008,11 +2009,11 @@ func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, 
 
 func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Time) ([]models.DailyLog, error) {
 	logs := make([]models.DailyLog, 0)
-	fromDate, _ := dayRange(from, handler.location)
-	_, toDateExclusive := dayRange(to, handler.location)
+	fromKey := dateAtLocation(from, handler.location).Format("2006-01-02")
+	toKey := dateAtLocation(to, handler.location).Format("2006-01-02")
 	err := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, fromDate, toDateExclusive).
-		Order("date ASC").
+		Where("user_id = ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?", userID, fromKey, toKey).
+		Order("substr(date, 1, 10) ASC, id ASC").
 		Find(&logs).Error
 	return logs, err
 }
@@ -2025,10 +2026,11 @@ func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, err
 
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
-	dayStart, dayEnd := dayRange(day, handler.location)
+	dayStart, _ := dayRange(day, handler.location)
+	dayKey := dayStart.Format("2006-01-02")
 	result := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
-		Order("date DESC").
+		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
+		Order("date DESC, id DESC").
 		Limit(1).
 		Find(&entry)
 	if result.Error != nil {
@@ -2046,16 +2048,16 @@ func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.Daily
 }
 
 func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {
-	dayStart, dayEnd := dayRange(day, handler.location)
-	return handler.db.Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).Delete(&models.DailyLog{}).Error
+	dayKey := dateAtLocation(day, handler.location).Format("2006-01-02")
+	return handler.db.Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).Delete(&models.DailyLog{}).Error
 }
 
 func (handler *Handler) dayHasDataForDate(userID uint, day time.Time) (bool, error) {
-	dayStart, dayEnd := dayRange(day, handler.location)
+	dayKey := dateAtLocation(day, handler.location).Format("2006-01-02")
 	entries := make([]models.DailyLog, 0)
 	if err := handler.db.
 		Select("is_period", "flow", "symptom_ids", "notes").
-		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
+		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
 		Find(&entries).Error; err != nil {
 		return false, err
 	}
@@ -2135,12 +2137,15 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 	gridStart := monthStart.AddDate(0, 0, -int(monthStart.Weekday()))
 	gridEnd := monthEnd.AddDate(0, 0, 6-int(monthEnd.Weekday()))
 
-	periodMap := make(map[string]bool)
+	latestLogByDate := make(map[string]models.DailyLog)
 	hasDataMap := make(map[string]bool)
 	for _, logEntry := range logs {
 		key := dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02")
-		periodMap[key] = logEntry.IsPeriod
-		hasDataMap[key] = dayHasData(logEntry)
+		existing, exists := latestLogByDate[key]
+		if !exists || logEntry.Date.After(existing.Date) || (logEntry.Date.Equal(existing.Date) && logEntry.ID > existing.ID) {
+			latestLogByDate[key] = logEntry
+		}
+		hasDataMap[key] = hasDataMap[key] || dayHasData(logEntry)
 	}
 
 	predictedPeriodMap := make(map[string]bool)
@@ -2169,7 +2174,8 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 	for day := gridStart; !day.After(gridEnd); day = day.AddDate(0, 0, 1) {
 		key := day.Format("2006-01-02")
 		inMonth := day.Month() == monthStart.Month()
-		isPeriod := periodMap[key]
+		entry, hasEntry := latestLogByDate[key]
+		isPeriod := hasEntry && entry.IsPeriod
 		isPredicted := predictedPeriodMap[key]
 		isFertility := fertilityMap[key]
 		isToday := key == todayKey
@@ -2849,9 +2855,7 @@ func normalizeRecoveryCode(raw string) string {
 	normalized := strings.ToUpper(strings.TrimSpace(raw))
 	normalized = strings.ReplaceAll(normalized, " ", "")
 	normalized = strings.ReplaceAll(normalized, "-", "")
-	if strings.HasPrefix(normalized, "LUME") {
-		normalized = strings.TrimPrefix(normalized, "LUME")
-	}
+	normalized = strings.TrimPrefix(normalized, "LUME")
 	if len(normalized) != 12 {
 		return strings.ToUpper(strings.TrimSpace(raw))
 	}
