@@ -28,13 +28,18 @@ go.work.sum
 .env
 data/
 node_modules/
+*.db
+*.sqlite
+*.sqlite3
 
 # Editor/IDE
 # .idea/
 # .vscode/
 
-# Local task notes
+# Local task notes and scratch files
 AGENTS.md
 PROJECT_CONTEXT.md
-TASK-delete-and-highlight.md
 BUGFIXES.md
+TASK-*.md
+.tmp_*/
+.local/
