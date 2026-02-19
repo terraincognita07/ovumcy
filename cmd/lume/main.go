@@ -23,7 +23,6 @@ import (
 	"github.com/terraincognita07/lume/internal/cli"
 	"github.com/terraincognita07/lume/internal/db"
 	"github.com/terraincognita07/lume/internal/i18n"
-	"github.com/terraincognita07/lume/internal/services"
 )
 
 func main() {
@@ -38,7 +37,10 @@ func main() {
 	location := mustLoadLocation(getEnv("TZ", "Local"))
 	time.Local = location
 
-	secretKey := getEnv("SECRET_KEY", "change_me_in_production")
+	secretKey, err := resolveSecretKey()
+	if err != nil {
+		log.Fatalf("invalid SECRET_KEY: %v", err)
+	}
 	dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
 	port := getEnv("PORT", "8080")
 	defaultLanguage := getEnv("DEFAULT_LANGUAGE", "ru")
@@ -120,17 +122,11 @@ func main() {
 	app.Static("/static", filepath.Join("web", "static"))
 	api.RegisterRoutes(app, handler)
 
-	notifier := services.NewNotificationService(database, location)
-	lifecycleCtx, cancelLifecycle := context.WithCancel(context.Background())
-	defer cancelLifecycle()
-	notifier.Start(lifecycleCtx)
-
 	sigCtx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopSignals()
 
 	go func() {
 		<-sigCtx.Done()
-		cancelLifecycle()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := app.ShutdownWithContext(shutdownCtx); err != nil {
@@ -193,6 +189,22 @@ func getEnv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func resolveSecretKey() (string, error) {
+	const insecureDefault = "change_me_in_production"
+
+	secret := strings.TrimSpace(os.Getenv("SECRET_KEY"))
+	if secret == "" {
+		return "", fmt.Errorf("SECRET_KEY is required")
+	}
+	if secret == insecureDefault {
+		return "", fmt.Errorf("SECRET_KEY cannot be %q", insecureDefault)
+	}
+	if len(secret) < 32 {
+		return "", fmt.Errorf("SECRET_KEY must be at least 32 characters")
+	}
+	return secret, nil
 }
 
 func getEnvInt(key string, fallback int) int {

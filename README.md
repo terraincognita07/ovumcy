@@ -33,7 +33,6 @@ Commercial period trackers like Flo and Clue have been caught:
 ✅ **Calendar view** - Visual monthly overview
 ✅ **Statistics** - Cycle length, regularity, symptom patterns
 ✅ **Partner view** (optional) - Share calendar without private details
-✅ **Telegram alerts** (optional) - Period reminders
 ✅ **Export data (CSV/JSON)** - Your data, your backup
 
 ---
@@ -42,11 +41,11 @@ Commercial period trackers like Flo and Clue have been caught:
 
 ### Docker (recommended)
 
-\\\ash
+```bash
 git clone https://github.com/terraincognita07/lume.git
 cd lume
-docker-compose up -d
-\\\
+docker compose -f docker/docker-compose.yml up -d
+```
 
 Open http://localhost:8080
 
@@ -54,7 +53,7 @@ Open http://localhost:8080
 
 Requirements: Go 1.26+, Node.js 18+
 
-\\\ash
+```bash
 # Clone
 git clone https://github.com/terraincognita07/lume.git
 cd lume
@@ -66,7 +65,7 @@ npm run build:css
 # Run backend
 go mod tidy
 go run cmd/lume/main.go
-\\\
+```
 
 ---
 
@@ -78,13 +77,9 @@ Edit `docker-compose.yml` or set environment variables:
 # Core
 TZ=UTC
 DEFAULT_LANGUAGE=ru
-SECRET_KEY=change_me_in_production
+SECRET_KEY=replace_with_at_least_32_random_characters
 DB_PATH=data/lume.db
 PORT=8080
-
-# Optional notifications
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_CHAT_ID=
 
 # Rate limits (self-host safe defaults)
 RATE_LIMIT_LOGIN_MAX=8
@@ -148,7 +143,7 @@ Contributions welcome! Please:
 
 - 🐛 **Issues:** [GitHub Issues](https://github.com/terraincognita07/lume/issues)
 - 💬 **Discussions:** [GitHub Discussions](https://github.com/terraincognita07/lume/discussions)
-- 📧 **Email:** lume@yourdomain.com *(update this)*
+- 📧 **Email:** open an issue or discussion
 
 ---
 
@@ -156,8 +151,8 @@ Contributions welcome! Please:
 
 Lume is designed for privacy:
 - ❌ No analytics or tracking
-- ❌ No external API calls (except optional Telegram)
-- ❌ No cookies (except authentication session)
+- ❌ No external API calls
+- ✅ Only first-party cookies (auth, CSRF, language)
 - ✅ All data stored locally in SQLite
 - ✅ You control backups and exports
 
