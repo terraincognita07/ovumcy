@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -71,8 +72,10 @@ type SymptomCount struct {
 }
 
 type credentialsInput struct {
-	Email    string `json:"email" form:"email"`
-	Password string `json:"password" form:"password"`
+	Email           string `json:"email" form:"email"`
+	Password        string `json:"password" form:"password"`
+	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
+	RememberMe      bool   `json:"remember_me" form:"remember_me"`
 }
 
 type dayPayload struct {
@@ -101,7 +104,20 @@ type resetPasswordInput struct {
 type changePasswordInput struct {
 	CurrentPassword string `json:"current_password" form:"current_password"`
 	NewPassword     string `json:"new_password" form:"new_password"`
+	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
 }
+
+type FlashPayload struct {
+	AuthError       string `json:"auth_error,omitempty"`
+	SettingsError   string `json:"settings_error,omitempty"`
+	SettingsSuccess string `json:"settings_success,omitempty"`
+	LoginEmail      string `json:"login_email,omitempty"`
+}
+
+const (
+	defaultAuthTokenTTL  = 7 * 24 * time.Hour
+	rememberAuthTokenTTL = 30 * 24 * time.Hour
+)
 
 type cycleSettingsInput struct {
 	CycleLength  int `json:"cycle_length" form:"cycle_length"`
@@ -314,13 +330,18 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
-	errorKey := authErrorTranslationKey(c.Query("error"))
-	email := strings.ToLower(strings.TrimSpace(c.Query("email")))
-	if email != "" {
-		if _, err := mail.ParseAddress(email); err != nil {
-			email = ""
-		}
+	flash := popFlashCookie(c)
+	errorSource := strings.TrimSpace(flash.AuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
 	}
+	errorKey := authErrorTranslationKey(errorSource)
+
+	email := normalizeLoginEmail(flash.LoginEmail)
+	if email == "" {
+		email = normalizeLoginEmail(c.Query("email"))
+	}
+
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.login")
 	if title == "meta.title.login" {
@@ -344,7 +365,12 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
 	}
 
-	errorKey := authErrorTranslationKey(c.Query("error"))
+	flash := popFlashCookie(c)
+	errorSource := strings.TrimSpace(flash.AuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
+	}
+	errorKey := authErrorTranslationKey(errorSource)
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.register")
 	if title == "meta.title.register" {
@@ -359,7 +385,12 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
-	errorKey := authErrorTranslationKey(c.Query("error"))
+	flash := popFlashCookie(c)
+	errorSource := strings.TrimSpace(flash.AuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
+	}
+	errorKey := authErrorTranslationKey(errorSource)
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.forgot_password")
 	if title == "meta.title.forgot_password" {
@@ -374,6 +405,12 @@ func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 
 func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 	token := strings.TrimSpace(c.Query("token"))
+	flash := popFlashCookie(c)
+	errorSource := strings.TrimSpace(flash.AuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
+	}
+
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.reset_password")
 	if title == "meta.title.reset_password" {
@@ -390,7 +427,7 @@ func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 		"Token":        token,
 		"InvalidToken": invalidToken,
 		"ForcedReset":  parseBoolValue(c.Query("forced")),
-		"ErrorKey":     authErrorTranslationKey(c.Query("error")),
+		"ErrorKey":     authErrorTranslationKey(errorSource),
 	}
 	return handler.render(c, "reset_password", data)
 }
@@ -413,7 +450,7 @@ func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
 	}
 
 	cycleLength := user.CycleLength
-	if cycleLength < 21 || cycleLength > 35 {
+	if cycleLength < 21 || cycleLength > 50 {
 		cycleLength = 28
 	}
 	periodLength := user.PeriodLength
@@ -491,8 +528,8 @@ func (handler *Handler) OnboardingStep2(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return apiError(c, fiber.StatusBadRequest, "invalid input")
 	}
-	if input.CycleLength < 21 || input.CycleLength > 35 {
-		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 35")
+	if input.CycleLength < 21 || input.CycleLength > 50 {
+		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 50")
 	}
 	if input.PeriodLength < 2 || input.PeriodLength > 7 {
 		return apiError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
@@ -640,9 +677,21 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
-	activeMonth, err := parseMonthQuery(c.Query("month"), now, handler.location)
+	monthQuery := strings.TrimSpace(c.Query("month"))
+	selectedDate := ""
+	selectedDayRaw := strings.TrimSpace(c.Query("day"))
+
+	activeMonth, err := parseMonthQuery(monthQuery, now, handler.location)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid month")
+	}
+	if selectedDayRaw != "" {
+		if selectedDay, parseErr := parseDayParam(selectedDayRaw, handler.location); parseErr == nil {
+			selectedDate = selectedDay.Format("2006-01-02")
+			if monthQuery == "" {
+				activeMonth = time.Date(selectedDay.Year(), selectedDay.Month(), 1, 0, 0, 0, 0, handler.location)
+			}
+		}
 	}
 
 	monthStart := activeMonth
@@ -674,6 +723,7 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 		"MonthValue":   monthStart.Format("2006-01"),
 		"PrevMonth":    prevMonth,
 		"NextMonth":    nextMonth,
+		"SelectedDate": selectedDate,
 		"CalendarDays": days,
 		"Today":        dateAtLocation(now, handler.location).Format("2006-01-02"),
 		"Stats":        stats,
@@ -813,20 +863,9 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
 
-	successStatus := strings.TrimSpace(c.Query("success"))
-	if successStatus == "" {
-		successStatus = strings.TrimSpace(c.Query("status"))
-	}
-	if strings.TrimSpace(c.Query("error")) != "" && successStatus != "" {
-		queryKey := "success"
-		if strings.TrimSpace(c.Query("success")) == "" {
-			queryKey = "status"
-		}
-		path := "/settings?" + queryKey + "=" + url.QueryEscape(successStatus)
-		return c.Redirect(path, fiber.StatusSeeOther)
-	}
+	flash := popFlashCookie(c)
 
-	data, err := handler.buildSettingsViewData(c, user)
+	data, err := handler.buildSettingsViewData(c, user, flash)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
 	}
@@ -858,6 +897,12 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 	if err != nil {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
 	}
+	if credentials.ConfirmPassword == "" {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+	}
+	if credentials.Password != credentials.ConfirmPassword {
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "password mismatch")
+	}
 	if err := validatePasswordStrength(credentials.Password); err != nil {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "weak password")
 	}
@@ -887,7 +932,7 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to seed symptoms")
 	}
 
-	if err := handler.setAuthCookie(c, &user); err != nil {
+	if err := handler.setAuthCookie(c, &user, true); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
@@ -939,7 +984,7 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 		return c.Redirect(path, fiber.StatusSeeOther)
 	}
 
-	if err := handler.setAuthCookie(c, &user); err != nil {
+	if err := handler.setAuthCookie(c, &user, credentials.RememberMe); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
@@ -1052,7 +1097,7 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to reset password")
 	}
 
-	if err := handler.setAuthCookie(c, &user); err != nil {
+	if err := handler.setAuthCookie(c, &user, true); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
 
@@ -1083,8 +1128,12 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 
 	input.CurrentPassword = strings.TrimSpace(input.CurrentPassword)
 	input.NewPassword = strings.TrimSpace(input.NewPassword)
-	if input.CurrentPassword == "" || input.NewPassword == "" {
+	input.ConfirmPassword = strings.TrimSpace(input.ConfirmPassword)
+	if input.CurrentPassword == "" || input.NewPassword == "" || input.ConfirmPassword == "" {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
+	}
+	if input.NewPassword != input.ConfirmPassword {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "password mismatch")
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.CurrentPassword)) != nil {
@@ -1112,7 +1161,8 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
 	}
-	return redirectOrJSON(c, "/settings?status=password_changed")
+	setFlashCookie(c, FlashPayload{SettingsSuccess: "password_changed"})
+	return redirectOrJSON(c, "/settings")
 }
 
 func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
@@ -1126,7 +1176,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
 	}
 	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 35")
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 50")
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
@@ -1145,7 +1195,8 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
 	}
-	return redirectOrJSON(c, "/settings?success=cycle_updated")
+	setFlashCookie(c, FlashPayload{SettingsSuccess: "cycle_updated"})
+	return redirectOrJSON(c, "/settings")
 }
 
 func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
@@ -1170,7 +1221,7 @@ func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 		})
 	}
 
-	data, err := handler.buildSettingsViewData(c, user)
+	data, err := handler.buildSettingsViewData(c, user, FlashPayload{})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
 	}
@@ -1712,8 +1763,83 @@ func (handler *Handler) renderPartial(c *fiber.Ctx, name string, data fiber.Map)
 	return c.Send(output.Bytes())
 }
 
-func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User) error {
-	token, err := handler.buildToken(user)
+func SetFlashCookie(c *fiber.Ctx, payload FlashPayload) {
+	setFlashCookie(c, payload)
+}
+
+func setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
+	payload.AuthError = strings.TrimSpace(payload.AuthError)
+	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
+	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
+	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
+
+	if payload.AuthError == "" &&
+		payload.SettingsError == "" &&
+		payload.SettingsSuccess == "" &&
+		payload.LoginEmail == "" {
+		clearFlashCookie(c)
+		return
+	}
+
+	serialized, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	encoded := base64.RawURLEncoding.EncodeToString(serialized)
+
+	c.Cookie(&fiber.Cookie{
+		Name:     flashCookieName,
+		Value:    encoded,
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Expires:  time.Now().Add(5 * time.Minute),
+	})
+}
+
+func popFlashCookie(c *fiber.Ctx) FlashPayload {
+	raw := strings.TrimSpace(c.Cookies(flashCookieName))
+	if raw == "" {
+		return FlashPayload{}
+	}
+	clearFlashCookie(c)
+
+	decoded, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return FlashPayload{}
+	}
+
+	payload := FlashPayload{}
+	if err := json.Unmarshal(decoded, &payload); err != nil {
+		return FlashPayload{}
+	}
+	payload.AuthError = strings.TrimSpace(payload.AuthError)
+	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
+	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
+	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
+	return payload
+}
+
+func clearFlashCookie(c *fiber.Ctx) {
+	c.Cookie(&fiber.Cookie{
+		Name:     flashCookieName,
+		Value:    "",
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+		Expires:  time.Now().Add(-1 * time.Hour),
+	})
+}
+
+func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User, rememberMe bool) error {
+	tokenTTL := defaultAuthTokenTTL
+	if rememberMe {
+		tokenTTL = rememberAuthTokenTTL
+	}
+
+	token, err := handler.buildToken(user, tokenTTL)
 	if err != nil {
 		return err
 	}
@@ -1725,7 +1851,9 @@ func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User) error {
 		HTTPOnly: true,
 		Secure:   false,
 		SameSite: "Lax",
-		Expires:  time.Now().Add(7 * 24 * time.Hour),
+	}
+	if rememberMe {
+		cookie.Expires = time.Now().Add(tokenTTL)
 	}
 	c.Cookie(cookie)
 	return nil
@@ -1743,14 +1871,19 @@ func (handler *Handler) clearAuthCookie(c *fiber.Ctx) {
 	})
 }
 
-func (handler *Handler) buildToken(user *models.User) (string, error) {
+func (handler *Handler) buildToken(user *models.User, ttl time.Duration) (string, error) {
+	if ttl <= 0 {
+		ttl = defaultAuthTokenTTL
+	}
+	now := time.Now()
+
 	claims := authClaims{
 		UserID: user.ID,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.FormatUint(uint64(user.ID), 10),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
@@ -1913,15 +2046,22 @@ func (handler *Handler) ensureBuiltinSymptoms(userID uint) error {
 	return handler.db.Create(&missing).Error
 }
 
-func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User) (fiber.Map, error) {
+func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
 	messages := currentMessages(c)
-	status := strings.TrimSpace(c.Query("success"))
+	status := strings.TrimSpace(flash.SettingsSuccess)
 	if status == "" {
-		status = strings.TrimSpace(c.Query("status"))
+		status = strings.TrimSpace(c.Query("success"))
+		if status == "" {
+			status = strings.TrimSpace(c.Query("status"))
+		}
 	}
+	errorSource := strings.TrimSpace(flash.SettingsError)
 	errorKey := ""
 	if status == "" {
-		errorKey = authErrorTranslationKey(c.Query("error"))
+		if errorSource == "" {
+			errorSource = strings.TrimSpace(c.Query("error"))
+		}
+		errorKey = authErrorTranslationKey(errorSource)
 	}
 
 	persisted := models.User{}
@@ -2371,6 +2511,8 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 
 	credentials.Email = strings.ToLower(strings.TrimSpace(credentials.Email))
 	credentials.Password = strings.TrimSpace(credentials.Password)
+	credentials.ConfirmPassword = strings.TrimSpace(credentials.ConfirmPassword)
+	credentials.RememberMe = credentials.RememberMe || parseBoolValue(c.FormValue("remember_me"))
 
 	if credentials.Email == "" || credentials.Password == "" {
 		return credentialsInput{}, errors.New("missing credentials")
@@ -2383,7 +2525,7 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 }
 
 func isValidOnboardingCycleLength(value int) bool {
-	return value >= 21 && value <= 35
+	return value >= 21 && value <= 50
 }
 
 func isValidOnboardingPeriodLength(value int) bool {
@@ -2705,34 +2847,31 @@ func apiError(c *fiber.Ctx, status int, message string) error {
 
 func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message string) error {
 	if strings.HasPrefix(c.Path(), "/api/auth/") && !acceptsJSON(c) && !isHTMX(c) {
-		errorParam := "error=" + url.QueryEscape(message)
+		flash := FlashPayload{AuthError: message}
 		switch c.Path() {
 		case "/api/auth/register":
-			return c.Redirect("/register?"+errorParam, fiber.StatusSeeOther)
+			setFlashCookie(c, flash)
+			return c.Redirect("/register", fiber.StatusSeeOther)
 		case "/api/auth/login":
-			email := strings.ToLower(strings.TrimSpace(c.FormValue("email")))
-			if email != "" {
-				if _, err := mail.ParseAddress(email); err != nil {
-					email = ""
-				}
-			}
-			if email != "" {
-				return c.Redirect("/login?"+errorParam+"&email="+url.QueryEscape(email), fiber.StatusSeeOther)
-			}
-			return c.Redirect("/login?"+errorParam, fiber.StatusSeeOther)
+			flash.LoginEmail = normalizeLoginEmail(c.FormValue("email"))
+			setFlashCookie(c, flash)
+			return c.Redirect("/login", fiber.StatusSeeOther)
 		case "/api/auth/forgot-password":
-			return c.Redirect("/forgot-password?"+errorParam, fiber.StatusSeeOther)
+			setFlashCookie(c, flash)
+			return c.Redirect("/forgot-password", fiber.StatusSeeOther)
 		case "/api/auth/reset-password":
 			token := strings.TrimSpace(c.FormValue("token"))
 			if token == "" {
 				token = strings.TrimSpace(c.Query("token"))
 			}
+			setFlashCookie(c, flash)
 			if token == "" {
-				return c.Redirect("/reset-password?"+errorParam, fiber.StatusSeeOther)
+				return c.Redirect("/reset-password", fiber.StatusSeeOther)
 			}
-			return c.Redirect("/reset-password?token="+url.QueryEscape(token)+"&"+errorParam, fiber.StatusSeeOther)
+			return c.Redirect("/reset-password?token="+url.QueryEscape(token), fiber.StatusSeeOther)
 		default:
-			return c.Redirect("/login?"+errorParam, fiber.StatusSeeOther)
+			setFlashCookie(c, flash)
+			return c.Redirect("/login", fiber.StatusSeeOther)
 		}
 	}
 	return apiError(c, status, message)
@@ -2749,10 +2888,21 @@ func (handler *Handler) respondSettingsError(c *fiber.Ctx, status int, message s
 		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("<div class=\"status-error\">%s</div>", template.HTMLEscapeString(rendered)))
 	}
 	if (strings.HasPrefix(c.Path(), "/api/settings/") || strings.HasPrefix(c.Path(), "/settings/")) && !acceptsJSON(c) {
-		errorParam := "error=" + url.QueryEscape(message)
-		return c.Redirect("/settings?"+errorParam, fiber.StatusSeeOther)
+		setFlashCookie(c, FlashPayload{SettingsError: message})
+		return c.Redirect("/settings", fiber.StatusSeeOther)
 	}
 	return apiError(c, status, message)
+}
+
+func normalizeLoginEmail(raw string) string {
+	email := strings.ToLower(strings.TrimSpace(raw))
+	if email == "" {
+		return ""
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return ""
+	}
+	return email
 }
 
 func acceptsJSON(c *fiber.Ctx) bool {

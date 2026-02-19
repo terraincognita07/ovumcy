@@ -13,7 +13,11 @@
     </div>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]" x-data="{ selectedDate: '' }">
+  <div
+    class="grid gap-6 lg:grid-cols-[2fr_1fr]"
+    x-data='calendarView({
+      selectedDate: "{{.SelectedDate}}"
+    })'>
     <div
       id="calendar-grid-refresh"
       hx-get="/calendar?month={{.MonthValue}}"
@@ -44,7 +48,7 @@
             hx-get="/calendar/day/{{.DateString}}"
             hx-target="#day-editor"
             hx-swap="innerHTML"
-            @click="selectedDate = '{{.DateString}}'"
+            @click="selectDay('{{.DateString}}')"
             :class="{ 'selected': selectedDate === '{{.DateString}}' }"
             class="{{.CellClass}}">
             <div class="flex items-center justify-between">
@@ -82,8 +86,37 @@
     </section>
 
     <aside id="day-editor" class="journal-card p-4 sm:p-5">
+      {{if .SelectedDate}}
+      <div
+        hx-get="/calendar/day/{{.SelectedDate}}"
+        hx-trigger="load"
+        hx-target="#day-editor"
+        hx-swap="innerHTML">
+        <p class="journal-muted">{{t .Messages "calendar.loading_day"}}</p>
+      </div>
+      {{else}}
       <p class="journal-muted">{{t .Messages "calendar.select_day"}}</p>
+      {{end}}
     </aside>
   </div>
 </section>
+
+<script>
+  function calendarView(config) {
+    var safeConfig = config || {};
+    return {
+      selectedDate: safeConfig.selectedDate || "",
+      selectDay(value) {
+        this.selectedDate = value || "";
+        if (!this.selectedDate || !window.history || typeof window.history.replaceState !== "function") return;
+        try {
+          var currentURL = new URL(window.location.href);
+          currentURL.searchParams.set("day", this.selectedDate);
+          var nextPath = currentURL.pathname + currentURL.search + currentURL.hash;
+          window.history.replaceState({}, "", nextPath);
+        } catch (_) {}
+      }
+    };
+  }
+</script>
 {{end}}

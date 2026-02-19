@@ -36,7 +36,7 @@
           id="settings-cycle-length"
           type="range"
           min="21"
-          max="35"
+          max="50"
           name="cycle_length"
           value="{{.CycleLength}}"
           x-model.number="cycleLength"
@@ -75,10 +75,40 @@
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <label class="field-label" for="settings-current-password">{{t .Messages "settings.current_password"}}</label>
-      <input id="settings-current-password" type="password" name="current_password" required autocomplete="current-password" class="input-field">
+      <div class="password-field">
+        <input id="settings-current-password" type="password" name="current_password" required autocomplete="current-password" class="input-field input-with-toggle">
+        <button
+          type="button"
+          class="password-toggle-btn"
+          data-password-toggle
+          data-show-label="{{t .Messages "auth.show_password"}}"
+          data-hide-label="{{t .Messages "auth.hide_password"}}"
+          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
+      </div>
 
       <label class="field-label" for="settings-new-password">{{t .Messages "auth.new_password"}}</label>
-      <input id="settings-new-password" type="password" name="new_password" required autocomplete="new-password" class="input-field">
+      <div class="password-field">
+        <input id="settings-new-password" type="password" name="new_password" required autocomplete="new-password" class="input-field input-with-toggle">
+        <button
+          type="button"
+          class="password-toggle-btn"
+          data-password-toggle
+          data-show-label="{{t .Messages "auth.show_password"}}"
+          data-hide-label="{{t .Messages "auth.hide_password"}}"
+          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
+      </div>
+
+      <label class="field-label" for="settings-confirm-password">{{t .Messages "auth.confirm_password"}}</label>
+      <div class="password-field">
+        <input id="settings-confirm-password" type="password" name="confirm_password" required autocomplete="new-password" class="input-field input-with-toggle">
+        <button
+          type="button"
+          class="password-toggle-btn"
+          data-password-toggle
+          data-show-label="{{t .Messages "auth.show_password"}}"
+          data-hide-label="{{t .Messages "auth.hide_password"}}"
+          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
+      </div>
       <p class="journal-muted text-xs">{{t .Messages "auth.password_requirements"}}</p>
 
       <button type="submit" class="btn-primary">{{t .Messages "settings.change_password.submit"}}</button>
@@ -143,7 +173,16 @@
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <label class="field-label" for="settings-delete-password">{{t .Messages "settings.delete_account.password"}}</label>
-      <input id="settings-delete-password" type="password" name="password" required autocomplete="current-password" class="input-field">
+      <div class="password-field">
+        <input id="settings-delete-password" type="password" name="password" required autocomplete="current-password" class="input-field input-with-toggle">
+        <button
+          type="button"
+          class="password-toggle-btn"
+          data-password-toggle
+          data-show-label="{{t .Messages "auth.show_password"}}"
+          data-hide-label="{{t .Messages "auth.hide_password"}}"
+          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
+      </div>
 
       <button type="submit" class="btn-danger">{{t .Messages "settings.delete_account.submit"}}</button>
       <div id="delete-account-feedback" class="save-status text-sm"></div>

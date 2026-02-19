@@ -14,6 +14,7 @@ import (
 const (
 	authCookieName     = "lume_auth"
 	languageCookieName = "lume_lang"
+	flashCookieName    = "lume_flash"
 	contextUserKey     = "current_user"
 	contextLanguageKey = "current_language"
 	contextMessagesKey = "current_messages"

@@ -50,15 +50,18 @@ func TestLoginInvalidCredentialsRedirectPreservesEmail(t *testing.T) {
 	if redirectURL.Path != "/login" {
 		t.Fatalf("expected redirect path /login, got %q", redirectURL.Path)
 	}
-	if got := redirectURL.Query().Get("error"); got != "invalid credentials" {
-		t.Fatalf("expected error query %q, got %q", "invalid credentials", got)
+	if query := strings.TrimSpace(redirectURL.RawQuery); query != "" {
+		t.Fatalf("expected clean redirect without query params, got %q", query)
 	}
-	if got := redirectURL.Query().Get("email"); got != user.Email {
-		t.Fatalf("expected email query %q, got %q", user.Email, got)
+
+	flashValue := responseCookieValue(response.Cookies(), flashCookieName)
+	if flashValue == "" {
+		t.Fatalf("expected flash cookie in login redirect response")
 	}
 
 	followRequest := httptest.NewRequest(http.MethodGet, location, nil)
 	followRequest.Header.Set("Accept-Language", "en")
+	followRequest.Header.Set("Cookie", flashCookieName+"="+flashValue)
 	followResponse, err := app.Test(followRequest, -1)
 	if err != nil {
 		t.Fatalf("follow-up login request failed: %v", err)
@@ -79,6 +82,84 @@ func TestLoginInvalidCredentialsRedirectPreservesEmail(t *testing.T) {
 	}
 	if !strings.Contains(rendered, `value="login-email@example.com"`) {
 		t.Fatalf("expected login email input to keep previous value")
+	}
+	if !strings.Contains(rendered, "Invalid email or password.") {
+		t.Fatalf("expected localized login error message from flash")
+	}
+
+	afterFlashRequest := httptest.NewRequest(http.MethodGet, "/login", nil)
+	afterFlashRequest.Header.Set("Accept-Language", "en")
+	afterFlashResponse, err := app.Test(afterFlashRequest, -1)
+	if err != nil {
+		t.Fatalf("login request after flash consumption failed: %v", err)
+	}
+	defer afterFlashResponse.Body.Close()
+
+	afterFlashBody, err := io.ReadAll(afterFlashResponse.Body)
+	if err != nil {
+		t.Fatalf("read body after flash consumption: %v", err)
+	}
+	if strings.Contains(string(afterFlashBody), `value="login-email@example.com"`) {
+		t.Fatalf("did not expect login email to persist after flash is consumed")
+	}
+}
+
+func TestLoginRememberMeControlsCookiePersistence(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "remember-session@example.com", "StrongPass1", true)
+
+	sessionForm := url.Values{
+		"email":    {user.Email},
+		"password": {"StrongPass1"},
+	}
+	sessionRequest := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(sessionForm.Encode()))
+	sessionRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	sessionResponse, err := app.Test(sessionRequest, -1)
+	if err != nil {
+		t.Fatalf("session login request failed: %v", err)
+	}
+	defer sessionResponse.Body.Close()
+
+	if sessionResponse.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", sessionResponse.StatusCode)
+	}
+
+	sessionCookie := responseCookie(sessionResponse.Cookies(), authCookieName)
+	if sessionCookie == nil {
+		t.Fatalf("expected auth cookie for default session login")
+	}
+	if !sessionCookie.Expires.IsZero() {
+		t.Fatalf("expected session cookie without Expires when remember_me is disabled")
+	}
+
+	rememberForm := url.Values{
+		"email":       {user.Email},
+		"password":    {"StrongPass1"},
+		"remember_me": {"1"},
+	}
+	rememberRequest := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(rememberForm.Encode()))
+	rememberRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rememberResponse, err := app.Test(rememberRequest, -1)
+	if err != nil {
+		t.Fatalf("remember-me login request failed: %v", err)
+	}
+	defer rememberResponse.Body.Close()
+
+	if rememberResponse.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", rememberResponse.StatusCode)
+	}
+
+	rememberCookie := responseCookie(rememberResponse.Cookies(), authCookieName)
+	if rememberCookie == nil {
+		t.Fatalf("expected auth cookie for remember-me login")
+	}
+	if rememberCookie.Expires.IsZero() {
+		t.Fatalf("expected persistent auth cookie when remember_me is enabled")
+	}
+	if rememberCookie.Expires.Before(time.Now().Add(20 * 24 * time.Hour)) {
+		t.Fatalf("expected remember-me cookie to expire in ~30 days, got %s", rememberCookie.Expires)
 	}
 }
 
@@ -130,6 +211,12 @@ func TestLanguageSwitchSetsCookieAndRendersMatchingHTMLLang(t *testing.T) {
 	if !strings.Contains(renderedEnglish, `data-email-message="Please enter a valid email address."`) {
 		t.Fatalf("expected english email validation message in login form")
 	}
+	if !strings.Contains(renderedEnglish, "Stay signed in for 30 days") {
+		t.Fatalf("expected remember-me control on login form in english")
+	}
+	if !strings.Contains(renderedEnglish, "only until you close the browser") {
+		t.Fatalf("expected remember-me helper text in english")
+	}
 
 	switchToRussian := httptest.NewRequest(http.MethodGet, "/lang/ru?next=/login", nil)
 	switchToRussian.Header.Set("Cookie", "lume_lang="+englishCookie)
@@ -164,6 +251,44 @@ func TestLanguageSwitchSetsCookieAndRendersMatchingHTMLLang(t *testing.T) {
 	}
 	if !strings.Contains(string(russianBody), `data-email-message="Введите корректный email адрес."`) {
 		t.Fatalf("expected russian email validation message in login form")
+	}
+	if !strings.Contains(string(russianBody), "Оставаться в системе 30 дней") {
+		t.Fatalf("expected remember-me control on login form in russian")
+	}
+	if !strings.Contains(string(russianBody), "только до закрытия браузера") {
+		t.Fatalf("expected remember-me helper text in russian")
+	}
+}
+
+func TestDashboardLogoutFormsRequireConfirmation(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "logout-confirm@example.com", "StrongPass1", true)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	request := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	request.Header.Set("Accept-Language", "en")
+	request.Header.Set("Cookie", authCookie)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("dashboard request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.StatusCode)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read dashboard body: %v", err)
+	}
+	rendered := string(body)
+	if strings.Count(rendered, `action="/api/auth/logout"`) < 2 {
+		t.Fatalf("expected desktop and mobile logout forms")
+	}
+	if strings.Count(rendered, `data-confirm="Log out of your account now?"`) < 2 {
+		t.Fatalf("expected confirmation attribute for both logout forms")
 	}
 }
 
@@ -271,6 +396,97 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	}
 	if !strings.Contains(rendered, `name="symptom_ids"`) {
 		t.Fatalf("expected symptoms controls to stay available regardless of period toggle")
+	}
+}
+
+func TestCalendarDayPanelUsesLanguageSpecificSymptomLabelClass(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "calendar-symptom-label-class@example.com", "StrongPass1", true)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	symptom := models.SymptomType{
+		UserID: user.ID,
+		Name:   "Breast tenderness",
+		Icon:   "💗",
+		Color:  "#D98395",
+	}
+	if err := database.Create(&symptom).Error; err != nil {
+		t.Fatalf("create symptom: %v", err)
+	}
+
+	enRequest := httptest.NewRequest(http.MethodGet, "/calendar/day/2026-02-17", nil)
+	enRequest.Header.Set("Accept-Language", "en")
+	enRequest.Header.Set("Cookie", authCookie)
+	enResponse, err := app.Test(enRequest, -1)
+	if err != nil {
+		t.Fatalf("english panel request failed: %v", err)
+	}
+	defer enResponse.Body.Close()
+
+	enBody, err := io.ReadAll(enResponse.Body)
+	if err != nil {
+		t.Fatalf("read english panel body: %v", err)
+	}
+	if !strings.Contains(string(enBody), `symptom-label symptom-label-nowrap`) {
+		t.Fatalf("expected nowrap symptom class for english labels")
+	}
+
+	ruRequest := httptest.NewRequest(http.MethodGet, "/calendar/day/2026-02-17", nil)
+	ruRequest.Header.Set("Accept-Language", "ru")
+	ruRequest.Header.Set("Cookie", authCookie)
+	ruResponse, err := app.Test(ruRequest, -1)
+	if err != nil {
+		t.Fatalf("russian panel request failed: %v", err)
+	}
+	defer ruResponse.Body.Close()
+
+	ruBody, err := io.ReadAll(ruResponse.Body)
+	if err != nil {
+		t.Fatalf("read russian panel body: %v", err)
+	}
+	if strings.Contains(string(ruBody), `symptom-label symptom-label-nowrap`) {
+		t.Fatalf("did not expect nowrap class for russian labels")
+	}
+	if !strings.Contains(string(ruBody), `class="symptom-label">`) {
+		t.Fatalf("expected default symptom label class for russian locale")
+	}
+}
+
+func TestCalendarPageKeepsSelectedDayFromQueryAndBootstrapsEditor(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "calendar-selected-day-query@example.com", "StrongPass1", true)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	request := httptest.NewRequest(http.MethodGet, "/calendar?month=2026-02&day=2026-02-17", nil)
+	request.Header.Set("Accept-Language", "en")
+	request.Header.Set("Cookie", authCookie)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("calendar request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.StatusCode)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read calendar body: %v", err)
+	}
+	rendered := string(body)
+	if !strings.Contains(rendered, `selectedDate: "2026-02-17"`) {
+		t.Fatalf("expected selected day in alpine state from day query")
+	}
+	if !strings.Contains(rendered, `hx-get="/calendar/day/2026-02-17"`) || !strings.Contains(rendered, `hx-trigger="load"`) {
+		t.Fatalf("expected day editor bootstrap request for selected day")
+	}
+	if !strings.Contains(rendered, `next=%2Fcalendar%3Fmonth%3D2026-02%26day%3D2026-02-17`) {
+		t.Fatalf("expected language switch links to preserve selected day in next param")
+	}
+	if !strings.Contains(rendered, `url.searchParams.set("next", nextPath)`) {
+		t.Fatalf("expected language link sync script to use current path")
 	}
 }
 
@@ -411,6 +627,15 @@ func responseCookieValue(cookies []*http.Cookie, name string) string {
 		}
 	}
 	return ""
+}
+
+func responseCookie(cookies []*http.Cookie, name string) *http.Cookie {
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
 }
 
 func findCalendarDayByDateString(t *testing.T, days []CalendarDay, date string) CalendarDay {

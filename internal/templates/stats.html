@@ -65,9 +65,13 @@
         {{if .SymptomCounts}}
         <ul class="mt-4 space-y-2 text-sm">
           {{range .SymptomCounts}}
-          <li class="journal-panel flex items-center justify-between gap-3">
-            <span class="inline-flex items-center gap-2"><span>{{.Icon}}</span><span>{{symptomLabel $.Messages .Name}}</span></span>
-            <span class="font-semibold">{{.FrequencySummary}}</span>
+          {{$label := symptomLabel $.Messages .Name}}
+          <li class="journal-panel stats-symptom-row">
+            <span class="stats-symptom-meta">
+              <span class="stats-symptom-icon">{{.Icon}}</span>
+              <span class="stats-symptom-name" title="{{$label}}">{{$label}}</span>
+            </span>
+            <span class="stats-symptom-frequency">{{.FrequencySummary}}</span>
           </li>
           {{end}}
         </ul>

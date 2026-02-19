@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -378,9 +377,6 @@ func redirectWithErrorCode(c *fiber.Ctx, path string, errorCode string) error {
 	if strings.TrimSpace(path) == "" {
 		path = "/login"
 	}
-	separator := "?"
-	if strings.Contains(path, "?") {
-		separator = "&"
-	}
-	return c.Redirect(path+separator+"error="+url.QueryEscape(errorCode), fiber.StatusSeeOther)
+	api.SetFlashCookie(c, api.FlashPayload{AuthError: errorCode})
+	return c.Redirect(path, fiber.StatusSeeOther)
 }

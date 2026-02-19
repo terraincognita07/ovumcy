@@ -43,7 +43,7 @@
 
           <span class="role-chip" aria-label="{{t .Messages "nav.current_role"}}">⚙ {{roleLabel .Messages .CurrentUser.Role}}</span>
 
-          <form action="/api/auth/logout" method="post" class="ml-1">
+          <form action="/api/auth/logout" method="post" class="ml-1" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit" class="btn-soft">{{t .Messages "nav.logout"}}</button>
           </form>
@@ -54,7 +54,7 @@
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link block {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
-          <form action="/api/auth/logout" method="post">
+          <form action="/api/auth/logout" method="post" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit" class="btn-soft w-full">{{t .Messages "nav.logout"}}</button>
           </form>
@@ -67,11 +67,13 @@
       {{template "content" .}}
     </main>
 
+    {{if not (isActiveRoute .CurrentPath "/privacy")}}
     <footer class="container-main pb-8 pt-2">
       <nav class="flex items-center justify-center">
-        <a href="/privacy" class="nav-link text-sm {{if isActiveRoute .CurrentPath "/privacy"}}nav-link-active{{end}}">{{t .Messages "nav.privacy"}}</a>
+        <a href="/privacy" class="nav-link text-sm">{{t .Messages "nav.privacy"}}</a>
       </nav>
     </footer>
+    {{end}}
   </div>
 
   <div
@@ -125,6 +127,29 @@
         return match[1];
       }
 
+      function withCurrentNextPath(href) {
+        if (!href) return href;
+        try {
+          var url = new URL(href, window.location.origin);
+          var nextPath = window.location.pathname + window.location.search;
+          url.searchParams.set("next", nextPath);
+          return url.pathname + url.search + url.hash;
+        } catch (_) {
+          return href;
+        }
+      }
+
+      function syncLanguageLinksNextPath() {
+        var links = document.querySelectorAll("a.lang-link");
+        for (var index = 0; index < links.length; index++) {
+          var link = links[index];
+          var updatedHref = withCurrentNextPath(link.getAttribute("href"));
+          if (updatedHref) {
+            link.setAttribute("href", updatedHref);
+          }
+        }
+      }
+
       function applyHTMLLanguage(raw) {
         var lang = normalizeLanguage(raw);
         if (!lang) return;
@@ -132,13 +157,56 @@
       }
 
       applyHTMLLanguage(readCookie("lume_lang") || document.documentElement.getAttribute("lang"));
+      syncLanguageLinksNextPath();
 
       document.addEventListener("click", function (event) {
         var target = event.target;
         if (!target || !target.closest) return;
         var link = target.closest("a.lang-link");
         if (!link) return;
-        applyHTMLLanguage(languageFromHref(link.getAttribute("href")));
+        var updatedHref = withCurrentNextPath(link.getAttribute("href"));
+        if (updatedHref) {
+          link.setAttribute("href", updatedHref);
+        }
+        applyHTMLLanguage(languageFromHref(updatedHref || link.getAttribute("href")));
+      });
+    })();
+
+    (function () {
+      function toggleLabel(button, isVisible) {
+        var showLabel = button.getAttribute("data-show-label") || "Show password";
+        var hideLabel = button.getAttribute("data-hide-label") || "Hide password";
+        button.setAttribute("aria-label", isVisible ? hideLabel : showLabel);
+        button.textContent = isVisible ? "🙈" : "👁";
+      }
+
+      function attachPasswordToggles(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var buttons = scope.querySelectorAll("[data-password-toggle]");
+        for (var index = 0; index < buttons.length; index++) {
+          var button = buttons[index];
+          if (button.dataset.passwordToggleBound === "1") continue;
+
+          var field = button.parentElement ? button.parentElement.querySelector("input[type='password'], input[type='text']") : null;
+          if (!field) continue;
+
+          button.dataset.passwordToggleBound = "1";
+          toggleLabel(button, field.type === "text");
+
+          button.addEventListener("click", (function (input, toggleButton) {
+            return function () {
+              var reveal = input.type === "password";
+              input.type = reveal ? "text" : "password";
+              toggleLabel(toggleButton, reveal);
+            };
+          })(field, button));
+        }
+      }
+
+      attachPasswordToggles(document);
+      document.body.addEventListener("htmx:afterSwap", function (event) {
+        var target = event && event.detail ? event.detail.target : null;
+        attachPasswordToggles(target || document);
       });
     })();
 

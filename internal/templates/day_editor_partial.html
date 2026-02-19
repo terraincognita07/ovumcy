@@ -54,7 +54,7 @@
           <input type="checkbox" name="symptom_ids" value="{{.ID}}" class="choice-input" {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
           <span class="check-chip check-chip-sm">
             <span class="symptom-icon">{{.Icon}}</span>
-            <span class="symptom-label">{{symptomLabel $.Messages .Name}}</span>
+            <span class="symptom-label{{if eq $.Lang "en"}} symptom-label-nowrap{{end}}">{{symptomLabel $.Messages .Name}}</span>
           </span>
         </label>
         {{end}}
