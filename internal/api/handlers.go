@@ -2,8 +2,6 @@ package api
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -16,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -171,11 +168,6 @@ type exportJSONEntry struct {
 	Symptoms      exportJSONSymptomFlags `json:"symptoms"`
 	OtherSymptoms []string               `json:"other_symptoms"`
 	Notes         string                 `json:"notes"`
-}
-
-type attemptLimiter struct {
-	mu       sync.Mutex
-	attempts map[string][]time.Time
 }
 
 type passwordResetClaims struct {
@@ -1763,76 +1755,6 @@ func (handler *Handler) renderPartial(c *fiber.Ctx, name string, data fiber.Map)
 	return c.Send(output.Bytes())
 }
 
-func SetFlashCookie(c *fiber.Ctx, payload FlashPayload) {
-	setFlashCookie(c, payload)
-}
-
-func setFlashCookie(c *fiber.Ctx, payload FlashPayload) {
-	payload.AuthError = strings.TrimSpace(payload.AuthError)
-	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
-	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
-	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
-
-	if payload.AuthError == "" &&
-		payload.SettingsError == "" &&
-		payload.SettingsSuccess == "" &&
-		payload.LoginEmail == "" {
-		clearFlashCookie(c)
-		return
-	}
-
-	serialized, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-	encoded := base64.RawURLEncoding.EncodeToString(serialized)
-
-	c.Cookie(&fiber.Cookie{
-		Name:     flashCookieName,
-		Value:    encoded,
-		Path:     "/",
-		HTTPOnly: true,
-		Secure:   false,
-		SameSite: "Lax",
-		Expires:  time.Now().Add(5 * time.Minute),
-	})
-}
-
-func popFlashCookie(c *fiber.Ctx) FlashPayload {
-	raw := strings.TrimSpace(c.Cookies(flashCookieName))
-	if raw == "" {
-		return FlashPayload{}
-	}
-	clearFlashCookie(c)
-
-	decoded, err := base64.RawURLEncoding.DecodeString(raw)
-	if err != nil {
-		return FlashPayload{}
-	}
-
-	payload := FlashPayload{}
-	if err := json.Unmarshal(decoded, &payload); err != nil {
-		return FlashPayload{}
-	}
-	payload.AuthError = strings.TrimSpace(payload.AuthError)
-	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
-	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
-	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
-	return payload
-}
-
-func clearFlashCookie(c *fiber.Ctx) {
-	c.Cookie(&fiber.Cookie{
-		Name:     flashCookieName,
-		Value:    "",
-		Path:     "/",
-		HTTPOnly: true,
-		Secure:   false,
-		SameSite: "Lax",
-		Expires:  time.Now().Add(-1 * time.Hour),
-	})
-}
-
 func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User, rememberMe bool) error {
 	tokenTTL := defaultAuthTokenTTL
 	if rememberMe {
@@ -2821,30 +2743,6 @@ func requiresOnboarding(user *models.User) bool {
 	return user.Role == models.RoleOwner && !user.OnboardingCompleted
 }
 
-func redirectOrJSON(c *fiber.Ctx, path string) error {
-	if isHTMX(c) {
-		c.Set("HX-Redirect", path)
-		return c.SendStatus(fiber.StatusOK)
-	}
-	if acceptsJSON(c) {
-		return c.JSON(fiber.Map{"ok": true})
-	}
-	return c.Redirect(path, fiber.StatusSeeOther)
-}
-
-func apiError(c *fiber.Ctx, status int, message string) error {
-	if isHTMX(c) {
-		rendered := message
-		if key := authErrorTranslationKey(message); key != "" {
-			if localized := translateMessage(currentMessages(c), key); localized != key {
-				rendered = localized
-			}
-		}
-		return c.Status(status).SendString(fmt.Sprintf("<div class=\"status-error\">%s</div>", template.HTMLEscapeString(rendered)))
-	}
-	return c.Status(status).JSON(fiber.Map{"error": message})
-}
-
 func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message string) error {
 	if strings.HasPrefix(c.Path(), "/api/auth/") && !acceptsJSON(c) && !isHTMX(c) {
 		flash := FlashPayload{AuthError: message}
@@ -2903,140 +2801,6 @@ func normalizeLoginEmail(raw string) string {
 		return ""
 	}
 	return email
-}
-
-func acceptsJSON(c *fiber.Ctx) bool {
-	return strings.Contains(strings.ToLower(c.Get("Accept")), "application/json")
-}
-
-func isHTMX(c *fiber.Ctx) bool {
-	return strings.EqualFold(c.Get("HX-Request"), "true")
-}
-
-func csrfToken(c *fiber.Ctx) string {
-	token, _ := c.Locals("csrf").(string)
-	return token
-}
-
-func localizedPageTitle(messages map[string]string, key string, fallback string) string {
-	title := translateMessage(messages, key)
-	if title == key || strings.TrimSpace(title) == "" {
-		return fallback
-	}
-	return title
-}
-
-func sanitizeRedirectPath(raw string, fallback string) string {
-	candidate := strings.TrimSpace(raw)
-	if candidate == "" {
-		return fallback
-	}
-	if strings.HasPrefix(candidate, "//") || !strings.HasPrefix(candidate, "/") {
-		return fallback
-	}
-	parsed, err := url.Parse(candidate)
-	if err != nil || parsed.IsAbs() {
-		return fallback
-	}
-	return candidate
-}
-
-func newAttemptLimiter() *attemptLimiter {
-	return &attemptLimiter{
-		attempts: make(map[string][]time.Time),
-	}
-}
-
-func (limiter *attemptLimiter) tooManyRecent(key string, now time.Time, limit int, window time.Duration) bool {
-	limiter.mu.Lock()
-	defer limiter.mu.Unlock()
-
-	pruned := limiter.pruneLocked(key, now, window)
-	return len(pruned) >= limit
-}
-
-func (limiter *attemptLimiter) addFailure(key string, now time.Time, window time.Duration) {
-	limiter.mu.Lock()
-	defer limiter.mu.Unlock()
-
-	pruned := limiter.pruneLocked(key, now, window)
-	pruned = append(pruned, now)
-	limiter.attempts[key] = pruned
-}
-
-func (limiter *attemptLimiter) reset(key string) {
-	limiter.mu.Lock()
-	defer limiter.mu.Unlock()
-	delete(limiter.attempts, key)
-}
-
-func (limiter *attemptLimiter) pruneLocked(key string, now time.Time, window time.Duration) []time.Time {
-	values := limiter.attempts[key]
-	if len(values) == 0 {
-		return []time.Time{}
-	}
-
-	threshold := now.Add(-window)
-	pruned := make([]time.Time, 0, len(values))
-	for _, value := range values {
-		if value.After(threshold) {
-			pruned = append(pruned, value)
-		}
-	}
-
-	if len(pruned) == 0 {
-		delete(limiter.attempts, key)
-		return []time.Time{}
-	}
-
-	limiter.attempts[key] = pruned
-	return pruned
-}
-
-func requestLimiterKey(c *fiber.Ctx) string {
-	key := strings.TrimSpace(c.IP())
-	if key == "" {
-		return "unknown"
-	}
-	return key
-}
-
-func normalizeRecoveryCode(raw string) string {
-	normalized := strings.ToUpper(strings.TrimSpace(raw))
-	normalized = strings.ReplaceAll(normalized, " ", "")
-	normalized = strings.ReplaceAll(normalized, "-", "")
-	normalized = strings.TrimPrefix(normalized, "LUME")
-	if len(normalized) != 12 {
-		return strings.ToUpper(strings.TrimSpace(raw))
-	}
-	return fmt.Sprintf("LUME-%s-%s-%s", normalized[:4], normalized[4:8], normalized[8:12])
-}
-
-func generateRecoveryCodeHash() (string, string, error) {
-	code, err := generateRecoveryCode()
-	if err != nil {
-		return "", "", err
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(code), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", err
-	}
-	return code, string(hash), nil
-}
-
-func generateRecoveryCode() (string, error) {
-	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	randomBytes := make([]byte, 12)
-	if _, err := rand.Read(randomBytes); err != nil {
-		return "", err
-	}
-
-	chars := make([]byte, 12)
-	for index, value := range randomBytes {
-		chars[index] = alphabet[int(value)%len(alphabet)]
-	}
-
-	return fmt.Sprintf("LUME-%s-%s-%s", string(chars[:4]), string(chars[4:8]), string(chars[8:12])), nil
 }
 
 func (handler *Handler) findUserByRecoveryCode(code string) (*models.User, error) {
