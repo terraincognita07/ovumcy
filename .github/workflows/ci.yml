@@ -29,6 +29,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Staticcheck
+        run: $(go env GOPATH)/bin/staticcheck ./...
+
       - name: Go vet
         run: go vet ./...
 

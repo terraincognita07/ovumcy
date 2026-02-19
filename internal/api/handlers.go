@@ -6,121 +6,12 @@ import (
 	"fmt"
 	"html/template"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/terraincognita07/lume/internal/i18n"
 	"gorm.io/gorm"
 )
-
-var hexColorRegex = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-var recoveryCodeRegex = regexp.MustCompile(`^LUME-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$`)
-var passwordLengthRegex = regexp.MustCompile(`^.{8,}$`)
-var passwordUpperRegex = regexp.MustCompile(`\p{Lu}`)
-var passwordLowerRegex = regexp.MustCompile(`\p{Ll}`)
-var passwordDigitRegex = regexp.MustCompile(`\d`)
-
-type Handler struct {
-	db              *gorm.DB
-	secretKey       []byte
-	location        *time.Location
-	cookieSecure    bool
-	lutealPhaseDays int
-	i18n            *i18n.Manager
-	templates       map[string]*template.Template
-	partials        map[string]*template.Template
-	recoveryLimiter *attemptLimiter
-}
-
-type CalendarDay struct {
-	Date         time.Time
-	DateString   string
-	Day          int
-	InMonth      bool
-	IsToday      bool
-	IsPeriod     bool
-	IsPredicted  bool
-	IsFertility  bool
-	IsOvulation  bool
-	HasData      bool
-	CellClass    string
-	TextClass    string
-	BadgeClass   string
-	OvulationDot bool
-}
-
-type SymptomCount struct {
-	Name             string
-	Icon             string
-	Count            int
-	TotalDays        int
-	FrequencySummary string
-}
-
-type credentialsInput struct {
-	Email           string `json:"email" form:"email"`
-	Password        string `json:"password" form:"password"`
-	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
-	RememberMe      bool   `json:"remember_me" form:"remember_me"`
-}
-
-type dayPayload struct {
-	IsPeriod   bool   `json:"is_period"`
-	Flow       string `json:"flow"`
-	SymptomIDs []uint `json:"symptom_ids"`
-	Notes      string `json:"notes"`
-}
-
-type symptomPayload struct {
-	Name  string `json:"name" form:"name"`
-	Icon  string `json:"icon" form:"icon"`
-	Color string `json:"color" form:"color"`
-}
-
-type forgotPasswordInput struct {
-	RecoveryCode string `json:"recovery_code" form:"recovery_code"`
-}
-
-type resetPasswordInput struct {
-	Token           string `json:"token" form:"token"`
-	Password        string `json:"password" form:"password"`
-	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
-}
-
-type changePasswordInput struct {
-	CurrentPassword string `json:"current_password" form:"current_password"`
-	NewPassword     string `json:"new_password" form:"new_password"`
-	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
-}
-
-type FlashPayload struct {
-	AuthError       string `json:"auth_error,omitempty"`
-	SettingsError   string `json:"settings_error,omitempty"`
-	SettingsSuccess string `json:"settings_success,omitempty"`
-	LoginEmail      string `json:"login_email,omitempty"`
-}
-
-const (
-	defaultAuthTokenTTL  = 7 * 24 * time.Hour
-	rememberAuthTokenTTL = 30 * 24 * time.Hour
-)
-
-type cycleSettingsInput struct {
-	CycleLength  int `json:"cycle_length" form:"cycle_length"`
-	PeriodLength int `json:"period_length" form:"period_length"`
-}
-
-type deleteAccountInput struct {
-	Password string `json:"password" form:"password"`
-}
-
-type passwordResetClaims struct {
-	UserID  uint   `json:"uid"`
-	Purpose string `json:"purpose"`
-	jwt.RegisteredClaims
-}
 
 func NewHandler(database *gorm.DB, secret string, templateDir string, location *time.Location, i18nManager *i18n.Manager, cookieSecure bool) (*Handler, error) {
 	if location == nil {

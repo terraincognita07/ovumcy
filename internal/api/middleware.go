@@ -28,12 +28,9 @@ type authClaims struct {
 
 func (handler *Handler) LanguageMiddleware(c *fiber.Ctx) error {
 	cookieLanguage := c.Cookies(languageCookieName)
-	language := handler.i18n.DefaultLanguage()
-
+	language := handler.i18n.DetectFromAcceptLanguage(c.Get("Accept-Language"))
 	if cookieLanguage != "" {
 		language = handler.i18n.NormalizeLanguage(cookieLanguage)
-	} else {
-		language = handler.i18n.DetectFromAcceptLanguage(c.Get("Accept-Language"))
 	}
 
 	if cookieLanguage != language {

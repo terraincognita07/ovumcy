@@ -34,26 +34,10 @@ func buildExportJSONEntries(logs []models.DailyLog, symptomNames map[uint]string
 	for _, logEntry := range logs {
 		flags, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
 		entries = append(entries, exportJSONEntry{
-			Date:   dateAtLocation(logEntry.Date, location).Format("2006-01-02"),
-			Period: logEntry.IsPeriod,
-			Flow:   normalizeExportFlow(logEntry.Flow),
-			Symptoms: exportJSONSymptomFlags{
-				Cramps:           flags.Cramps,
-				Headache:         flags.Headache,
-				Acne:             flags.Acne,
-				Mood:             flags.Mood,
-				Bloating:         flags.Bloating,
-				Fatigue:          flags.Fatigue,
-				BreastTenderness: flags.BreastTenderness,
-				BackPain:         flags.BackPain,
-				Nausea:           flags.Nausea,
-				Spotting:         flags.Spotting,
-				Irritability:     flags.Irritability,
-				Insomnia:         flags.Insomnia,
-				FoodCravings:     flags.FoodCravings,
-				Diarrhea:         flags.Diarrhea,
-				Constipation:     flags.Constipation,
-			},
+			Date:          dateAtLocation(logEntry.Date, location).Format("2006-01-02"),
+			Period:        logEntry.IsPeriod,
+			Flow:          normalizeExportFlow(logEntry.Flow),
+			Symptoms:      exportJSONSymptomFlags(flags),
 			OtherSymptoms: other,
 			Notes:         logEntry.Notes,
 		})
