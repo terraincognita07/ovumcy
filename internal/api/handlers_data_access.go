@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
 	"github.com/terraincognita07/lume/internal/services"
+	"gorm.io/gorm"
 )
 
 func (handler *Handler) seedBuiltinSymptoms(userID uint) error {
@@ -176,9 +177,18 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	return data, nil
 }
 
-func (handler *Handler) fetchExportData(userID uint) ([]models.DailyLog, map[uint]string, error) {
+func (handler *Handler) fetchExportData(userID uint, from *time.Time, to *time.Time) ([]models.DailyLog, map[uint]string, error) {
 	logs := make([]models.DailyLog, 0)
-	if err := handler.db.Where("user_id = ?", userID).Order("date ASC").Find(&logs).Error; err != nil {
+	query := handler.db.Where("user_id = ?", userID)
+	if from != nil {
+		fromKey := dateAtLocation(*from, handler.location).Format("2006-01-02")
+		query = query.Where("substr(date, 1, 10) >= ?", fromKey)
+	}
+	if to != nil {
+		toKey := dateAtLocation(*to, handler.location).Format("2006-01-02")
+		query = query.Where("substr(date, 1, 10) <= ?", toKey)
+	}
+	if err := query.Order("date ASC").Find(&logs).Error; err != nil {
 		return nil, nil, err
 	}
 
@@ -196,8 +206,25 @@ func (handler *Handler) fetchExportData(userID uint) ([]models.DailyLog, map[uin
 }
 
 func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, error) {
+	return handler.fetchExportSummaryForRange(userID, nil, nil)
+}
+
+func (handler *Handler) fetchExportSummaryForRange(userID uint, from *time.Time, to *time.Time) (int64, string, string, error) {
+	queryWithRange := func() *gorm.DB {
+		query := handler.db.Where("user_id = ?", userID)
+		if from != nil {
+			fromKey := dateAtLocation(*from, handler.location).Format("2006-01-02")
+			query = query.Where("substr(date, 1, 10) >= ?", fromKey)
+		}
+		if to != nil {
+			toKey := dateAtLocation(*to, handler.location).Format("2006-01-02")
+			query = query.Where("substr(date, 1, 10) <= ?", toKey)
+		}
+		return query
+	}
+
 	var total int64
-	if err := handler.db.Model(&models.DailyLog{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+	if err := queryWithRange().Model(&models.DailyLog{}).Count(&total).Error; err != nil {
 		return 0, "", "", err
 	}
 	if total == 0 {
@@ -205,12 +232,12 @@ func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, 
 	}
 
 	var first models.DailyLog
-	if err := handler.db.Select("date").Where("user_id = ?", userID).Order("date ASC").First(&first).Error; err != nil {
+	if err := queryWithRange().Select("date").Order("date ASC").First(&first).Error; err != nil {
 		return 0, "", "", err
 	}
 
 	var last models.DailyLog
-	if err := handler.db.Select("date").Where("user_id = ?", userID).Order("date DESC").First(&last).Error; err != nil {
+	if err := queryWithRange().Select("date").Order("date DESC").First(&last).Error; err != nil {
 		return 0, "", "", err
 	}
 

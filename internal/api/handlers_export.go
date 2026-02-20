@@ -11,13 +11,47 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func (handler *Handler) parseExportRange(c *fiber.Ctx) (*time.Time, *time.Time, string) {
+	rawFrom := strings.TrimSpace(c.Query("from"))
+	rawTo := strings.TrimSpace(c.Query("to"))
+
+	var from *time.Time
+	if rawFrom != "" {
+		parsedFrom, err := parseDayParam(rawFrom, handler.location)
+		if err != nil {
+			return nil, nil, "invalid from date"
+		}
+		from = &parsedFrom
+	}
+
+	var to *time.Time
+	if rawTo != "" {
+		parsedTo, err := parseDayParam(rawTo, handler.location)
+		if err != nil {
+			return nil, nil, "invalid to date"
+		}
+		to = &parsedTo
+	}
+
+	if from != nil && to != nil && to.Before(*from) {
+		return nil, nil, "invalid range"
+	}
+
+	return from, to, ""
+}
+
 func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	logs, symptomNames, err := handler.fetchExportData(user.ID)
+	from, to, rangeError := handler.parseExportRange(c)
+	if rangeError != "" {
+		return apiError(c, fiber.StatusBadRequest, rangeError)
+	}
+
+	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}
@@ -68,13 +102,42 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 	return c.Send(output.Bytes())
 }
 
+func (handler *Handler) ExportSummary(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	from, to, rangeError := handler.parseExportRange(c)
+	if rangeError != "" {
+		return apiError(c, fiber.StatusBadRequest, rangeError)
+	}
+
+	totalEntries, firstDate, lastDate, err := handler.fetchExportSummaryForRange(user.ID, from, to)
+	if err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
+	}
+
+	return c.JSON(fiber.Map{
+		"total_entries": int(totalEntries),
+		"has_data":      totalEntries > 0,
+		"date_from":     firstDate,
+		"date_to":       lastDate,
+	})
+}
+
 func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
 	if !ok {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	logs, symptomNames, err := handler.fetchExportData(user.ID)
+	from, to, rangeError := handler.parseExportRange(c)
+	if rangeError != "" {
+		return apiError(c, fiber.StatusBadRequest, rangeError)
+	}
+
+	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}

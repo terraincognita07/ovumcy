@@ -56,6 +56,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	stats.Get("/overview", handler.GetStatsOverview)
 
 	export := api.Group("/export", handler.AuthRequired, handler.OwnerOnly)
+	export.Get("/summary", handler.ExportSummary)
 	export.Get("/csv", handler.ExportCSV)
 	export.Get("/json", handler.ExportJSON)
 
