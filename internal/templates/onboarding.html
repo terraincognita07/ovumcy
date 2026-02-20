@@ -57,10 +57,10 @@
           id="last-period-start"
           type="date"
           class="input-field"
+          lang="{{.Lang}}"
           x-model="selectedDate"
           min="{{.MinDate}}"
-          max="{{.MaxDate}}"
-          required>
+          max="{{.MaxDate}}">
 
         <div class="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
           <template x-for="day in dayOptions" :key="day.value">
@@ -75,7 +75,7 @@
 
         <div class="flex flex-wrap items-center gap-3">
           <button type="button" class="btn-secondary" @click="step = 0">{{t .Messages "onboarding.button.back"}}</button>
-          <button type="submit" class="btn-primary" :disabled="!selectedDate">{{t .Messages "onboarding.button.next"}}</button>
+          <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.next"}}</button>
         </div>
         <div id="onboarding-step1-status" class="save-status text-sm"></div>
       </form>

@@ -28,6 +28,7 @@ var authErrorKeys = map[string]string{
 	"invalid settings input":                        "settings.error.invalid_input",
 	"invalid password":                              "settings.error.invalid_password",
 	"period flow is required":                       "calendar.error.period_flow_required",
+	"date is required":                              "onboarding.error.date_required",
 	"invalid last period start":                     "onboarding.error.invalid_last_period_start",
 	"last period start must be within last 60 days": "onboarding.error.last_period_range",
 	"cycle length must be between 15 and 90":        "onboarding.error.cycle_length_range",

@@ -326,7 +326,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
-	lengths := services.CycleLengths(logs)
+	lengths := handler.completedCycleTrendLengths(logs, now)
 	if len(lengths) > 12 {
 		lengths = lengths[len(lengths)-12:]
 	}
@@ -380,6 +380,26 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	}
 
 	return handler.render(c, "stats", data)
+}
+
+func (handler *Handler) completedCycleTrendLengths(logs []models.DailyLog, now time.Time) []int {
+	starts := services.DetectCycleStarts(logs)
+	if len(starts) < 2 {
+		return nil
+	}
+
+	today := dateAtLocation(now, handler.location)
+	lengths := make([]int, 0, len(starts)-1)
+	for index := 1; index < len(starts); index++ {
+		previousStart := dateAtLocation(starts[index-1], handler.location)
+		currentStart := dateAtLocation(starts[index], handler.location)
+		if !currentStart.Before(today) {
+			break
+		}
+		lengths = append(lengths, int(currentStart.Sub(previousStart).Hours()/24))
+	}
+
+	return lengths
 }
 
 func (handler *Handler) ShowSettings(c *fiber.Ctx) error {

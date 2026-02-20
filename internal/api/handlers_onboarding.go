@@ -66,7 +66,12 @@ func (handler *Handler) OnboardingStep1(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid input")
 	}
 
-	parsedDay, err := parseDayParam(strings.TrimSpace(input.LastPeriodStart), handler.location)
+	rawLastPeriodStart := strings.TrimSpace(input.LastPeriodStart)
+	if rawLastPeriodStart == "" {
+		return apiError(c, fiber.StatusBadRequest, "date is required")
+	}
+
+	parsedDay, err := parseDayParam(rawLastPeriodStart, handler.location)
 	if err != nil {
 		return apiError(c, fiber.StatusBadRequest, "invalid last period start")
 	}
