@@ -14,7 +14,7 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 		lutealPhaseDays: 14,
 	}
 
-	userLastPeriod := mustParseBaselineDay("2026-02-07")
+	userLastPeriod := mustParseBaselineDay(t, "2026-02-07")
 	user := &models.User{
 		Role:            models.RoleOwner,
 		CycleLength:     29,
@@ -23,11 +23,11 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 	}
 
 	logs := []models.DailyLog{
-		{Date: mustParseBaselineDay("2026-02-07"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2026-02-16"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2026-02-07"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2026-02-16"), IsPeriod: true, Flow: models.FlowMedium},
 	}
 
-	now := mustParseBaselineDay("2026-02-17")
+	now := mustParseBaselineDay(t, "2026-02-17")
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
@@ -60,7 +60,7 @@ func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 		lutealPhaseDays: 14,
 	}
 
-	userLastPeriod := mustParseBaselineDay("2025-03-27")
+	userLastPeriod := mustParseBaselineDay(t, "2025-03-27")
 	user := &models.User{
 		Role:            models.RoleOwner,
 		CycleLength:     29,
@@ -69,18 +69,18 @@ func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 	}
 
 	logs := []models.DailyLog{
-		{Date: mustParseBaselineDay("2025-01-01"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-01-02"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-01-03"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-01-29"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-01-30"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-01-31"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-02-26"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-02-27"), IsPeriod: true, Flow: models.FlowMedium},
-		{Date: mustParseBaselineDay("2025-02-28"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-01"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-02"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-03"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-29"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-30"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-01-31"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-02-26"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-02-27"), IsPeriod: true, Flow: models.FlowMedium},
+		{Date: mustParseBaselineDay(t, "2025-02-28"), IsPeriod: true, Flow: models.FlowMedium},
 	}
 
-	now := mustParseBaselineDay("2025-03-05")
+	now := mustParseBaselineDay(t, "2025-03-05")
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
@@ -95,10 +95,12 @@ func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 	}
 }
 
-func mustParseBaselineDay(raw string) time.Time {
+func mustParseBaselineDay(t *testing.T, raw string) time.Time {
+	t.Helper()
+
 	parsed, err := time.ParseInLocation("2006-01-02", raw, time.UTC)
 	if err != nil {
-		panic(err)
+		t.Fatalf("parse baseline day %q: %v", raw, err)
 	}
 	return parsed
 }

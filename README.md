@@ -71,7 +71,7 @@ go run cmd/lume/main.go
 
 ## Configuration
 
-Edit `docker-compose.yml` or set environment variables:
+Edit `docker/docker-compose.yml` or set environment variables:
 
 ```env
 # Core
@@ -97,6 +97,7 @@ TRUSTED_PROXIES=127.0.0.1,::1
 ```
 
 Set `COOKIE_SECURE=true` when Lume is served over HTTPS.
+Keep `TRUST_PROXY_ENABLED=false` unless Lume is running behind your own reverse proxy.
 
 ---
 

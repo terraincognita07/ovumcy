@@ -42,7 +42,10 @@ func main() {
 		log.Fatalf("invalid SECRET_KEY: %v", err)
 	}
 	dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
-	port := getEnv("PORT", "8080")
+	port, err := resolvePort()
+	if err != nil {
+		log.Fatalf("invalid PORT: %v", err)
+	}
 	defaultLanguage := getEnv("DEFAULT_LANGUAGE", "ru")
 	cookieSecure := getEnvBool("COOKIE_SECURE", false)
 
@@ -56,6 +59,14 @@ func main() {
 	trustProxyEnabled := getEnvBool("TRUST_PROXY_ENABLED", false)
 	proxyHeader := strings.TrimSpace(getEnv("PROXY_HEADER", fiber.HeaderXForwardedFor))
 	trustedProxies := parseCSV(getEnv("TRUSTED_PROXIES", "127.0.0.1,::1"))
+	if trustProxyEnabled {
+		if proxyHeader == "" {
+			proxyHeader = fiber.HeaderXForwardedFor
+		}
+		if len(trustedProxies) == 0 {
+			log.Fatal("TRUST_PROXY_ENABLED=true requires at least one TRUSTED_PROXIES entry")
+		}
+	}
 
 	database, err := db.OpenSQLite(dbPath)
 	if err != nil {
@@ -129,9 +140,8 @@ func main() {
 	}()
 
 	log.Printf(
-		"Lume listening on http://0.0.0.0:%s (db: %s, tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
+		"Lume listening on http://0.0.0.0:%s (tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
 		port,
-		dbPath,
 		location.String(),
 		loginLimitMax,
 		loginLimitWindow,
@@ -142,7 +152,7 @@ func main() {
 		trustProxyEnabled,
 	)
 	if trustProxyEnabled {
-		log.Printf("trusted proxy config: header=%s trusted=%v", proxyHeader, trustedProxies)
+		log.Printf("trusted proxy config: header=%s trusted_proxy_count=%d", proxyHeader, len(trustedProxies))
 	}
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("server exited: %v", err)
@@ -186,19 +196,29 @@ func getEnv(key string, fallback string) string {
 }
 
 func resolveSecretKey() (string, error) {
-	const insecureDefault = "change_me_in_production"
-
 	secret := strings.TrimSpace(os.Getenv("SECRET_KEY"))
 	if secret == "" {
 		return "", fmt.Errorf("SECRET_KEY is required")
 	}
-	if secret == insecureDefault {
-		return "", fmt.Errorf("SECRET_KEY cannot be %q", insecureDefault)
+
+	lower := strings.ToLower(secret)
+	switch lower {
+	case "change_me_in_production", "replace_with_at_least_32_random_characters", "replace_me", "changeme":
+		return "", fmt.Errorf("SECRET_KEY cannot use placeholder value %q", secret)
 	}
 	if len(secret) < 32 {
 		return "", fmt.Errorf("SECRET_KEY must be at least 32 characters")
 	}
 	return secret, nil
+}
+
+func resolvePort() (string, error) {
+	raw := strings.TrimSpace(getEnv("PORT", "8080"))
+	port, err := strconv.Atoi(raw)
+	if err != nil || port < 1 || port > 65535 {
+		return "", fmt.Errorf("PORT must be a number between 1 and 65535")
+	}
+	return strconv.Itoa(port), nil
 }
 
 func getEnvInt(key string, fallback int) int {
@@ -263,7 +283,7 @@ func csrfMiddlewareConfig(cookieSecure bool) csrf.Config {
 		KeyLookup:      "form:csrf_token",
 		CookieName:     "lume_csrf",
 		CookieSameSite: "Lax",
-		CookieHTTPOnly: false,
+		CookieHTTPOnly: true,
 		CookieSecure:   cookieSecure,
 		ContextKey:     "csrf",
 	}

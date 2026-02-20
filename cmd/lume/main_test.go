@@ -13,6 +13,11 @@ func TestResolveSecretKey(t *testing.T) {
 		t.Fatal("expected error when SECRET_KEY uses insecure placeholder")
 	}
 
+	t.Setenv("SECRET_KEY", "replace_with_at_least_32_random_characters")
+	if _, err := resolveSecretKey(); err == nil {
+		t.Fatal("expected error when SECRET_KEY uses example placeholder")
+	}
+
 	t.Setenv("SECRET_KEY", "too-short-secret")
 	if _, err := resolveSecretKey(); err == nil {
 		t.Fatal("expected error when SECRET_KEY is too short")
@@ -35,6 +40,9 @@ func TestCSRFMiddlewareConfigUsesCookieSecureFlag(t *testing.T) {
 	if !secureConfig.CookieSecure {
 		t.Fatal("expected csrf cookie secure flag to be enabled")
 	}
+	if !secureConfig.CookieHTTPOnly {
+		t.Fatal("expected csrf cookie to be httpOnly")
+	}
 	if secureConfig.CookieName != "lume_csrf" {
 		t.Fatalf("expected csrf cookie name lume_csrf, got %q", secureConfig.CookieName)
 	}
@@ -45,5 +53,40 @@ func TestCSRFMiddlewareConfigUsesCookieSecureFlag(t *testing.T) {
 	insecureConfig := csrfMiddlewareConfig(false)
 	if insecureConfig.CookieSecure {
 		t.Fatal("expected csrf cookie secure flag to be disabled")
+	}
+}
+
+func TestResolvePort(t *testing.T) {
+	t.Setenv("PORT", "")
+	port, err := resolvePort()
+	if err != nil {
+		t.Fatalf("expected default port, got error: %v", err)
+	}
+	if port != "8080" {
+		t.Fatalf("expected default port 8080, got %q", port)
+	}
+
+	t.Setenv("PORT", "9090")
+	port, err = resolvePort()
+	if err != nil {
+		t.Fatalf("expected valid port, got error: %v", err)
+	}
+	if port != "9090" {
+		t.Fatalf("expected port 9090, got %q", port)
+	}
+
+	t.Setenv("PORT", "0")
+	if _, err := resolvePort(); err == nil {
+		t.Fatal("expected invalid port 0 to fail")
+	}
+
+	t.Setenv("PORT", "70000")
+	if _, err := resolvePort(); err == nil {
+		t.Fatal("expected invalid high port to fail")
+	}
+
+	t.Setenv("PORT", "not-a-number")
+	if _, err := resolvePort(); err == nil {
+		t.Fatal("expected invalid non-numeric port to fail")
 	}
 }

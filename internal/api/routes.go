@@ -3,11 +3,13 @@ package api
 import "github.com/gofiber/fiber/v2"
 
 func RegisterRoutes(app *fiber.App, handler *Handler) {
+	registerPageRoutes(app, handler)
+	registerAPIRoutes(app, handler)
+}
+
+func registerPageRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/healthz", handler.Health)
-	app.Get("/favicon.ico", func(c *fiber.Ctx) error { return c.SendStatus(fiber.StatusNoContent) })
-	app.Get("/.well-known/appspecific/com.chrome.devtools.json", func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusNoContent)
-	})
+	app.Get("/favicon.ico", sendNoContent)
 	app.Get("/lang/:lang", handler.SetLanguage)
 
 	app.Get("/login", handler.ShowLoginPage)
@@ -26,7 +28,9 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/stats", handler.AuthRequired, handler.ShowStats)
 	app.Get("/settings", handler.AuthRequired, handler.ShowSettings)
 	app.Post("/settings/cycle", handler.AuthRequired, handler.OwnerOnly, handler.UpdateCycleSettings)
+}
 
+func registerAPIRoutes(app *fiber.App, handler *Handler) {
 	api := app.Group("/api")
 
 	auth := api.Group("/auth")
@@ -44,8 +48,8 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	days.Post("/:date", handler.OwnerOnly, handler.UpsertDay)
 	days.Delete("/:date", handler.OwnerOnly, handler.DeleteDay)
 
-	log := api.Group("/log", handler.AuthRequired, handler.OwnerOnly)
-	log.Delete("/delete", handler.DeleteDailyLog)
+	dailyLog := api.Group("/log", handler.AuthRequired, handler.OwnerOnly)
+	dailyLog.Delete("/delete", handler.DeleteDailyLog)
 
 	symptoms := api.Group("/symptoms", handler.AuthRequired)
 	symptoms.Get("", handler.GetSymptoms)
@@ -65,4 +69,8 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	settings.Post("/regenerate-recovery-code", handler.RegenerateRecoveryCode)
 	settings.Post("/clear-data", handler.OwnerOnly, handler.ClearAllData)
 	settings.Delete("/delete-account", handler.DeleteAccount)
+}
+
+func sendNoContent(c *fiber.Ctx) error {
+	return c.SendStatus(fiber.StatusNoContent)
 }

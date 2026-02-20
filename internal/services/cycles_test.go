@@ -9,12 +9,12 @@ import (
 
 func TestDetectCycleStarts(t *testing.T) {
 	logs := []models.DailyLog{
-		makeLog("2025-01-01", true),
-		makeLog("2025-01-02", true),
-		makeLog("2025-01-03", true),
-		makeLog("2025-01-29", true),
-		makeLog("2025-01-30", true),
-		makeLog("2025-02-26", true),
+		makeLog(t, "2025-01-01", true),
+		makeLog(t, "2025-01-02", true),
+		makeLog(t, "2025-01-03", true),
+		makeLog(t, "2025-01-29", true),
+		makeLog(t, "2025-01-30", true),
+		makeLog(t, "2025-02-26", true),
 	}
 
 	starts := DetectCycleStarts(logs)
@@ -38,10 +38,10 @@ func TestBuildCycleStats(t *testing.T) {
 		"2025-02-26", "2025-02-27", "2025-02-28", "2025-03-01",
 	}
 	for _, day := range periodDays {
-		logs = append(logs, makeLog(day, true))
+		logs = append(logs, makeLog(t, day, true))
 	}
 
-	now := mustParseDay("2025-03-05")
+	now := mustParseDay(t, "2025-03-05")
 	stats := BuildCycleStats(logs, now, 14)
 
 	if stats.MedianCycleLength != 28 {
@@ -70,8 +70,8 @@ func TestBuildCycleStats(t *testing.T) {
 	}
 }
 
-func makeLog(date string, isPeriod bool) models.DailyLog {
-	day := mustParseDay(date)
+func makeLog(t *testing.T, date string, isPeriod bool) models.DailyLog {
+	day := mustParseDay(t, date)
 	return models.DailyLog{
 		Date:     day,
 		IsPeriod: isPeriod,
@@ -79,10 +79,12 @@ func makeLog(date string, isPeriod bool) models.DailyLog {
 	}
 }
 
-func mustParseDay(raw string) time.Time {
+func mustParseDay(t *testing.T, raw string) time.Time {
+	t.Helper()
+
 	parsed, err := time.ParseInLocation("2006-01-02", raw, time.UTC)
 	if err != nil {
-		panic(err)
+		t.Fatalf("parse day %q: %v", raw, err)
 	}
 	return parsed
 }
