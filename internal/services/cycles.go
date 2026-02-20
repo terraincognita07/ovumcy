@@ -69,7 +69,7 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 
 	predictionCycleLength := stats.MedianCycleLength
 	if predictionCycleLength == 0 {
-		predictionCycleLength = 28
+		predictionCycleLength = 26
 	}
 
 	stats.NextPeriodStart = dateOnly(stats.LastPeriodStart.AddDate(0, 0, predictionCycleLength))

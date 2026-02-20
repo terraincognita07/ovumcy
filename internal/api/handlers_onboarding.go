@@ -28,11 +28,11 @@ func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
 	}
 
 	cycleLength := user.CycleLength
-	if cycleLength < 21 || cycleLength > 50 {
-		cycleLength = 28
+	if !isValidOnboardingCycleLength(cycleLength) {
+		cycleLength = 26
 	}
 	periodLength := user.PeriodLength
-	if periodLength < 2 || periodLength > 7 {
+	if !isValidOnboardingPeriodLength(periodLength) {
 		periodLength = 5
 	}
 
@@ -45,6 +45,7 @@ func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
 		"LastPeriodStart": lastPeriodStart,
 		"CycleLength":     cycleLength,
 		"PeriodLength":    periodLength,
+		"AutoPeriodFill":  user.AutoPeriodFill,
 	}
 	return handler.render(c, "onboarding", data)
 }
@@ -100,27 +101,30 @@ func (handler *Handler) OnboardingStep2(c *fiber.Ctx) error {
 	}
 
 	input := struct {
-		CycleLength  int `json:"cycle_length" form:"cycle_length"`
-		PeriodLength int `json:"period_length" form:"period_length"`
+		CycleLength    int  `json:"cycle_length" form:"cycle_length"`
+		PeriodLength   int  `json:"period_length" form:"period_length"`
+		AutoPeriodFill bool `json:"auto_period_fill" form:"auto_period_fill"`
 	}{}
 	if err := c.BodyParser(&input); err != nil {
 		return apiError(c, fiber.StatusBadRequest, "invalid input")
 	}
-	if input.CycleLength < 21 || input.CycleLength > 50 {
-		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 50")
+	if !isValidOnboardingCycleLength(input.CycleLength) {
+		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 15 and 90")
 	}
-	if input.PeriodLength < 2 || input.PeriodLength > 7 {
-		return apiError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
+	if !isValidOnboardingPeriodLength(input.PeriodLength) {
+		return apiError(c, fiber.StatusBadRequest, "period length must be between 1 and 10")
 	}
 
 	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"cycle_length":  input.CycleLength,
-		"period_length": input.PeriodLength,
+		"cycle_length":     input.CycleLength,
+		"period_length":    input.PeriodLength,
+		"auto_period_fill": input.AutoPeriodFill,
 	}).Error; err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to save onboarding step")
 	}
 	user.CycleLength = input.CycleLength
 	user.PeriodLength = input.PeriodLength
+	user.AutoPeriodFill = input.AutoPeriodFill
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})

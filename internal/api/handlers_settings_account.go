@@ -70,21 +70,23 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
 	}
 	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 21 and 50")
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 15 and 90")
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "period length must be between 2 and 7")
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "period length must be between 1 and 10")
 	}
 
 	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"cycle_length":  input.CycleLength,
-		"period_length": input.PeriodLength,
+		"cycle_length":     input.CycleLength,
+		"period_length":    input.PeriodLength,
+		"auto_period_fill": input.AutoPeriodFill,
 	}).Error; err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update cycle settings")
 	}
 
 	user.CycleLength = input.CycleLength
 	user.PeriodLength = input.PeriodLength
+	user.AutoPeriodFill = input.AutoPeriodFill
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
@@ -122,6 +124,38 @@ func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 	data["SuccessKey"] = "settings.success.recovery_code_regenerated"
 	data["GeneratedRecoveryCode"] = recoveryCode
 	return handler.render(c, "settings", data)
+}
+
+func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	if err := handler.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", user.ID).Delete(&models.DailyLog{}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
+			"cycle_length":      26,
+			"period_length":     5,
+			"auto_period_fill":  true,
+			"last_period_start": nil,
+		}).Error
+	}); err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to clear data")
+	}
+
+	user.CycleLength = 26
+	user.PeriodLength = 5
+	user.AutoPeriodFill = true
+	user.LastPeriodStart = nil
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{"ok": true})
+	}
+	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: "data_cleared"})
+	return redirectOrJSON(c, "/settings")
 }
 
 func (handler *Handler) DeleteAccount(c *fiber.Ctx) error {

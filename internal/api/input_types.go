@@ -37,8 +37,9 @@ type changePasswordInput struct {
 }
 
 type cycleSettingsInput struct {
-	CycleLength  int `json:"cycle_length" form:"cycle_length"`
-	PeriodLength int `json:"period_length" form:"period_length"`
+	CycleLength    int  `json:"cycle_length" form:"cycle_length"`
+	PeriodLength   int  `json:"period_length" form:"period_length"`
+	AutoPeriodFill bool `json:"auto_period_fill" form:"auto_period_fill"`
 }
 
 type deleteAccountInput struct {

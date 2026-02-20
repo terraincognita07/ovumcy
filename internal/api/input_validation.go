@@ -33,11 +33,11 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 }
 
 func isValidOnboardingCycleLength(value int) bool {
-	return value >= 21 && value <= 50
+	return value >= 15 && value <= 90
 }
 
 func isValidOnboardingPeriodLength(value int) bool {
-	return value >= 2 && value <= 7
+	return value >= 1 && value <= 10
 }
 
 func validatePasswordStrength(password string) error {

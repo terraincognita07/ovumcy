@@ -30,8 +30,8 @@ var authErrorKeys = map[string]string{
 	"period flow is required":                       "calendar.error.period_flow_required",
 	"invalid last period start":                     "onboarding.error.invalid_last_period_start",
 	"last period start must be within last 60 days": "onboarding.error.last_period_range",
-	"cycle length must be between 21 and 50":        "onboarding.error.cycle_length_range",
-	"period length must be between 2 and 7":         "onboarding.error.period_length_range",
+	"cycle length must be between 15 and 90":        "onboarding.error.cycle_length_range",
+	"period length must be between 1 and 10":        "onboarding.error.period_length_range",
 	"complete onboarding steps first":               "onboarding.error.incomplete",
 	"failed to save onboarding step":                "onboarding.error.generic",
 	"failed to finish onboarding":                   "onboarding.error.generic",
@@ -108,6 +108,8 @@ func settingsStatusTranslationKey(status string) string {
 		return "settings.success.password_changed"
 	case "cycle_updated":
 		return "settings.success.cycle_updated"
+	case "data_cleared":
+		return "settings.success.data_cleared"
 	default:
 		return ""
 	}

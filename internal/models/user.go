@@ -15,8 +15,9 @@ type User struct {
 	MustChangePassword  bool       `gorm:"column:must_change_password;not null;default:false"`
 	Role                string     `gorm:"not null;default:owner"`
 	OnboardingCompleted bool       `gorm:"not null;default:false"`
-	CycleLength         int        `gorm:"not null;default:28"`
+	CycleLength         int        `gorm:"not null;default:26"`
 	PeriodLength        int        `gorm:"not null;default:5"`
+	AutoPeriodFill      bool       `gorm:"column:auto_period_fill;not null;default:true"`
 	LastPeriodStart     *time.Time `gorm:"type:date"`
 	CreatedAt           time.Time  `gorm:"not null"`
 }

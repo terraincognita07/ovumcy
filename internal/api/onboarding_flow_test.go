@@ -69,8 +69,9 @@ func TestOnboardingFlowCompletesAndCreatesFirstPeriodLog(t *testing.T) {
 	}
 
 	step2Form := url.Values{
-		"cycle_length":  {"30"},
-		"period_length": {"6"},
+		"cycle_length":     {"30"},
+		"period_length":    {"6"},
+		"auto_period_fill": {"true"},
 	}
 	step2Request := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(step2Form.Encode()))
 	step2Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -179,7 +180,7 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	invalidCycleForm := url.Values{
-		"cycle_length":  {"20"},
+		"cycle_length":  {"14"},
 		"period_length": {"5"},
 	}
 	invalidCycleRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(invalidCycleForm.Encode()))
@@ -198,7 +199,7 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 
 	invalidPeriodForm := url.Values{
 		"cycle_length":  {"29"},
-		"period_length": {"8"},
+		"period_length": {"11"},
 	}
 	invalidPeriodRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(invalidPeriodForm.Encode()))
 	invalidPeriodRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -275,8 +276,9 @@ func createOnboardingTestUser(t *testing.T, database *gorm.DB, email string, pas
 		PasswordHash:        string(passwordHash),
 		Role:                models.RoleOwner,
 		OnboardingCompleted: onboardingCompleted,
-		CycleLength:         28,
+		CycleLength:         26,
 		PeriodLength:        5,
+		AutoPeriodFill:      true,
 		CreatedAt:           time.Now().UTC(),
 	}
 	if err := database.Create(&user).Error; err != nil {

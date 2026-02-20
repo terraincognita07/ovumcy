@@ -7,6 +7,7 @@
     lastPeriodStart: "{{.LastPeriodStart}}",
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
+    autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     lang: "{{.Lang}}"
   })'
   x-cloak
@@ -99,11 +100,12 @@
           <input
             id="cycle-length"
             type="range"
-            min="21"
-            max="50"
+            min="15"
+            max="90"
             name="cycle_length"
             x-model.number="cycleLength"
             class="w-full">
+          <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
           <p class="journal-muted text-sm">{{t .Messages "onboarding.step2.hint"}}</p>
         </div>
 
@@ -115,11 +117,20 @@
           <input
             id="period-length"
             type="range"
-            min="2"
-            max="7"
+            min="1"
+            max="10"
             name="period_length"
             x-model.number="periodLength"
             class="w-full">
+          <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>
+        </div>
+
+        <div class="space-y-2">
+          <label class="period-toggle">
+            <input type="checkbox" name="auto_period_fill" value="true" x-model="autoPeriodFill" {{if .AutoPeriodFill}}checked{{end}}>
+            <span>🩸 {{t .Messages "onboarding.step2.auto_period_fill"}}</span>
+          </label>
+          <p class="journal-muted text-sm">{{t .Messages "onboarding.step2.auto_period_fill_hint"}}</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -154,8 +165,9 @@
     return {
       step: 0,
       selectedDate: safeConfig.lastPeriodStart || "",
-      cycleLength: Number(safeConfig.cycleLength || 28),
+      cycleLength: Number(safeConfig.cycleLength || 26),
       periodLength: Number(safeConfig.periodLength || 5),
+      autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],
       init() {
         this.dayOptions = this.buildDayOptions(safeConfig.minDate, safeConfig.maxDate, lang);

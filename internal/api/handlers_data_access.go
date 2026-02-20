@@ -139,28 +139,31 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	}
 
 	persisted := models.User{}
-	if err := handler.db.Select("cycle_length", "period_length").First(&persisted, user.ID).Error; err != nil {
+	if err := handler.db.Select("cycle_length", "period_length", "auto_period_fill").First(&persisted, user.ID).Error; err != nil {
 		return nil, err
 	}
 
 	cycleLength := persisted.CycleLength
 	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = 28
+		cycleLength = 26
 	}
 	periodLength := persisted.PeriodLength
 	if !isValidOnboardingPeriodLength(periodLength) {
 		periodLength = 5
 	}
+	autoPeriodFill := persisted.AutoPeriodFill
 	user.CycleLength = cycleLength
 	user.PeriodLength = periodLength
+	user.AutoPeriodFill = autoPeriodFill
 
 	data := fiber.Map{
-		"Title":        localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
-		"CurrentUser":  user,
-		"ErrorKey":     errorKey,
-		"SuccessKey":   settingsStatusTranslationKey(status),
-		"CycleLength":  cycleLength,
-		"PeriodLength": periodLength,
+		"Title":          localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
+		"CurrentUser":    user,
+		"ErrorKey":       errorKey,
+		"SuccessKey":     settingsStatusTranslationKey(status),
+		"CycleLength":    cycleLength,
+		"PeriodLength":   periodLength,
+		"AutoPeriodFill": autoPeriodFill,
 	}
 
 	if user.Role == models.RoleOwner {

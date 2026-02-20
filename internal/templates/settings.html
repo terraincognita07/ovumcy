@@ -14,7 +14,7 @@
   {{end}}
 
   {{if eq .CurrentUser.Role "owner"}}
-  <section class="journal-card p-5 sm:p-6" x-data="{ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}} }">
+  <section class="journal-card p-5 sm:p-6" x-data="{ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} }">
     <h2 class="journal-subtitle">🗓️ {{t .Messages "settings.cycle.title"}}</h2>
 
     <form
@@ -35,12 +35,13 @@
         <input
           id="settings-cycle-length"
           type="range"
-          min="21"
-          max="50"
+          min="15"
+          max="90"
           name="cycle_length"
           value="{{.CycleLength}}"
           x-model.number="cycleLength"
           class="w-full">
+        <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "settings.cycle.cycle_warning"}}</p>
       </div>
 
       <div class="space-y-2">
@@ -51,12 +52,21 @@
         <input
           id="settings-period-length"
           type="range"
-          min="2"
-          max="7"
+          min="1"
+          max="10"
           name="period_length"
           value="{{.PeriodLength}}"
           x-model.number="periodLength"
           class="w-full">
+        <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "settings.cycle.period_warning"}}</p>
+      </div>
+
+      <div class="space-y-2">
+        <label class="period-toggle">
+          <input type="checkbox" name="auto_period_fill" value="true" x-model="autoPeriodFill" {{if .AutoPeriodFill}}checked{{end}}>
+          <span>🩸 {{t .Messages "settings.cycle.auto_period_fill"}}</span>
+        </label>
+        <p class="journal-muted text-sm">{{t .Messages "settings.cycle.auto_period_fill_hint"}}</p>
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
@@ -230,6 +240,23 @@
       {{if .HasExportData}}{{printf (t .Messages "settings.export_summary_range") .ExportDateFrom .ExportDateTo}}{{else}}{{t .Messages "settings.export_summary_range_empty"}}{{end}}
     </p>
     <p class="journal-muted mt-3 text-xs">{{t .Messages "settings.export_data_hint"}}</p>
+  </section>
+  {{end}}
+
+  {{if eq .CurrentUser.Role "owner"}}
+  <section class="journal-card border border-[rgba(172,136,96,0.28)] p-5 sm:p-6">
+    <h2 class="journal-subtitle">🧹 {{t .Messages "settings.clear_data.title"}}</h2>
+    <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.clear_data.subtitle"}}</p>
+
+    <form
+      action="/api/settings/clear-data"
+      method="post"
+      class="mt-5"
+      data-confirm="{{t .Messages "settings.confirm_clear_data"}}"
+      data-confirm-accept="{{t .Messages "settings.clear_data.submit"}}">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <button type="submit" class="btn-secondary">{{t .Messages "settings.clear_data.submit"}}</button>
+    </form>
   </section>
   {{end}}
 
