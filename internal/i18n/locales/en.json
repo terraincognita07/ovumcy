@@ -28,7 +28,7 @@
   "auth.welcome_back": "Welcome back",
   "auth.create_account": "Create your account",
   "auth.login_subtitle": "Continue your private cycle journal.",
-  "auth.register_subtitle": "First launch detected. Create the main account to begin.",
+  "auth.register_subtitle": "First launch of Lume. After sign up, complete cycle setup.",
   "auth.email": "Email",
   "auth.password": "Password",
   "validation.required": "Please fill out this field.",

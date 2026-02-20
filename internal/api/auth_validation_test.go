@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const firstLaunchRegisterSubtitle = "First launch detected. Create the main account to begin."
+const firstLaunchRegisterSubtitle = "First launch of Lume. After sign up, complete cycle setup."
 const weakPasswordErrorText = "Use at least 8 characters with uppercase, lowercase, and a number."
 
 func TestRegisterRejectsWeakNumericPassword(t *testing.T) {

@@ -35,6 +35,11 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
+	var usersCount int64
+	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
+	}
+
 	flash := handler.popFlashCookie(c)
 	errorSource := strings.TrimSpace(flash.AuthError)
 	if errorSource == "" {
@@ -53,9 +58,10 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		title = "Lume | Login"
 	}
 	data := fiber.Map{
-		"Title":    title,
-		"ErrorKey": errorKey,
-		"Email":    email,
+		"Title":         title,
+		"ErrorKey":      errorKey,
+		"Email":         email,
+		"IsFirstLaunch": usersCount == 0,
 	}
 	return handler.render(c, "login", data)
 }

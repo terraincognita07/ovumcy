@@ -28,7 +28,7 @@
   "auth.welcome_back": "С возвращением",
   "auth.create_account": "Создайте аккаунт",
   "auth.login_subtitle": "Продолжите личный трекинг цикла.",
-  "auth.register_subtitle": "Первый вход: создайте основной аккаунт для запуска Lume.",
+  "auth.register_subtitle": "Первый запуск Lume. После регистрации откроется настройка цикла.",
   "auth.email": "Email",
   "auth.password": "Пароль",
   "validation.required": "Заполните это поле.",

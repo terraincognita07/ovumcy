@@ -10,6 +10,7 @@ COPY web/static/js ./web/static/js
 COPY internal/templates ./internal/templates
 COPY internal/api ./internal/api
 COPY cmd ./cmd
+COPY scripts ./scripts
 RUN npm run build:css
 RUN npm run build:js
 

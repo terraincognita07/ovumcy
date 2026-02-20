@@ -4,8 +4,13 @@
     <p class="journal-kicker">{{t .Messages "app.name"}}</p>
 
     <div>
+      {{if .IsFirstLaunch}}
+      <h1 class="journal-title">{{t .Messages "auth.create_account"}}</h1>
+      <p class="journal-muted mt-2">{{t .Messages "auth.register_subtitle"}}</p>
+      {{else}}
       <h1 class="journal-title">{{t .Messages "auth.welcome_back"}}</h1>
       <p class="journal-muted mt-2">{{t .Messages "auth.login_subtitle"}}</p>
+      {{end}}
     </div>
 
     {{if .ErrorKey}}
