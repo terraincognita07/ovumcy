@@ -427,6 +427,7 @@
   .btn-primary,
   .btn-secondary,
   .btn-soft,
+  .btn-warning,
   .btn-danger {
     border-radius: 999px;
     padding: 0.58rem 1.12rem;
@@ -468,6 +469,17 @@
     border: 1px solid rgba(199, 117, 109, 0.28);
     background: rgba(255, 255, 255, 0.84);
     color: #9f534d;
+  }
+
+  .btn-warning {
+    border: 1px solid rgba(196, 146, 74, 0.45);
+    background: rgba(255, 236, 196, 0.82);
+    color: #8b5a1c;
+  }
+
+  .btn-warning:hover {
+    transform: translateY(-1px);
+    background: rgba(247, 218, 161, 0.92);
   }
 
   .btn-danger {
@@ -867,6 +879,11 @@
     border: 1px solid rgba(199, 117, 109, 0.45);
     background: rgba(199, 117, 109, 0.16);
     color: #8d4b45;
+  }
+
+  .warning-amber {
+    color: #8b5a1c;
+    font-weight: 600;
   }
 
   .status-transient {

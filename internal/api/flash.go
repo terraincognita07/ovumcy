@@ -26,11 +26,13 @@ func writeFlashCookie(c *fiber.Ctx, payload FlashPayload, secure bool) {
 	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
 	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
 	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
+	payload.RegisterEmail = normalizeLoginEmail(payload.RegisterEmail)
 
 	if payload.AuthError == "" &&
 		payload.SettingsError == "" &&
 		payload.SettingsSuccess == "" &&
-		payload.LoginEmail == "" {
+		payload.LoginEmail == "" &&
+		payload.RegisterEmail == "" {
 		clearFlashCookie(c, secure)
 		return
 	}
@@ -72,6 +74,7 @@ func (handler *Handler) popFlashCookie(c *fiber.Ctx) FlashPayload {
 	payload.SettingsError = strings.TrimSpace(payload.SettingsError)
 	payload.SettingsSuccess = strings.TrimSpace(payload.SettingsSuccess)
 	payload.LoginEmail = normalizeLoginEmail(payload.LoginEmail)
+	payload.RegisterEmail = normalizeLoginEmail(payload.RegisterEmail)
 	return payload
 }
 

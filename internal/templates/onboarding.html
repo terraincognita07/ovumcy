@@ -5,6 +5,8 @@
     minDate: "{{.MinDate}}",
     maxDate: "{{.MaxDate}}",
     lastPeriodStart: "{{.LastPeriodStart}}",
+    onboardingPeriodStatus: "{{.OnboardingPeriodStatus}}",
+    onboardingPeriodEnd: "{{.OnboardingPeriodEnd}}",
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
@@ -51,6 +53,8 @@
         class="space-y-4">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <input type="hidden" name="last_period_start" :value="selectedDate">
+        <input type="hidden" name="period_status" :value="periodStatus">
+        <input type="hidden" name="period_end" :value="periodStatus === 'finished' ? periodEndDate : ''">
 
         <label class="field-label" for="last-period-start">{{t .Messages "onboarding.step1.field"}}</label>
         <input
@@ -60,6 +64,7 @@
           lang="{{.Lang}}"
           placeholder="{{t .Messages "onboarding.step1.date_placeholder"}}"
           x-model="selectedDate"
+          @change="onStartDateChanged"
           min="{{.MinDate}}"
           max="{{.MaxDate}}">
 
@@ -69,9 +74,53 @@
               type="button"
               class="check-chip check-chip-sm justify-center"
               :style="selectedDate === day.value ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
-              @click="selectedDate = day.value"
+              @click="setStartDate(day.value)"
               x-text="day.label"></button>
           </template>
+        </div>
+
+        <div class="space-y-2" x-cloak x-show="selectedDate">
+          <p class="field-label">{{t .Messages "onboarding.step1.status_question"}}</p>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              class="check-chip check-chip-sm justify-center"
+              :style="periodStatus === 'ongoing' ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              @click="setPeriodStatus('ongoing')">
+              🩸 <span>{{t .Messages "onboarding.step1.status_ongoing"}}</span>
+            </button>
+            <button
+              type="button"
+              class="check-chip check-chip-sm justify-center"
+              :style="periodStatus === 'finished' ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              @click="setPeriodStatus('finished')">
+              ✅ <span>{{t .Messages "onboarding.step1.status_finished"}}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2" x-cloak x-show="selectedDate && periodStatus === 'finished'">
+          <label class="field-label" for="last-period-end">{{t .Messages "onboarding.step1.end_question"}}</label>
+          <input
+            id="last-period-end"
+            type="date"
+            class="input-field"
+            lang="{{.Lang}}"
+            placeholder="{{t .Messages "onboarding.step1.date_placeholder"}}"
+            x-model="periodEndDate"
+            :min="selectedDate || minDate"
+            :max="maxDate">
+
+          <div class="grid max-h-60 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
+            <template x-for="day in endDayOptions" :key="'end-' + day.value">
+              <button
+                type="button"
+                class="check-chip check-chip-sm justify-center"
+                :style="periodEndDate === day.value ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+                @click="periodEndDate = day.value"
+                x-text="day.label"></button>
+            </template>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -106,7 +155,7 @@
             name="cycle_length"
             x-model.number="cycleLength"
             class="w-full range-field">
-          <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
+          <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
           <p class="journal-muted text-sm" x-cloak x-show="cycleLength === 28">{{t .Messages "onboarding.step2.hint"}}</p>
         </div>
 
@@ -165,13 +214,58 @@
 
     return {
       step: 0,
+      minDate: safeConfig.minDate || "",
+      maxDate: safeConfig.maxDate || "",
       selectedDate: safeConfig.lastPeriodStart || "",
+      periodStatus: safeConfig.onboardingPeriodStatus || "",
+      periodEndDate: safeConfig.onboardingPeriodEnd || "",
       cycleLength: Number(safeConfig.cycleLength || 28),
       periodLength: Number(safeConfig.periodLength || 5),
       autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],
+      endDayOptions: [],
       init() {
-        this.dayOptions = this.buildDayOptions(safeConfig.minDate, safeConfig.maxDate, lang);
+        this.dayOptions = this.buildDayOptions(this.minDate, this.maxDate, lang);
+        this.onStartDateChanged();
+      },
+      setStartDate(value) {
+        this.selectedDate = value || "";
+        this.onStartDateChanged();
+      },
+      setPeriodStatus(value) {
+        this.periodStatus = value || "";
+        if (this.periodStatus !== "finished") {
+          this.periodEndDate = "";
+        }
+        this.refreshEndDayOptions();
+      },
+      onStartDateChanged() {
+        if (!this.selectedDate) {
+          this.periodStatus = "";
+          this.periodEndDate = "";
+          this.endDayOptions = [];
+          return;
+        }
+        this.refreshEndDayOptions();
+      },
+      refreshEndDayOptions() {
+        if (!this.selectedDate) {
+          this.endDayOptions = [];
+          this.periodEndDate = "";
+          return;
+        }
+        this.endDayOptions = this.buildDayOptions(this.selectedDate, this.maxDate, lang);
+        if (!this.isDateWithinRange(this.periodEndDate, this.selectedDate, this.maxDate)) {
+          this.periodEndDate = "";
+        }
+      },
+      isDateWithinRange(value, minRaw, maxRaw) {
+        if (!value) return false;
+        var current = this.parseDate(value);
+        var min = this.parseDate(minRaw);
+        var max = this.parseDate(maxRaw);
+        if (!current || !min || !max) return false;
+        return current >= min && current <= max;
       },
       buildDayOptions(minDateRaw, maxDateRaw, locale) {
         var minDate = this.parseDate(minDateRaw);

@@ -18,7 +18,7 @@
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <label class="field-label" for="register-email">{{t .Messages "auth.email"}}</label>
-      <input id="register-email" type="email" name="email" required autocomplete="email" class="input-field" />
+      <input id="register-email" type="email" name="email" value="{{.Email}}" required autocomplete="email" class="input-field" />
 
       <label class="field-label" for="register-password">{{t .Messages "auth.password"}}</label>
       <div class="password-field">

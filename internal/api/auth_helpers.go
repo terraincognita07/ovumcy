@@ -32,6 +32,7 @@ func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message strin
 		flash := FlashPayload{AuthError: message}
 		switch c.Path() {
 		case "/api/auth/register":
+			flash.RegisterEmail = normalizeLoginEmail(c.FormValue("email"))
 			handler.setFlashCookie(c, flash)
 			return c.Redirect("/register", fiber.StatusSeeOther)
 		case "/api/auth/login":

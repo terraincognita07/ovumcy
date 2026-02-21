@@ -82,6 +82,10 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		errorSource = strings.TrimSpace(c.Query("error"))
 	}
 	errorKey := authErrorTranslationKey(errorSource)
+	email := normalizeLoginEmail(flash.RegisterEmail)
+	if email == "" {
+		email = normalizeLoginEmail(c.Query("email"))
+	}
 	messages := currentMessages(c)
 	title := translateMessage(messages, "meta.title.register")
 	if title == "meta.title.register" {
@@ -90,6 +94,7 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 	data := fiber.Map{
 		"Title":         title,
 		"ErrorKey":      errorKey,
+		"Email":         email,
 		"IsFirstLaunch": usersCount == 0,
 	}
 	return handler.render(c, "register", data)

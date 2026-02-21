@@ -66,7 +66,7 @@
           value="{{.CycleLength}}"
           x-model.number="cycleLength"
           class="w-full range-field">
-        <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "settings.cycle.cycle_warning"}}</p>
+        <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "settings.cycle.cycle_warning"}}</p>
       </div>
 
       <div class="space-y-2">
@@ -280,7 +280,7 @@
   {{end}}
 
   {{if eq .CurrentUser.Role "owner"}}
-  <section class="journal-card border border-[rgba(172,136,96,0.28)] p-5 sm:p-6">
+  <section class="journal-card border border-[rgba(196,146,74,0.38)] bg-[rgba(255,247,228,0.62)] p-5 sm:p-6">
     <h2 class="journal-subtitle">🧹 {{t .Messages "settings.clear_data.title"}}</h2>
     <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.clear_data.subtitle"}}</p>
 
@@ -291,7 +291,7 @@
       data-confirm="{{t .Messages "settings.confirm_clear_data"}}"
       data-confirm-accept="{{t .Messages "settings.clear_data.submit"}}">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-      <button type="submit" class="btn-secondary">{{t .Messages "settings.clear_data.submit"}}</button>
+      <button type="submit" class="btn-warning">{{t .Messages "settings.clear_data.submit"}}</button>
     </form>
   </section>
   {{end}}
@@ -694,7 +694,6 @@
 
       var toDate = cloneDate(maxBound);
       var fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate() - days + 1);
-      fromDate = clampToBounds(fromDate);
       return { from: fromDate, to: toDate };
     }
 
@@ -731,7 +730,6 @@
         return { ok: false, date: null };
       }
 
-      parsed = clampToBounds(parsed);
       input.value = formatISODate(parsed);
       input.setCustomValidity("");
       return { ok: true, date: parsed };
@@ -811,8 +809,8 @@
 
       var fromValue = parseISODate(fromInput.value);
       var toValue = parseISODate(toInput.value);
-      fromValue = clampToBounds(fromValue || cloneDate(minBound));
-      toValue = clampToBounds(toValue || cloneDate(maxBound));
+      fromValue = fromValue || cloneDate(minBound);
+      toValue = toValue || cloneDate(maxBound);
 
       fromInput.value = formatISODate(fromValue);
       toInput.value = formatISODate(toValue);
@@ -976,9 +974,8 @@
           if (!range) return;
           fromInput.value = formatISODate(range.from);
           toInput.value = formatISODate(range.to);
-          validateExportRange("preset");
-          updatePresetState();
-          scheduleSummaryRefresh();
+          fromInput.dispatchEvent(new Event("input", { bubbles: true }));
+          toInput.dispatchEvent(new Event("input", { bubbles: true }));
         });
       })(presetButtons[presetIndex]);
     }

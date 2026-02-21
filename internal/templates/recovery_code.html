@@ -20,9 +20,11 @@
     <p x-show="downloadFailed" x-cloak class="status-error mt-4">{{t .Messages "auth.code_download_failed"}}</p>
 
     <form action="{{if .ContinuePath}}{{.ContinuePath}}{{else}}/dashboard{{end}}" method="get" class="mt-5 space-y-4">
-      <label class="choice-option block">
-        <input type="checkbox" name="saved" required class="choice-input">
-        <span class="check-chip">{{t .Messages "auth.saved_recovery_code"}}</span>
+      <label class="remember-option" for="recovery-code-saved">
+        <input id="recovery-code-saved" type="checkbox" name="saved" required class="remember-checkbox">
+        <span class="remember-copy">
+          <span class="remember-title">{{t .Messages "auth.saved_recovery_code"}}</span>
+        </span>
       </label>
       <button type="submit" class="btn-primary w-full">{{t .Messages "auth.continue_to_app"}}</button>
     </form>
