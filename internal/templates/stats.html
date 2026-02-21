@@ -39,12 +39,12 @@
       </div>
       <div class="mb-3 flex flex-wrap items-center gap-3 text-xs journal-muted">
         <span class="inline-flex items-center gap-2">
-          <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: var(--chart-dot, #b9753e);"></span>
+          <span class="inline-block h-2.5 w-2.5 rounded-full stats-legend-dot-actual"></span>
           {{t .Messages "stats.legend.actual"}}
         </span>
         {{if gt .ChartBaseline 0}}
         <span class="inline-flex items-center gap-2 border-l border-[rgba(172,136,96,0.28)] pl-3">
-          <span class="inline-block w-6 border-t-2 border-dashed" style="border-color: var(--chart-baseline, #9f8a75);"></span>
+          <span class="inline-block w-6 border-t-2 border-dashed stats-legend-baseline-line"></span>
           {{t .Messages "stats.legend.baseline"}}: {{.ChartBaseline}} {{t .Messages "common.days_short"}}
         </span>
         {{end}}

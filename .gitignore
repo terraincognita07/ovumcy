@@ -26,11 +26,20 @@ go.work.sum
 
 # env file
 .env
+.env.local
+.env.development
+.env.production
 data/
 node_modules/
 *.db
 *.sqlite
 *.sqlite3
+*.log
+*.tmp
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
 
 # Editor/IDE
 # .idea/
@@ -42,4 +51,5 @@ PROJECT_CONTEXT.md
 BUGFIXES.md
 TASK-*.md
 .tmp_*/
+.tmp*/
 .local/

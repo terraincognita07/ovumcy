@@ -73,7 +73,7 @@
             <button
               type="button"
               class="check-chip check-chip-sm justify-center"
-              :style="selectedDate === day.value ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              :class="{ 'choice-chip-active': selectedDate === day.value }"
               @click="setStartDate(day.value)"
               x-text="day.label"></button>
           </template>
@@ -85,14 +85,14 @@
             <button
               type="button"
               class="check-chip check-chip-sm justify-center"
-              :style="periodStatus === 'ongoing' ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              :class="{ 'choice-chip-active': periodStatus === 'ongoing' }"
               @click="setPeriodStatus('ongoing')">
               🩸 <span>{{t .Messages "onboarding.step1.status_ongoing"}}</span>
             </button>
             <button
               type="button"
               class="check-chip check-chip-sm justify-center"
-              :style="periodStatus === 'finished' ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+              :class="{ 'choice-chip-active': periodStatus === 'finished' }"
               @click="setPeriodStatus('finished')">
               ✅ <span>{{t .Messages "onboarding.step1.status_finished"}}</span>
             </button>
@@ -116,7 +116,7 @@
               <button
                 type="button"
                 class="check-chip check-chip-sm justify-center"
-                :style="periodEndDate === day.value ? 'border-color: rgba(212, 165, 116, 0.95); background: rgba(232, 196, 168, 0.5); box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);' : ''"
+                :class="{ 'choice-chip-active': periodEndDate === day.value }"
                 @click="periodEndDate = day.value"
                 x-text="day.label"></button>
             </template>
@@ -207,101 +207,4 @@
   </div>
 </section>
 
-<script>
-  function onboardingFlow(config) {
-    var safeConfig = config || {};
-    var lang = safeConfig.lang || "en";
-
-    return {
-      step: 0,
-      minDate: safeConfig.minDate || "",
-      maxDate: safeConfig.maxDate || "",
-      selectedDate: safeConfig.lastPeriodStart || "",
-      periodStatus: safeConfig.onboardingPeriodStatus || "",
-      periodEndDate: safeConfig.onboardingPeriodEnd || "",
-      cycleLength: Number(safeConfig.cycleLength || 28),
-      periodLength: Number(safeConfig.periodLength || 5),
-      autoPeriodFill: safeConfig.autoPeriodFill !== false,
-      dayOptions: [],
-      endDayOptions: [],
-      init() {
-        this.dayOptions = this.buildDayOptions(this.minDate, this.maxDate, lang);
-        this.onStartDateChanged();
-      },
-      setStartDate(value) {
-        this.selectedDate = value || "";
-        this.onStartDateChanged();
-      },
-      setPeriodStatus(value) {
-        this.periodStatus = value || "";
-        if (this.periodStatus !== "finished") {
-          this.periodEndDate = "";
-        }
-        this.refreshEndDayOptions();
-      },
-      onStartDateChanged() {
-        if (!this.selectedDate) {
-          this.periodStatus = "";
-          this.periodEndDate = "";
-          this.endDayOptions = [];
-          return;
-        }
-        this.refreshEndDayOptions();
-      },
-      refreshEndDayOptions() {
-        if (!this.selectedDate) {
-          this.endDayOptions = [];
-          this.periodEndDate = "";
-          return;
-        }
-        this.endDayOptions = this.buildDayOptions(this.selectedDate, this.maxDate, lang);
-        if (!this.isDateWithinRange(this.periodEndDate, this.selectedDate, this.maxDate)) {
-          this.periodEndDate = "";
-        }
-      },
-      isDateWithinRange(value, minRaw, maxRaw) {
-        if (!value) return false;
-        var current = this.parseDate(value);
-        var min = this.parseDate(minRaw);
-        var max = this.parseDate(maxRaw);
-        if (!current || !min || !max) return false;
-        return current >= min && current <= max;
-      },
-      buildDayOptions(minDateRaw, maxDateRaw, locale) {
-        var minDate = this.parseDate(minDateRaw);
-        var maxDate = this.parseDate(maxDateRaw);
-        if (!minDate || !maxDate || minDate > maxDate) {
-          return [];
-        }
-
-        var result = [];
-        var formatter = new Intl.DateTimeFormat(locale || "en", {
-          day: "numeric",
-          month: "short"
-        });
-
-        for (var cursor = new Date(maxDate); cursor >= minDate; cursor.setDate(cursor.getDate() - 1)) {
-          var current = new Date(cursor);
-          result.push({
-            value: this.formatDateValue(current),
-            label: formatter.format(current)
-          });
-        }
-        return result;
-      },
-      parseDate(value) {
-        if (!value) return null;
-        var parsed = new Date(value + "T00:00:00");
-        if (isNaN(parsed.getTime())) return null;
-        return parsed;
-      },
-      formatDateValue(value) {
-        var year = value.getFullYear();
-        var month = String(value.getMonth() + 1).padStart(2, "0");
-        var day = String(value.getDate()).padStart(2, "0");
-        return year + "-" + month + "-" + day;
-      }
-    };
-  }
-</script>
 {{end}}

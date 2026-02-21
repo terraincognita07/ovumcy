@@ -101,22 +101,4 @@
   </div>
 </section>
 
-<script>
-  function calendarView(config) {
-    var safeConfig = config || {};
-    return {
-      selectedDate: safeConfig.selectedDate || "",
-      selectDay(value) {
-        this.selectedDate = value || "";
-        if (!this.selectedDate || !window.history || typeof window.history.replaceState !== "function") return;
-        try {
-          var currentURL = new URL(window.location.href);
-          currentURL.searchParams.set("day", this.selectedDate);
-          var nextPath = currentURL.pathname + currentURL.search + currentURL.hash;
-          window.history.replaceState({}, "", nextPath);
-        } catch (_) {}
-      }
-    };
-  }
-</script>
 {{end}}

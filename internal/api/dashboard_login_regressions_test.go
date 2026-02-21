@@ -202,8 +202,8 @@ func TestLanguageSwitchSetsCookieAndRendersMatchingHTMLLang(t *testing.T) {
 	if !strings.Contains(renderedEnglish, `<html lang="en"`) {
 		t.Fatalf("expected login page html lang to be en")
 	}
-	if !strings.Contains(renderedEnglish, `applyHTMLLanguage(readCookie("lume_lang")`) {
-		t.Fatalf("expected language sync script in base template")
+	if !strings.Contains(renderedEnglish, `<script defer src="/static/js/app.js"></script>`) {
+		t.Fatalf("expected shared app script in base template")
 	}
 	if !strings.Contains(renderedEnglish, `data-required-message="Please fill out this field."`) {
 		t.Fatalf("expected english required validation message in login form")
@@ -532,8 +532,8 @@ func TestAuthPagesIncludeSwitchTransitionHooks(t *testing.T) {
 	if !strings.Contains(loginRendered, `data-auth-switch`) {
 		t.Fatalf("expected auth switch transition hook on login page")
 	}
-	if !strings.Contains(loginRendered, `querySelector("[data-auth-panel]")`) {
-		t.Fatalf("expected base transition script for auth panel")
+	if !strings.Contains(loginRendered, `<script defer src="/static/js/app.js"></script>`) {
+		t.Fatalf("expected shared app script for auth panel transitions")
 	}
 
 	registerRequest := httptest.NewRequest(http.MethodGet, "/register", nil)
@@ -827,8 +827,8 @@ func TestCalendarPageKeepsSelectedDayFromQueryAndBootstrapsEditor(t *testing.T) 
 	if !strings.Contains(rendered, `next=%2Fcalendar%3Fmonth%3D2026-02%26day%3D2026-02-17`) {
 		t.Fatalf("expected language switch links to preserve selected day in next param")
 	}
-	if !strings.Contains(rendered, `url.searchParams.set("next", nextPath)`) {
-		t.Fatalf("expected language link sync script to use current path")
+	if !strings.Contains(rendered, `<script defer src="/static/js/app.js"></script>`) {
+		t.Fatalf("expected shared app script to keep language links in sync")
 	}
 }
 

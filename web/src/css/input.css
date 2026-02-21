@@ -167,6 +167,15 @@
     user-select: none;
   }
 
+  .role-chip-identity {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .journal-card {
     border-radius: 1rem;
     border: 1px solid var(--line-soft);
@@ -355,6 +364,11 @@
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
+  }
+
+  .readonly-field {
+    opacity: 0.75;
+    cursor: default;
   }
 
   .remember-hint {
@@ -722,6 +736,12 @@
     box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
   }
 
+  .choice-chip-active {
+    border-color: rgba(212, 165, 116, 0.95);
+    background: rgba(232, 196, 168, 0.5);
+    box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
+  }
+
   .calendar-cell {
     display: block;
     width: 100%;
@@ -861,6 +881,14 @@
     padding: 0.9rem;
   }
 
+  .stats-legend-dot-actual {
+    background: var(--chart-dot, #b9753e);
+  }
+
+  .stats-legend-baseline-line {
+    border-color: var(--chart-baseline, #9f8a75);
+  }
+
   .status-ok,
   .status-error {
     border-radius: 0.8rem;
@@ -890,8 +918,52 @@
     animation: status-fade 380ms ease-out 2s forwards;
   }
 
+  .toast-stack {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 22rem;
+  }
+
+  .toast-exit {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
   .save-status {
     min-height: 1.25rem;
+  }
+
+  .confirm-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(22, 16, 12, 0.52);
+    padding: 1rem;
+  }
+
+  .confirm-modal-center {
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .confirm-modal-card {
+    width: min(32rem, 100%);
+    padding: 1.25rem;
+  }
+
+  .confirm-modal-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
   }
 
   .recovery-code-box {
@@ -954,6 +1026,12 @@
 
     .stats-symptom-frequency {
       font-size: 0.76rem;
+    }
+
+    .toast-stack {
+      left: 1rem;
+      right: 1rem;
+      max-width: none;
     }
   }
 }
