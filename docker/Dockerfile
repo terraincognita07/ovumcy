@@ -2,8 +2,8 @@
 
 FROM node:20-alpine AS assets
 WORKDIR /build
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY tailwind.config.js ./
 COPY web/src ./web/src
 COPY web/static/js ./web/static/js
@@ -22,10 +22,12 @@ COPY . .
 COPY --from=assets /build/web/static/css/tailwind.css ./web/static/css/tailwind.css
 COPY --from=assets /build/web/static/js/htmx.min.js ./web/static/js/htmx.min.js
 COPY --from=assets /build/web/static/js/alpine.min.js ./web/static/js/alpine.min.js
+COPY --from=assets /build/web/static/js/app.js ./web/static/js/app.js
+COPY --from=assets /build/web/static/js/settings-export.js ./web/static/js/settings-export.js
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go build -o /out/lume ./cmd/lume
 
-FROM alpine:latest AS runtime
+FROM alpine:3.21 AS runtime
 WORKDIR /app
 RUN apk add --no-cache tzdata ca-certificates
 COPY --from=builder /out/lume /app/lume

@@ -42,8 +42,10 @@ node_modules/
 Thumbs.db
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # Local task notes and scratch files
 AGENTS.md

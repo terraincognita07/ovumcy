@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/terraincognita07/lume/internal/db"
 	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/lume/internal/security"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -64,15 +64,5 @@ func generateTemporaryPassword(length int) (string, error) {
 	}
 
 	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-	randomBytes := make([]byte, length)
-	if _, err := rand.Read(randomBytes); err != nil {
-		return "", err
-	}
-
-	value := make([]byte, length)
-	for index, item := range randomBytes {
-		value[index] = alphabet[int(item)%len(alphabet)]
-	}
-
-	return string(value), nil
+	return security.RandomString(length, alphabet)
 }

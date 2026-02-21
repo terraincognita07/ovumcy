@@ -1,10 +1,10 @@
 package api
 
 import (
-	"crypto/rand"
 	"fmt"
 	"strings"
 
+	"github.com/terraincognita07/lume/internal/security"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,15 +33,10 @@ func generateRecoveryCodeHash() (string, string, error) {
 
 func generateRecoveryCode() (string, error) {
 	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	randomBytes := make([]byte, 12)
-	if _, err := rand.Read(randomBytes); err != nil {
+	value, err := security.RandomString(12, alphabet)
+	if err != nil {
 		return "", err
 	}
 
-	chars := make([]byte, 12)
-	for index, value := range randomBytes {
-		chars[index] = alphabet[int(value)%len(alphabet)]
-	}
-
-	return fmt.Sprintf("LUME-%s-%s-%s", string(chars[:4]), string(chars[4:8]), string(chars[8:12])), nil
+	return fmt.Sprintf("LUME-%s-%s-%s", value[:4], value[4:8], value[8:12]), nil
 }
