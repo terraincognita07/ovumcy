@@ -39,10 +39,7 @@ func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update profile")
 	}
 
-	status := "profile_updated"
-	if strings.TrimSpace(user.DisplayName) != "" && displayName == "" {
-		status = "profile_name_cleared"
-	}
+	status := profileUpdateStatus(user.DisplayName, displayName)
 
 	user.DisplayName = displayName
 
@@ -63,29 +60,14 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	input := changePasswordInput{}
-	if err := c.BodyParser(&input); err != nil {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
+	input, parseError := parseChangePasswordInput(c)
+	if parseError != "" {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, parseError)
 	}
 
-	input.CurrentPassword = strings.TrimSpace(input.CurrentPassword)
-	input.NewPassword = strings.TrimSpace(input.NewPassword)
-	input.ConfirmPassword = strings.TrimSpace(input.ConfirmPassword)
-	if input.CurrentPassword == "" || input.NewPassword == "" || input.ConfirmPassword == "" {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
-	}
-	if input.NewPassword != input.ConfirmPassword {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "password mismatch")
-	}
-
-	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.CurrentPassword)) != nil {
-		return handler.respondSettingsError(c, fiber.StatusUnauthorized, "invalid current password")
-	}
-	if input.CurrentPassword == input.NewPassword {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "new password must differ")
-	}
-	if err := validatePasswordStrength(input.NewPassword); err != nil {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "weak password")
+	validationStatus, validationError := validateChangePasswordInput(input, user)
+	if validationStatus != 0 {
+		return handler.respondSettingsError(c, validationStatus, validationError)
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
@@ -113,28 +95,16 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	input := cycleSettingsInput{}
-	if err := c.BodyParser(&input); err != nil {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
-	}
-	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "cycle length must be between 15 and 90")
-	}
-	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, "period length must be between 1 and 10")
+	input, parseError := parseCycleSettingsInput(c)
+	if parseError != "" {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, parseError)
 	}
 
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"cycle_length":     input.CycleLength,
-		"period_length":    input.PeriodLength,
-		"auto_period_fill": input.AutoPeriodFill,
-	}).Error; err != nil {
+	if err := handler.saveCycleSettings(user.ID, input); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update cycle settings")
 	}
 
-	user.CycleLength = input.CycleLength
-	user.PeriodLength = input.PeriodLength
-	user.AutoPeriodFill = input.AutoPeriodFill
+	applyCycleSettings(user, input)
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
