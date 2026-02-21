@@ -25,40 +25,7 @@ func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
 	}
 
 	now := dateAtLocation(time.Now().In(handler.location), handler.location)
-	messages := currentMessages(c)
-
-	lastPeriodStart := ""
-	if user.LastPeriodStart != nil {
-		lastPeriodStart = dateAtLocation(*user.LastPeriodStart, handler.location).Format("2006-01-02")
-	}
-	periodEnd := ""
-	if user.OnboardingPeriodEnd != nil {
-		periodEnd = dateAtLocation(*user.OnboardingPeriodEnd, handler.location).Format("2006-01-02")
-	}
-	periodStatus := normalizeOnboardingPeriodStatus(user.OnboardingPeriodStatus)
-
-	cycleLength := user.CycleLength
-	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = models.DefaultCycleLength
-	}
-	periodLength := user.PeriodLength
-	if !isValidOnboardingPeriodLength(periodLength) {
-		periodLength = models.DefaultPeriodLength
-	}
-
-	data := fiber.Map{
-		"Title":                  localizedPageTitle(messages, "meta.title.onboarding", "Lume | Onboarding"),
-		"CurrentUser":            user,
-		"HideNavigation":         true,
-		"MinDate":                now.AddDate(0, 0, -60).Format("2006-01-02"),
-		"MaxDate":                now.Format("2006-01-02"),
-		"LastPeriodStart":        lastPeriodStart,
-		"OnboardingPeriodStatus": periodStatus,
-		"OnboardingPeriodEnd":    periodEnd,
-		"CycleLength":            cycleLength,
-		"PeriodLength":           periodLength,
-		"AutoPeriodFill":         user.AutoPeriodFill,
-	}
+	data := handler.buildOnboardingViewData(c, user, now)
 	return handler.render(c, "onboarding", data)
 }
 
@@ -257,57 +224,4 @@ func (handler *Handler) OnboardingComplete(c *fiber.Ctx) error {
 	user.OnboardingPeriodStatus = ""
 	user.OnboardingPeriodEnd = nil
 	return redirectOrJSON(c, "/dashboard")
-}
-
-func normalizeOnboardingPeriodStatus(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case onboardingPeriodStatusOngoing:
-		return onboardingPeriodStatusOngoing
-	case onboardingPeriodStatusFinished:
-		return onboardingPeriodStatusFinished
-	default:
-		return ""
-	}
-}
-
-func (handler *Handler) upsertOnboardingPeriodRange(tx *gorm.DB, userID uint, startDay time.Time, endDay time.Time) error {
-	if endDay.Before(startDay) {
-		return errors.New("invalid onboarding range")
-	}
-
-	for cursor := startDay; !cursor.After(endDay); cursor = cursor.AddDate(0, 0, 1) {
-		day := dateAtLocation(cursor, handler.location)
-		dayKey := dayStorageKey(day, handler.location)
-		nextDayKey := nextDayStorageKey(day, handler.location)
-
-		var entry models.DailyLog
-		result := tx.
-			Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).
-			Order("date DESC, id DESC").
-			First(&entry)
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			entry = models.DailyLog{
-				UserID:     userID,
-				Date:       day,
-				IsPeriod:   true,
-				Flow:       models.FlowNone,
-				SymptomIDs: []uint{},
-			}
-			if err := tx.Create(&entry).Error; err != nil {
-				return err
-			}
-			continue
-		}
-		if result.Error != nil {
-			return result.Error
-		}
-		if err := tx.Model(&entry).Updates(map[string]any{
-			"is_period": true,
-			"flow":      models.FlowNone,
-		}).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
