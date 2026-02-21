@@ -133,13 +133,10 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	now := time.Now().In(handler.location)
 	today := dateAtLocation(now, handler.location)
 
-	allLogs, err := handler.fetchLogsForUser(user.ID, today.AddDate(-2, 0, 0), today)
+	stats, _, err := handler.buildCycleStatsForRange(user, today.AddDate(-2, 0, 0), today, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load logs")
 	}
-
-	stats := services.BuildCycleStats(allLogs, now, handler.lutealPhaseDays)
-	stats = handler.applyUserCycleBaseline(user, allLogs, stats, now)
 	todayLog, err := handler.fetchLogByDate(user.ID, today)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load today log")
@@ -208,12 +205,10 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load calendar")
 	}
 
-	statsLogs, err := handler.fetchLogsForUser(user.ID, now.AddDate(-2, 0, 0), now)
+	stats, _, err := handler.buildCycleStatsForRange(user, now.AddDate(-2, 0, 0), now, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
 	}
-	stats := services.BuildCycleStats(statsLogs, now, handler.lutealPhaseDays)
-	stats = handler.applyUserCycleBaseline(user, statsLogs, stats, now)
 
 	days := handler.buildCalendarDays(monthStart, logs, stats, now)
 
@@ -298,13 +293,10 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
-	logs, err := handler.fetchLogsForUser(user.ID, now.AddDate(-2, 0, 0), now)
+	stats, logs, err := handler.buildCycleStatsForRange(user, now.AddDate(-2, 0, 0), now, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
 	}
-
-	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
-	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 	lengths := handler.completedCycleTrendLengths(logs, now)
 	if len(lengths) > 12 {
 		lengths = lengths[len(lengths)-12:]
