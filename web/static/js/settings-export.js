@@ -175,18 +175,6 @@
       return key >= dateKey(minBound) && key <= dateKey(maxBound);
     }
 
-    function clampToBounds(value) {
-      if (!hasBounds || !value) return value;
-      var key = dateKey(value);
-      if (key < dateKey(minBound)) {
-        return cloneDate(minBound);
-      }
-      if (key > dateKey(maxBound)) {
-        return cloneDate(maxBound);
-      }
-      return value;
-    }
-
     function monthIntersectsBounds(monthValue) {
       if (!hasBounds) return true;
       var start = toMonthStart(monthValue);
@@ -237,13 +225,7 @@
     function setExportLinksDisabled(disabled) {
       for (var index = 0; index < links.length; index++) {
         var link = links[index];
-        if (disabled) {
-          link.style.pointerEvents = "none";
-          link.style.opacity = "0.6";
-        } else {
-          link.style.pointerEvents = "";
-          link.style.opacity = "";
-        }
+        link.classList.toggle("export-link-disabled", disabled);
         link.setAttribute("aria-disabled", disabled ? "true" : "false");
       }
     }
@@ -304,7 +286,7 @@
         var payload = await response.json();
         if (requestID != summaryRequestID) return;
         updateSummaryText(payload.total_entries, payload.has_data, payload.date_from, payload.date_to);
-      } catch (_) {
+      } catch {
         // Keep previous summary values if refresh fails.
       }
     }
@@ -523,15 +505,12 @@
         var button = document.createElement("button");
         button.type = "button";
         button.textContent = String(day);
-        button.style.padding = "0.35rem 0";
-        button.className = "btn-secondary text-sm";
+        button.className = "btn-secondary text-sm export-calendar-day-button";
 
         var isAllowedDay = isWithinBounds(dayDate);
         if (!isAllowedDay) {
           button.disabled = true;
-          button.className = "btn-soft text-sm";
-          button.style.opacity = "0.55";
-          button.style.cursor = "not-allowed";
+          button.className = "btn-soft text-sm export-calendar-day-button export-calendar-day-disabled";
         } else {
           (function (selectedDay) {
             button.addEventListener("click", function () {
@@ -546,7 +525,7 @@
         }
 
         if (selectedDate && dateKey(selectedDate) === dateKey(dayDate)) {
-          button.className = "btn-primary text-sm";
+          button.className = "btn-primary text-sm export-calendar-day-button";
         }
 
         calendarDays.appendChild(button);
@@ -565,11 +544,11 @@
 
     function parseFilenameFromDisposition(disposition, fallbackName) {
       if (!disposition) return fallbackName;
-      var match = disposition.match(/filename\*?=(?:UTF-8'')?\"?([^\";]+)\"?/i);
+      var match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
       if (!match || !match[1]) return fallbackName;
       try {
         return decodeURIComponent(match[1]);
-      } catch (_) {
+      } catch {
         return match[1];
       }
     }
@@ -787,7 +766,7 @@
         if (typeof window.showToast === "function") {
           window.showToast(successMessage, "success");
         }
-      } catch (_) {
+      } catch {
         if (typeof window.showToast === "function") {
           window.showToast(failedMessage, "error");
         }

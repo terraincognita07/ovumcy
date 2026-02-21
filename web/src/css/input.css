@@ -889,6 +889,20 @@
     border-color: var(--chart-baseline, #9f8a75);
   }
 
+  .export-link-disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .export-calendar-day-button {
+    padding: 0.35rem 0;
+  }
+
+  .export-calendar-day-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   .status-ok,
   .status-error {
     border-radius: 0.8rem;

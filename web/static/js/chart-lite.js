@@ -65,7 +65,7 @@
         values: values,
         baseline: baseline
       };
-    } catch (_) {
+    } catch {
       return null;
     }
   }

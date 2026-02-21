@@ -65,7 +65,7 @@
       var nextPath = window.location.pathname + window.location.search;
       url.searchParams.set("next", nextPath);
       return url.pathname + url.search + url.hash;
-    } catch (_) {
+    } catch {
       return href;
     }
   }
@@ -518,7 +518,7 @@
           resolve();
           return;
         }
-      } catch (_) {
+      } catch {
         document.body.removeChild(textarea);
       }
 
@@ -541,7 +541,9 @@
           currentURL.searchParams.set("day", this.selectedDate);
           var nextPath = currentURL.pathname + currentURL.search + currentURL.hash;
           window.history.replaceState({}, "", nextPath);
-        } catch (_) {}
+        } catch {
+          // Ignore malformed URLs and keep current location unchanged.
+        }
       }
     };
   };
@@ -706,7 +708,7 @@
           window.setTimeout(function () {
             self.downloaded = false;
           }, STATUS_CLEAR_MS);
-        } catch (_) {
+        } catch {
           self.downloadFailed = true;
           window.setTimeout(function () {
             self.downloadFailed = false;
