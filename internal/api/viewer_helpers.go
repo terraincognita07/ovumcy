@@ -1,6 +1,10 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/models"
+import (
+	"time"
+
+	"github.com/terraincognita07/lume/internal/models"
+)
 
 func isOwnerUser(user *models.User) bool {
 	return user != nil && user.Role == models.RoleOwner
@@ -31,4 +35,18 @@ func (handler *Handler) fetchSymptomsForViewer(user *models.User) ([]models.Symp
 		return []models.SymptomType{}, nil
 	}
 	return handler.fetchSymptoms(user.ID)
+}
+
+func (handler *Handler) fetchDayLogForViewer(user *models.User, day time.Time) (models.DailyLog, []models.SymptomType, error) {
+	logEntry, err := handler.fetchLogByDate(user.ID, day)
+	if err != nil {
+		return models.DailyLog{}, nil, err
+	}
+
+	symptoms, err := handler.fetchSymptomsForViewer(user)
+	if err != nil {
+		return models.DailyLog{}, nil, err
+	}
+
+	return sanitizeLogForViewer(user, logEntry), symptoms, nil
 }

@@ -137,17 +137,10 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load logs")
 	}
-	todayLog, err := handler.fetchLogByDate(user.ID, today)
+	todayLog, symptoms, err := handler.fetchDayLogForViewer(user, today)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load today log")
 	}
-
-	symptoms, err := handler.fetchSymptomsForViewer(user)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
-	}
-
-	todayLog = sanitizeLogForViewer(user, todayLog)
 
 	data := fiber.Map{
 		"Title":             localizedPageTitle(messages, "meta.title.dashboard", "Lume | Dashboard"),
@@ -227,21 +220,16 @@ func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
 func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, day time.Time) error {
 	messages := currentMessages(c)
 
-	logEntry, err := handler.fetchLogByDate(user.ID, day)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day")
-	}
 	hasDayData, err := handler.dayHasDataForDate(user.ID, day)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day state")
 	}
 
 	isOwner := isOwnerUser(user)
-	symptoms, err := handler.fetchSymptomsForViewer(user)
+	logEntry, symptoms, err := handler.fetchDayLogForViewer(user, day)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day")
 	}
-	logEntry = sanitizeLogForViewer(user, logEntry)
 
 	payload := fiber.Map{
 		"Date":              day,
