@@ -171,7 +171,10 @@ func parsePartialTemplates(templateDir string, funcMap template.FuncMap, partial
 	partials := make(map[string]*template.Template, len(partialFiles))
 	for _, partial := range partialFiles {
 		name := strings.TrimSuffix(partial, ".html")
-		parsed, err := template.New(name).Funcs(funcMap).ParseFiles(filepath.Join(templateDir, partial))
+		parsed, err := template.New(name).Funcs(funcMap).ParseFiles(
+			filepath.Join(templateDir, "base.html"),
+			filepath.Join(templateDir, partial),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("parse partial %s: %w", partial, err)
 		}

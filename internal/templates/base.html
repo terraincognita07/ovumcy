@@ -122,3 +122,10 @@
     aria-label="{{t .Messages "auth.show_password"}}">👁</button>
 </div>
 {{end}}
+{{define "readonly_log_summary"}}
+<div class="journal-panel space-y-3 text-sm">
+  <p><span class="journal-muted">{{t .Messages "dashboard.period_day"}}:</span> {{if .Log.IsPeriod}}{{t .Messages "common.yes"}}{{else}}{{t .Messages "common.no"}}{{end}}</p>
+  <p><span class="journal-muted">{{t .Messages "dashboard.flow"}}:</span> {{flowLabel .Messages .Log.Flow}}</p>
+  <p class="journal-muted">{{t .Messages "dashboard.partner_readonly"}}</p>
+</div>
+{{end}}

@@ -83,11 +83,7 @@
   </div>
   {{end}}
   {{else}}
-  <div class="journal-panel space-y-3 text-sm">
-    <p><span class="journal-muted">{{t .Messages "dashboard.period_day"}}:</span> {{if .Log.IsPeriod}}{{t .Messages "common.yes"}}{{else}}{{t .Messages "common.no"}}{{end}}</p>
-    <p><span class="journal-muted">{{t .Messages "dashboard.flow"}}:</span> {{flowLabel .Messages .Log.Flow}}</p>
-    <p class="journal-muted">{{t .Messages "dashboard.partner_readonly"}}</p>
-  </div>
+  {{template "readonly_log_summary" (dict "Messages" .Messages "Log" .Log)}}
   {{end}}
 </div>
 {{end}}
