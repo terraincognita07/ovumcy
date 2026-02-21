@@ -10,12 +10,36 @@ import (
 	"github.com/terraincognita07/lume/internal/services"
 )
 
-func (handler *Handler) SetupStatus(c *fiber.Ctx) error {
+func (handler *Handler) requiresInitialSetup() (bool, error) {
 	var usersCount int64
 	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
+		return false, err
+	}
+	return usersCount == 0, nil
+}
+
+func authErrorKeyFromFlashOrQuery(c *fiber.Ctx, flashAuthError string) string {
+	errorSource := strings.TrimSpace(flashAuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
+	}
+	return authErrorTranslationKey(errorSource)
+}
+
+func loginEmailFromFlashOrQuery(c *fiber.Ctx, flashEmail string) string {
+	email := normalizeLoginEmail(flashEmail)
+	if email == "" {
+		email = normalizeLoginEmail(c.Query("email"))
+	}
+	return email
+}
+
+func (handler *Handler) SetupStatus(c *fiber.Ctx) error {
+	needsSetup, err := handler.requiresInitialSetup()
+	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
 	}
-	return c.JSON(fiber.Map{"needs_setup": usersCount == 0})
+	return c.JSON(fiber.Map{"needs_setup": needsSetup})
 }
 
 func (handler *Handler) SetLanguage(c *fiber.Ctx) error {
@@ -35,33 +59,17 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
-	var usersCount int64
-	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
+	needsSetup, err := handler.requiresInitialSetup()
+	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
 	}
 
 	flash := handler.popFlashCookie(c)
-	errorSource := strings.TrimSpace(flash.AuthError)
-	if errorSource == "" {
-		errorSource = strings.TrimSpace(c.Query("error"))
-	}
-	errorKey := authErrorTranslationKey(errorSource)
-
-	email := normalizeLoginEmail(flash.LoginEmail)
-	if email == "" {
-		email = normalizeLoginEmail(c.Query("email"))
-	}
-
-	messages := currentMessages(c)
-	title := translateMessage(messages, "meta.title.login")
-	if title == "meta.title.login" {
-		title = "Lume | Login"
-	}
 	data := fiber.Map{
-		"Title":         title,
-		"ErrorKey":      errorKey,
-		"Email":         email,
-		"IsFirstLaunch": usersCount == 0,
+		"Title":         localizedPageTitle(currentMessages(c), "meta.title.login", "Lume | Login"),
+		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+		"Email":         loginEmailFromFlashOrQuery(c, flash.LoginEmail),
+		"IsFirstLaunch": needsSetup,
 	}
 	return handler.render(c, "login", data)
 }
@@ -71,50 +79,26 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
 	}
 
-	var usersCount int64
-	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
+	needsSetup, err := handler.requiresInitialSetup()
+	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
 	}
 
 	flash := handler.popFlashCookie(c)
-	errorSource := strings.TrimSpace(flash.AuthError)
-	if errorSource == "" {
-		errorSource = strings.TrimSpace(c.Query("error"))
-	}
-	errorKey := authErrorTranslationKey(errorSource)
-	email := normalizeLoginEmail(flash.RegisterEmail)
-	if email == "" {
-		email = normalizeLoginEmail(c.Query("email"))
-	}
-	messages := currentMessages(c)
-	title := translateMessage(messages, "meta.title.register")
-	if title == "meta.title.register" {
-		title = "Lume | Sign Up"
-	}
 	data := fiber.Map{
-		"Title":         title,
-		"ErrorKey":      errorKey,
-		"Email":         email,
-		"IsFirstLaunch": usersCount == 0,
+		"Title":         localizedPageTitle(currentMessages(c), "meta.title.register", "Lume | Sign Up"),
+		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+		"Email":         loginEmailFromFlashOrQuery(c, flash.RegisterEmail),
+		"IsFirstLaunch": needsSetup,
 	}
 	return handler.render(c, "register", data)
 }
 
 func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 	flash := handler.popFlashCookie(c)
-	errorSource := strings.TrimSpace(flash.AuthError)
-	if errorSource == "" {
-		errorSource = strings.TrimSpace(c.Query("error"))
-	}
-	errorKey := authErrorTranslationKey(errorSource)
-	messages := currentMessages(c)
-	title := translateMessage(messages, "meta.title.forgot_password")
-	if title == "meta.title.forgot_password" {
-		title = "Lume | Password Recovery"
-	}
 	data := fiber.Map{
-		"Title":    title,
-		"ErrorKey": errorKey,
+		"Title":    localizedPageTitle(currentMessages(c), "meta.title.forgot_password", "Lume | Password Recovery"),
+		"ErrorKey": authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 	}
 	return handler.render(c, "forgot_password", data)
 }
@@ -122,16 +106,6 @@ func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 	token := strings.TrimSpace(c.Query("token"))
 	flash := handler.popFlashCookie(c)
-	errorSource := strings.TrimSpace(flash.AuthError)
-	if errorSource == "" {
-		errorSource = strings.TrimSpace(c.Query("error"))
-	}
-
-	messages := currentMessages(c)
-	title := translateMessage(messages, "meta.title.reset_password")
-	if title == "meta.title.reset_password" {
-		title = "Lume | Reset Password"
-	}
 
 	invalidToken := false
 	if _, err := handler.parsePasswordResetToken(token); err != nil {
@@ -139,11 +113,11 @@ func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 	}
 
 	data := fiber.Map{
-		"Title":        title,
+		"Title":        localizedPageTitle(currentMessages(c), "meta.title.reset_password", "Lume | Reset Password"),
 		"Token":        token,
 		"InvalidToken": invalidToken,
 		"ForcedReset":  parseBoolValue(c.Query("forced")),
-		"ErrorKey":     authErrorTranslationKey(errorSource),
+		"ErrorKey":     authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 	}
 	return handler.render(c, "reset_password", data)
 }
