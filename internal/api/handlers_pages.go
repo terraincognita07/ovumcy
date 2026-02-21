@@ -173,28 +173,12 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
-	monthQuery := strings.TrimSpace(c.Query("month"))
-	selectedDate := ""
-	selectedDayRaw := strings.TrimSpace(c.Query("day"))
-
-	activeMonth, err := parseMonthQuery(monthQuery, now, handler.location)
+	activeMonth, selectedDate, err := resolveCalendarMonthAndSelectedDate(c.Query("month"), c.Query("day"), now, handler.location)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid month")
 	}
-	if selectedDayRaw != "" {
-		if selectedDay, parseErr := parseDayParam(selectedDayRaw, handler.location); parseErr == nil {
-			selectedDate = selectedDay.Format("2006-01-02")
-			if monthQuery == "" {
-				activeMonth = time.Date(selectedDay.Year(), selectedDay.Month(), 1, 0, 0, 0, 0, handler.location)
-			}
-		}
-	}
-
 	monthStart := activeMonth
-	monthEnd := monthStart.AddDate(0, 1, -1)
-
-	logRangeStart := monthStart.AddDate(0, 0, -70)
-	logRangeEnd := monthEnd.AddDate(0, 0, 70)
+	logRangeStart, logRangeEnd := calendarLogRange(monthStart)
 	logs, err := handler.fetchLogsForUser(user.ID, logRangeStart, logRangeEnd)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load calendar")
@@ -207,8 +191,7 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 
 	days := handler.buildCalendarDays(monthStart, logs, stats, now)
 
-	prevMonth := monthStart.AddDate(0, -1, 0).Format("2006-01")
-	nextMonth := monthStart.AddDate(0, 1, 0).Format("2006-01")
+	prevMonth, nextMonth := calendarAdjacentMonthValues(monthStart)
 
 	data := fiber.Map{
 		"Title":        localizedPageTitle(messages, "meta.title.calendar", "Lume | Calendar"),
