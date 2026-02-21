@@ -35,11 +35,7 @@ func (handler *Handler) GetDays(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}
 
-	if user.Role == models.RolePartner {
-		for index := range logs {
-			logs[index] = sanitizeLogForPartner(logs[index])
-		}
-	}
+	sanitizeLogsForViewer(user, logs)
 
 	return c.JSON(logs)
 }
@@ -60,9 +56,7 @@ func (handler *Handler) GetDay(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch day")
 	}
 
-	if user.Role == models.RolePartner {
-		logEntry = sanitizeLogForPartner(logEntry)
-	}
+	logEntry = sanitizeLogForViewer(user, logEntry)
 
 	return c.JSON(logEntry)
 }

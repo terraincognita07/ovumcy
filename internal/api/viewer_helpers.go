@@ -1,0 +1,27 @@
+package api
+
+import "github.com/terraincognita07/lume/internal/models"
+
+func isOwnerUser(user *models.User) bool {
+	return user != nil && user.Role == models.RoleOwner
+}
+
+func isPartnerUser(user *models.User) bool {
+	return user != nil && user.Role == models.RolePartner
+}
+
+func sanitizeLogForViewer(user *models.User, entry models.DailyLog) models.DailyLog {
+	if isPartnerUser(user) {
+		return sanitizeLogForPartner(entry)
+	}
+	return entry
+}
+
+func sanitizeLogsForViewer(user *models.User, logs []models.DailyLog) {
+	if !isPartnerUser(user) {
+		return
+	}
+	for index := range logs {
+		logs[index] = sanitizeLogForPartner(logs[index])
+	}
+}

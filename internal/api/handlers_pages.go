@@ -132,6 +132,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 
 	now := time.Now().In(handler.location)
 	today := dateAtLocation(now, handler.location)
+	isOwner := isOwnerUser(user)
 
 	stats, _, err := handler.buildCycleStatsForRange(user, today.AddDate(-2, 0, 0), today, now)
 	if err != nil {
@@ -143,16 +144,14 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	}
 
 	symptoms := make([]models.SymptomType, 0)
-	if user.Role == models.RoleOwner {
+	if isOwner {
 		symptoms, err = handler.fetchSymptoms(user.ID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
 		}
 	}
 
-	if user.Role == models.RolePartner {
-		todayLog = sanitizeLogForPartner(todayLog)
-	}
+	todayLog = sanitizeLogForViewer(user, todayLog)
 
 	data := fiber.Map{
 		"Title":             localizedPageTitle(messages, "meta.title.dashboard", "Lume | Dashboard"),
@@ -164,7 +163,7 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 		"TodayHasData":      dayHasData(todayLog),
 		"Symptoms":          symptoms,
 		"SelectedSymptomID": symptomIDSet(todayLog.SymptomIDs),
-		"IsOwner":           user.Role == models.RoleOwner,
+		"IsOwner":           isOwner,
 	}
 
 	return handler.render(c, "dashboard", data)
@@ -226,7 +225,7 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 		"CalendarDays": days,
 		"Today":        dateAtLocation(now, handler.location).Format("2006-01-02"),
 		"Stats":        stats,
-		"IsOwner":      user.Role == models.RoleOwner,
+		"IsOwner":      isOwnerUser(user),
 	}
 
 	return handler.render(c, "calendar", data)
@@ -258,16 +257,15 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day state")
 	}
 
-	isOwner := user.Role == models.RoleOwner
+	isOwner := isOwnerUser(user)
 	symptoms := make([]models.SymptomType, 0)
 	if isOwner {
 		symptoms, err = handler.fetchSymptoms(user.ID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
 		}
-	} else {
-		logEntry = sanitizeLogForPartner(logEntry)
 	}
+	logEntry = sanitizeLogForViewer(user, logEntry)
 
 	payload := fiber.Map{
 		"Date":              day,
@@ -347,7 +345,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		"ChartBaseline":   baselineCycleLength,
 		"TrendPointCount": len(lengths),
 		"SymptomCounts":   symptomCounts,
-		"IsOwner":         user.Role == models.RoleOwner,
+		"IsOwner":         isOwnerUser(user),
 	}
 
 	return handler.render(c, "stats", data)
