@@ -608,6 +608,40 @@
     return node ? String(node.textContent || "").trim() : "";
   }
 
+  function collectCheckedSymptomLabels(scope) {
+    if (!scope || !scope.querySelectorAll) {
+      return [];
+    }
+
+    var checked = scope.querySelectorAll("input[name='symptom_ids']:checked");
+    var labels = [];
+    for (var index = 0; index < checked.length; index++) {
+      var label = String(checked[index].dataset.symptomLabel || "").trim();
+      if (label) {
+        labels.push(label);
+      }
+    }
+    return labels;
+  }
+
+  window.dashboardTodayEditor = function (config) {
+    var safeConfig = config || {};
+
+    return {
+      isPeriod: !!safeConfig.isPeriod,
+      activeSymptoms: [],
+      notesPreview: "",
+      syncSymptoms: function () {
+        this.activeSymptoms = collectCheckedSymptomLabels(this.$root);
+      },
+      init: function () {
+        var notesField = this.$root ? this.$root.querySelector("#today-notes") : null;
+        this.notesPreview = notesField ? String(notesField.value || "") : "";
+        this.syncSymptoms();
+      }
+    };
+  };
+
   window.calendarView = function (config) {
     var safeConfig = config || {};
     return {

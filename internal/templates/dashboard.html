@@ -24,21 +24,9 @@
 
   <div
     class="grid gap-6 lg:grid-cols-[1.55fr_1fr]"
-    x-data="{
-      isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}},
-      activeSymptoms: [],
-      notesPreview: '',
-      syncSymptoms() {
-        this.activeSymptoms = Array.from(this.$root.querySelectorAll(`input[name='symptom_ids']:checked`))
-          .map((input) => (input.dataset.symptomLabel || '').trim())
-          .filter((label) => label.length > 0);
-      },
-      init() {
-        const notesField = this.$root.querySelector('#today-notes');
-        this.notesPreview = notesField ? notesField.value : '';
-        this.syncSymptoms();
-      }
-    }">
+    x-data='dashboardTodayEditor({
+      isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}}
+    })'>
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-5 flex items-center justify-between gap-3">
         <div>
