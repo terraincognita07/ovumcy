@@ -171,34 +171,19 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
 
-	flash := handler.popFlashCookie(c)
-
-	data, err := handler.buildSettingsViewData(c, user, flash)
+	data, errorMessage, err := handler.buildSettingsPageData(c, user)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load settings")
+		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 	return handler.render(c, "settings", data)
 }
 
 func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
 	messages := currentMessages(c)
-
-	metaDescription := translateMessage(messages, "meta.description.privacy")
-	if metaDescription == "meta.description.privacy" {
-		metaDescription = "Lume Privacy Policy - Zero data collection, self-hosted period tracker."
-	}
-	backFallback := "/login"
-
-	data := fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Lume | Privacy Policy"),
-		"MetaDescription": metaDescription,
-	}
-
+	var authenticatedUser *models.User
 	if user, err := handler.authenticateRequest(c); err == nil {
-		data["CurrentUser"] = user
-		backFallback = "/dashboard"
+		authenticatedUser = user
 	}
-	data["BackPath"] = sanitizeRedirectPath(c.Query("back"), backFallback)
-
+	data := buildPrivacyPageData(messages, c.Query("back"), authenticatedUser)
 	return handler.render(c, "privacy", data)
 }
