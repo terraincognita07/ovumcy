@@ -7,76 +7,6 @@ import (
 	"github.com/terraincognita07/lume/internal/models"
 )
 
-func (handler *Handler) SetupStatus(c *fiber.Ctx) error {
-	needsSetup, err := handler.requiresInitialSetup()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
-	}
-	return c.JSON(fiber.Map{"needs_setup": needsSetup})
-}
-
-func (handler *Handler) SetLanguage(c *fiber.Ctx) error {
-	language := handler.i18n.NormalizeLanguage(c.Params("lang"))
-	handler.setLanguageCookie(c, language)
-
-	nextPath := sanitizeRedirectPath(c.Query("next"), "/")
-	if isHTMX(c) {
-		c.Set("HX-Redirect", nextPath)
-		return c.SendStatus(fiber.StatusOK)
-	}
-	return c.Redirect(nextPath, fiber.StatusSeeOther)
-}
-
-func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
-	redirected, err := handler.redirectAuthenticatedUserIfPresent(c)
-	if err != nil {
-		return err
-	}
-	if redirected {
-		return nil
-	}
-
-	needsSetup, err := handler.requiresInitialSetup()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
-	}
-
-	flash := handler.popFlashCookie(c)
-	data := buildLoginPageData(c, currentMessages(c), flash, needsSetup)
-	return handler.render(c, "login", data)
-}
-
-func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
-	redirected, err := handler.redirectAuthenticatedUserIfPresent(c)
-	if err != nil {
-		return err
-	}
-	if redirected {
-		return nil
-	}
-
-	needsSetup, err := handler.requiresInitialSetup()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to load setup state")
-	}
-
-	flash := handler.popFlashCookie(c)
-	data := buildRegisterPageData(c, currentMessages(c), flash, needsSetup)
-	return handler.render(c, "register", data)
-}
-
-func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
-	flash := handler.popFlashCookie(c)
-	data := buildForgotPasswordPageData(c, currentMessages(c), flash)
-	return handler.render(c, "forgot_password", data)
-}
-
-func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
-	flash := handler.popFlashCookie(c)
-	data := handler.buildResetPasswordPageData(c, currentMessages(c), flash)
-	return handler.render(c, "reset_password", data)
-}
-
 func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	user, handled, err := handler.currentUserOrRedirectToLogin(c)
 	if err != nil {
@@ -172,11 +102,4 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 	return handler.render(c, "settings", data)
-}
-
-func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
-	messages := currentMessages(c)
-	authenticatedUser := handler.optionalAuthenticatedUser(c)
-	data := buildPrivacyPageData(messages, c.Query("back"), authenticatedUser)
-	return handler.render(c, "privacy", data)
 }
