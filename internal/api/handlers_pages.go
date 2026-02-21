@@ -261,17 +261,9 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	}
 	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
 
-	symptomCounts := make([]SymptomCount, 0)
-	if user.Role == models.RoleOwner {
-		symptomLogs, loadErr := handler.fetchAllLogsForUser(user.ID)
-		if loadErr != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom logs")
-		}
-		symptomCounts, err = handler.calculateSymptomFrequencies(user.ID, symptomLogs)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom stats")
-		}
-		localizeSymptomFrequencySummaries(language, symptomCounts)
+	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(symptomErrorMessage)
 	}
 
 	data := fiber.Map{

@@ -35,3 +35,21 @@ func (handler *Handler) buildStatsTrendView(user *models.User, logs []models.Dai
 	chartPayload := buildStatsChartData(messages, lengths, baselineCycleLength)
 	return chartPayload, baselineCycleLength, len(lengths)
 }
+
+func (handler *Handler) buildStatsSymptomCounts(user *models.User, language string) ([]SymptomCount, string, error) {
+	if !isOwnerUser(user) {
+		return []SymptomCount{}, "", nil
+	}
+
+	symptomLogs, err := handler.fetchAllLogsForUser(user.ID)
+	if err != nil {
+		return nil, "failed to load symptom logs", err
+	}
+
+	symptomCounts, err := handler.calculateSymptomFrequencies(user.ID, symptomLogs)
+	if err != nil {
+		return nil, "failed to load symptom stats", err
+	}
+	localizeSymptomFrequencySummaries(language, symptomCounts)
+	return symptomCounts, "", nil
+}
