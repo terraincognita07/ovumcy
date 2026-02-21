@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -143,12 +142,9 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load today log")
 	}
 
-	symptoms := make([]models.SymptomType, 0)
-	if isOwner {
-		symptoms, err = handler.fetchSymptoms(user.ID)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
-		}
+	symptoms, err := handler.fetchSymptomsForViewer(user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
 	}
 
 	todayLog = sanitizeLogForViewer(user, todayLog)
@@ -258,12 +254,9 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 	}
 
 	isOwner := isOwnerUser(user)
-	symptoms := make([]models.SymptomType, 0)
-	if isOwner {
-		symptoms, err = handler.fetchSymptoms(user.ID)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
-		}
+	symptoms, err := handler.fetchSymptomsForViewer(user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptoms")
 	}
 	logEntry = sanitizeLogForViewer(user, logEntry)
 
@@ -300,19 +293,8 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		lengths = lengths[len(lengths)-12:]
 	}
 
-	labels := make([]string, 0, len(lengths))
-	cycleLabelPattern := translateMessage(messages, "stats.cycle_label")
-	if cycleLabelPattern == "stats.cycle_label" {
-		cycleLabelPattern = "Cycle %d"
-	}
-	for index := range lengths {
-		labels = append(labels, fmt.Sprintf(cycleLabelPattern, index+1))
-	}
-
-	baselineCycleLength := 0
-	if user.Role == models.RoleOwner && isValidOnboardingCycleLength(user.CycleLength) {
-		baselineCycleLength = user.CycleLength
-	}
+	labels := buildCycleTrendLabels(messages, len(lengths))
+	baselineCycleLength := ownerBaselineCycleLength(user)
 
 	chartPayload := fiber.Map{
 		"labels": labels,
@@ -332,9 +314,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("failed to load symptom stats")
 		}
-		for index := range symptomCounts {
-			symptomCounts[index].FrequencySummary = localizedSymptomFrequencySummary(language, symptomCounts[index].Count, symptomCounts[index].TotalDays)
-		}
+		localizeSymptomFrequencySummaries(language, symptomCounts)
 	}
 
 	data := fiber.Map{

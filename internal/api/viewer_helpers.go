@@ -25,3 +25,10 @@ func sanitizeLogsForViewer(user *models.User, logs []models.DailyLog) {
 		logs[index] = sanitizeLogForPartner(logs[index])
 	}
 }
+
+func (handler *Handler) fetchSymptomsForViewer(user *models.User) ([]models.SymptomType, error) {
+	if !isOwnerUser(user) {
+		return []models.SymptomType{}, nil
+	}
+	return handler.fetchSymptoms(user.ID)
+}
