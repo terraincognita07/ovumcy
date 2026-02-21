@@ -709,9 +709,34 @@
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
         this.onStartDateChanged();
       },
+      goToStep: function (value) {
+        var nextStep = Number(value);
+        if (!Number.isFinite(nextStep)) {
+          return;
+        }
+        this.step = nextStep;
+      },
+      begin: function () {
+        this.goToStep(1);
+      },
+      onStepOneSaved: function (event) {
+        this.advanceAfterSuccessfulRequest(event, 2);
+      },
+      onStepTwoSaved: function (event) {
+        this.advanceAfterSuccessfulRequest(event, 3);
+      },
+      advanceAfterSuccessfulRequest: function (event, targetStep) {
+        if (!event || !event.detail || !event.detail.successful) {
+          return;
+        }
+        this.goToStep(targetStep);
+      },
       setStartDate: function (value) {
         this.selectedDate = value || "";
         this.onStartDateChanged();
+      },
+      setPeriodEndDate: function (value) {
+        this.periodEndDate = value || "";
       },
       setPeriodStatus: function (value) {
         this.periodStatus = value || "";

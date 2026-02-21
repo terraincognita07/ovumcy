@@ -38,7 +38,7 @@
         <p class="journal-muted text-sm">{{t .Messages "onboarding.welcome.details"}}</p>
       </div>
 
-      <button type="button" class="btn-primary" @click="step = 1">{{t .Messages "onboarding.button.begin"}}</button>
+      <button type="button" class="btn-primary" @click="begin()">{{t .Messages "onboarding.button.begin"}}</button>
     </div>
 
     <div x-show="step === 1" x-transition class="mt-6 space-y-4">
@@ -49,7 +49,7 @@
         hx-post="/onboarding/step1"
         hx-target="#onboarding-step1-status"
         hx-swap="innerHTML"
-        x-on:htmx:after-request="if ($event.detail.successful) { step = 2; }"
+        x-on:htmx:after-request="onStepOneSaved($event)"
         class="space-y-4">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <input type="hidden" name="last_period_start" :value="selectedDate">
@@ -117,14 +117,14 @@
                 type="button"
                 class="check-chip check-chip-sm justify-center"
                 :class="{ 'choice-chip-active': periodEndDate === day.value }"
-                @click="periodEndDate = day.value"
+                @click="setPeriodEndDate(day.value)"
                 x-text="day.label"></button>
             </template>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <button type="button" class="btn-secondary" @click="step = 0">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="button" class="btn-secondary" @click="goToStep(0)">{{t .Messages "onboarding.button.back"}}</button>
           <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.next"}}</button>
         </div>
         <div id="onboarding-step1-status" class="save-status text-sm"></div>
@@ -138,7 +138,7 @@
         hx-post="/onboarding/step2"
         hx-target="#onboarding-step2-status"
         hx-swap="innerHTML"
-        x-on:htmx:after-request="if ($event.detail.successful) { step = 3; }"
+        x-on:htmx:after-request="onStepTwoSaved($event)"
         class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
@@ -184,7 +184,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <button type="button" class="btn-secondary" @click="step = 1">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="button" class="btn-secondary" @click="goToStep(1)">{{t .Messages "onboarding.button.back"}}</button>
           <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.next"}}</button>
         </div>
         <div id="onboarding-step2-status" class="save-status text-sm"></div>
@@ -198,7 +198,7 @@
       <form hx-post="/onboarding/complete" hx-target="#onboarding-step3-status" hx-swap="innerHTML">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <div class="flex flex-wrap items-center gap-3">
-          <button type="button" class="btn-secondary" @click="step = 2">{{t .Messages "onboarding.button.back"}}</button>
+          <button type="button" class="btn-secondary" @click="goToStep(2)">{{t .Messages "onboarding.button.back"}}</button>
           <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.start"}}</button>
         </div>
         <div id="onboarding-step3-status" class="save-status mt-3 text-sm"></div>
