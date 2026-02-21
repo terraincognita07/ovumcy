@@ -2,12 +2,9 @@ package api
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
-	"gorm.io/gorm"
 )
 
 const (
@@ -38,67 +35,15 @@ func (handler *Handler) OnboardingStep1(c *fiber.Ctx) error {
 		return redirectOrJSON(c, "/dashboard")
 	}
 
-	input := struct {
-		LastPeriodStart string `json:"last_period_start" form:"last_period_start"`
-		PeriodStatus    string `json:"period_status" form:"period_status"`
-		PeriodEnd       string `json:"period_end" form:"period_end"`
-	}{}
-	if err := c.BodyParser(&input); err != nil {
-		return apiError(c, fiber.StatusBadRequest, "invalid input")
-	}
-
-	rawLastPeriodStart := strings.TrimSpace(input.LastPeriodStart)
-	if rawLastPeriodStart == "" {
-		return apiError(c, fiber.StatusBadRequest, "date is required")
-	}
-
-	parsedDay, err := parseDayParam(rawLastPeriodStart, handler.location)
-	if err != nil {
-		return apiError(c, fiber.StatusBadRequest, "invalid last period start")
-	}
-
 	today := dateAtLocation(time.Now().In(handler.location), handler.location)
-	minDate := today.AddDate(0, 0, -60)
-	if parsedDay.After(today) || parsedDay.Before(minDate) {
-		return apiError(c, fiber.StatusBadRequest, "last period start must be within last 60 days")
+	values, validationError := handler.parseOnboardingStep1Values(c, today)
+	if validationError != "" {
+		return apiError(c, fiber.StatusBadRequest, validationError)
 	}
 
-	rawPeriodStatus := strings.TrimSpace(input.PeriodStatus)
-	if rawPeriodStatus == "" {
-		return apiError(c, fiber.StatusBadRequest, "period status is required")
-	}
-	periodStatus := normalizeOnboardingPeriodStatus(rawPeriodStatus)
-	if periodStatus == "" {
-		return apiError(c, fiber.StatusBadRequest, "invalid period status")
-	}
-
-	var periodEnd *time.Time
-	if periodStatus == onboardingPeriodStatusFinished {
-		rawPeriodEnd := strings.TrimSpace(input.PeriodEnd)
-		if rawPeriodEnd == "" {
-			return apiError(c, fiber.StatusBadRequest, "period end is required")
-		}
-		parsedEnd, err := parseDayParam(rawPeriodEnd, handler.location)
-		if err != nil {
-			return apiError(c, fiber.StatusBadRequest, "invalid period end")
-		}
-		if parsedEnd.Before(parsedDay) || parsedEnd.After(today) {
-			return apiError(c, fiber.StatusBadRequest, "period end must be between start and today")
-		}
-		periodEnd = &parsedEnd
-	}
-
-	updates := map[string]any{
-		"last_period_start":        parsedDay,
-		"onboarding_period_status": periodStatus,
-		"onboarding_period_end":    periodEnd,
-	}
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+	if err := handler.saveOnboardingStep1(user, values); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to save onboarding step")
 	}
-	user.LastPeriodStart = &parsedDay
-	user.OnboardingPeriodStatus = periodStatus
-	user.OnboardingPeriodEnd = periodEnd
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
@@ -118,31 +63,14 @@ func (handler *Handler) OnboardingStep2(c *fiber.Ctx) error {
 		return redirectOrJSON(c, "/dashboard")
 	}
 
-	input := struct {
-		CycleLength    int  `json:"cycle_length" form:"cycle_length"`
-		PeriodLength   int  `json:"period_length" form:"period_length"`
-		AutoPeriodFill bool `json:"auto_period_fill" form:"auto_period_fill"`
-	}{}
-	if err := c.BodyParser(&input); err != nil {
-		return apiError(c, fiber.StatusBadRequest, "invalid input")
-	}
-	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return apiError(c, fiber.StatusBadRequest, "cycle length must be between 15 and 90")
-	}
-	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return apiError(c, fiber.StatusBadRequest, "period length must be between 1 and 10")
+	values, validationError := parseOnboardingStep2Input(c)
+	if validationError != "" {
+		return apiError(c, fiber.StatusBadRequest, validationError)
 	}
 
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"cycle_length":     input.CycleLength,
-		"period_length":    input.PeriodLength,
-		"auto_period_fill": input.AutoPeriodFill,
-	}).Error; err != nil {
+	if err := handler.saveOnboardingStep2(user, values); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to save onboarding step")
 	}
-	user.CycleLength = input.CycleLength
-	user.PeriodLength = input.PeriodLength
-	user.AutoPeriodFill = input.AutoPeriodFill
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
@@ -166,54 +94,9 @@ func (handler *Handler) OnboardingComplete(c *fiber.Ctx) error {
 	}
 
 	today := dateAtLocation(time.Now().In(handler.location), handler.location)
-	startDay := dateAtLocation(*user.LastPeriodStart, handler.location)
-	endDay := startDay
-	if err := handler.db.Transaction(func(tx *gorm.DB) error {
-		var current models.User
-		if err := tx.First(&current, user.ID).Error; err != nil {
-			return err
-		}
-		if current.LastPeriodStart == nil {
-			return errors.New("complete onboarding steps first")
-		}
-		startDay = dateAtLocation(*current.LastPeriodStart, handler.location)
-
-		status := normalizeOnboardingPeriodStatus(current.OnboardingPeriodStatus)
-		if status == "" {
-			status = onboardingPeriodStatusOngoing
-		}
-		if status == onboardingPeriodStatusFinished {
-			if current.OnboardingPeriodEnd == nil {
-				return errors.New("complete onboarding steps first")
-			}
-			endDay = dateAtLocation(*current.OnboardingPeriodEnd, handler.location)
-			if endDay.Before(startDay) || endDay.After(today) {
-				return errors.New("complete onboarding steps first")
-			}
-		} else {
-			periodLength := current.PeriodLength
-			if !isValidOnboardingPeriodLength(periodLength) {
-				periodLength = models.DefaultPeriodLength
-			}
-			endDay = startDay.AddDate(0, 0, periodLength-1)
-		}
-
-		if err := handler.upsertOnboardingPeriodRange(tx, current.ID, startDay, endDay); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&models.User{}).Where("id = ?", current.ID).Updates(map[string]any{
-			"last_period_start":        startDay,
-			"onboarding_completed":     true,
-			"onboarding_period_status": "",
-			"onboarding_period_end":    nil,
-		}).Error; err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "complete onboarding steps first") {
+	startDay, err := handler.completeOnboardingForUser(user.ID, today)
+	if err != nil {
+		if errors.Is(err, errOnboardingStepsRequired) {
 			return apiError(c, fiber.StatusBadRequest, "complete onboarding steps first")
 		}
 		return apiError(c, fiber.StatusInternalServerError, "failed to finish onboarding")
