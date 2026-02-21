@@ -14,17 +14,6 @@ const (
 	contextMessagesKey = "current_messages"
 )
 
-func (handler *Handler) OwnerOnly(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-	if user.Role != models.RoleOwner {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "owner access required"})
-	}
-	return c.Next()
-}
-
 func currentUser(c *fiber.Ctx) (*models.User, bool) {
 	user, ok := c.Locals(contextUserKey).(*models.User)
 	return user, ok
