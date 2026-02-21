@@ -28,17 +28,13 @@
       <label class="field-label" for="login-email">{{t .Messages "auth.email"}}</label>
       <input id="login-email" type="email" name="email" value="{{.Email}}" required autocomplete="email" class="input-field" />
 
-      <label class="field-label" for="login-password">{{t .Messages "auth.password"}}</label>
-      <div class="password-field">
-        <input id="login-password" type="password" name="password" required autocomplete="current-password" class="input-field input-with-toggle" />
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "auth.password"
+        "FieldID" "login-password"
+        "FieldName" "password"
+        "Autocomplete" "current-password"
+        "Required" true)}}
 
       <label class="remember-option" for="login-remember-me">
         <input id="login-remember-me" type="checkbox" name="remember_me" value="1" class="remember-checkbox" />

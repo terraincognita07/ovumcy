@@ -20,29 +20,21 @@
       <label class="field-label" for="register-email">{{t .Messages "auth.email"}}</label>
       <input id="register-email" type="email" name="email" value="{{.Email}}" required autocomplete="email" class="input-field" />
 
-      <label class="field-label" for="register-password">{{t .Messages "auth.password"}}</label>
-      <div class="password-field">
-        <input id="register-password" type="password" name="password" required autocomplete="new-password" class="input-field input-with-toggle" />
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "auth.password"
+        "FieldID" "register-password"
+        "FieldName" "password"
+        "Autocomplete" "new-password"
+        "Required" true)}}
 
-      <label class="field-label" for="register-confirm-password">{{t .Messages "auth.confirm_password"}}</label>
-      <div class="password-field">
-        <input id="register-confirm-password" type="password" name="confirm_password" required autocomplete="new-password" class="input-field input-with-toggle" />
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "auth.confirm_password"
+        "FieldID" "register-confirm-password"
+        "FieldName" "confirm_password"
+        "Autocomplete" "new-password"
+        "Required" true)}}
       <p class="journal-muted text-xs">{{t .Messages "auth.password_requirements"}}</p>
 
       <button type="submit" class="btn-primary w-full">{{t .Messages "auth.register"}}</button>

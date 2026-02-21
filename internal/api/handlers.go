@@ -134,6 +134,20 @@ func newTemplateFuncMap() template.FuncMap {
 			}
 			return template.JS(serialized)
 		},
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("dict requires key-value pairs")
+			}
+			result := make(map[string]any, len(values)/2)
+			for index := 0; index < len(values); index += 2 {
+				key, ok := values[index].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict key at index %d is not a string", index)
+				}
+				result[key] = values[index+1]
+			}
+			return result, nil
+		},
 	}
 }
 

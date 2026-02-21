@@ -103,3 +103,22 @@
 </body>
 </html>
 {{end}}
+{{define "password_toggle_field"}}
+<label class="field-label" for="{{.FieldID}}">{{t .Messages .LabelKey}}</label>
+<div class="password-field">
+  <input
+    id="{{.FieldID}}"
+    type="password"
+    name="{{.FieldName}}"
+    {{if .Required}}required{{end}}
+    autocomplete="{{.Autocomplete}}"
+    class="input-field input-with-toggle">
+  <button
+    type="button"
+    class="password-toggle-btn"
+    data-password-toggle
+    data-show-label="{{t .Messages "auth.show_password"}}"
+    data-hide-label="{{t .Messages "auth.hide_password"}}"
+    aria-label="{{t .Messages "auth.show_password"}}">👁</button>
+</div>
+{{end}}
