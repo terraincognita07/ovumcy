@@ -7,13 +7,6 @@ import (
 	"github.com/terraincognita07/lume/internal/models"
 )
 
-func normalizeLegacySymptomName(name string) string {
-	if strings.EqualFold(strings.TrimSpace(name), "fatique") {
-		return "Fatigue"
-	}
-	return name
-}
-
 func buildCSVSymptomColumns(symptomIDs []uint, symptomNames map[uint]string) (exportSymptomFlags, []string) {
 	flags := exportSymptomFlags{}
 	otherSet := make(map[string]struct{})
