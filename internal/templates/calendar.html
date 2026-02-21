@@ -48,8 +48,9 @@
             hx-get="/calendar/day/{{.DateString}}"
             hx-target="#day-editor"
             hx-swap="innerHTML"
-            @click="selectDay('{{.DateString}}')"
-            :class="{ 'selected': selectedDate === '{{.DateString}}' }"
+            data-day="{{.DateString}}"
+            @click="selectDayFromEvent($event)"
+            :class="{ 'selected': isSelectedDay($el.dataset.day) }"
             class="{{.CellClass}}">
             <div class="flex items-center justify-between">
               <span class="{{.TextClass}}">{{.Day}}</span>

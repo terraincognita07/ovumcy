@@ -33,6 +33,12 @@
       syncSymptoms: function () {
         this.activeSymptoms = collectCheckedSymptomLabels(this.$root);
       },
+      hasActiveSymptoms: function () {
+        return this.activeSymptoms.length > 0;
+      },
+      hasNotesPreview: function () {
+        return String(this.notesPreview || "").trim().length > 0;
+      },
       init: function () {
         var notesField = this.$root ? this.$root.querySelector("#today-notes") : null;
         this.notesPreview = notesField ? String(notesField.value || "") : "";
@@ -45,6 +51,16 @@
     var safeConfig = config || {};
     return {
       selectedDate: safeConfig.selectedDate || "",
+      isSelectedDay: function (value) {
+        return this.selectedDate === String(value || "");
+      },
+      selectDayFromEvent: function (event) {
+        var target = event && event.currentTarget ? event.currentTarget : null;
+        if (!target || typeof target.getAttribute !== "function") {
+          return;
+        }
+        this.selectDay(target.getAttribute("data-day"));
+      },
       selectDay: function (value) {
         this.selectedDate = value || "";
         if (!this.selectedDate || !window.history || typeof window.history.replaceState !== "function") {

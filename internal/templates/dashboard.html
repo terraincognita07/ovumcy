@@ -94,18 +94,18 @@
       <div class="mt-4 space-y-4 text-sm" x-cloak x-show="!isPeriod" x-transition.opacity.duration.220ms>
         <div>
           <p class="journal-muted">{{t .Messages "dashboard.symptoms"}}</p>
-          <ul class="mt-2 space-y-1" x-show="activeSymptoms.length > 0">
+          <ul class="mt-2 space-y-1" x-show="hasActiveSymptoms()">
             <template x-for="(symptom, index) in activeSymptoms" :key="index">
               <li x-text="symptom"></li>
             </template>
           </ul>
-          <p class="mt-2" x-show="activeSymptoms.length === 0">{{.NoDataLabel}}</p>
+          <p class="mt-2" x-show="!hasActiveSymptoms()">{{.NoDataLabel}}</p>
         </div>
 
         <div>
           <p class="journal-muted">{{t .Messages "dashboard.notes"}}</p>
-          <p class="mt-2 whitespace-pre-wrap break-words" x-show="notesPreview.trim().length > 0" x-text="notesPreview"></p>
-          <p class="mt-2" x-show="notesPreview.trim().length === 0">{{.NoDataLabel}}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words" x-show="hasNotesPreview()" x-text="notesPreview"></p>
+          <p class="mt-2" x-show="!hasNotesPreview()">{{.NoDataLabel}}</p>
         </div>
       </div>
     </section>
