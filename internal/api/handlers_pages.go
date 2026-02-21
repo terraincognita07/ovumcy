@@ -259,21 +259,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
 	}
-	lengths := handler.completedCycleTrendLengths(logs, now)
-	if len(lengths) > 12 {
-		lengths = lengths[len(lengths)-12:]
-	}
-
-	labels := buildCycleTrendLabels(messages, len(lengths))
-	baselineCycleLength := ownerBaselineCycleLength(user)
-
-	chartPayload := fiber.Map{
-		"labels": labels,
-		"values": lengths,
-	}
-	if baselineCycleLength > 0 {
-		chartPayload["baseline"] = baselineCycleLength
-	}
+	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
 
 	symptomCounts := make([]SymptomCount, 0)
 	if user.Role == models.RoleOwner {
@@ -294,7 +280,7 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 		"Stats":           stats,
 		"ChartData":       chartPayload,
 		"ChartBaseline":   baselineCycleLength,
-		"TrendPointCount": len(lengths),
+		"TrendPointCount": trendPointCount,
 		"SymptomCounts":   symptomCounts,
 		"IsOwner":         isOwnerUser(user),
 	}
