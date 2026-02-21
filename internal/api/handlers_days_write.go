@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
-	"gorm.io/gorm"
 )
 
 func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
@@ -41,20 +39,8 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	}
 
 	dayStart, _ := dayRange(day, handler.location)
-	dayKey := dayStorageKey(dayStart, handler.location)
-	nextDayKey := nextDayStorageKey(dayStart, handler.location)
-	wasPeriod := false
 	autoPeriodFillEnabled := false
 	periodLength := 5
-
-	var entry models.DailyLog
-	result := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", user.ID, dayKey, nextDayKey).
-		Order("date DESC, id DESC").
-		First(&entry)
-	if result.Error == nil {
-		wasPeriod = entry.IsPeriod
-	}
 
 	if payload.IsPeriod {
 		periodLength, autoPeriodFillEnabled, err = handler.loadDayAutoFillSettings(user.ID)
@@ -63,26 +49,16 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		}
 	}
 
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		entry = models.DailyLog{
-			UserID:   user.ID,
-			Date:     dayStart,
-			IsPeriod: payload.IsPeriod,
-			Flow:     payload.Flow,
-			Notes:    payload.Notes,
-		}
-		entry.SymptomIDs = cleanIDs
-		if err := handler.db.Create(&entry).Error; err != nil {
+	entry, wasPeriod, err := handler.upsertDayEntry(user.ID, dayStart, payload, cleanIDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, errDayEntryLoadFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to load day")
+		case errors.Is(err, errDayEntryCreateFailed):
 			return apiError(c, fiber.StatusInternalServerError, "failed to create day")
-		}
-	} else if result.Error != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to load day")
-	} else {
-		entry.IsPeriod = payload.IsPeriod
-		entry.Flow = payload.Flow
-		entry.SymptomIDs = cleanIDs
-		entry.Notes = payload.Notes
-		if err := handler.db.Save(&entry).Error; err != nil {
+		case errors.Is(err, errDayEntryUpdateFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to update day")
+		default:
 			return apiError(c, fiber.StatusInternalServerError, "failed to update day")
 		}
 	}
@@ -122,11 +98,15 @@ func (handler *Handler) DeleteDailyLog(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid date")
 	}
 
-	if err := handler.deleteDailyLogByDate(user.ID, day); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-	}
-	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+	if err := handler.deleteDayAndRefreshLastPeriod(user.ID, day); err != nil {
+		switch {
+		case errors.Is(err, errDeleteDayFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+		case errors.Is(err, errSyncLastPeriodFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+		default:
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+		}
 	}
 
 	source := strings.ToLower(strings.TrimSpace(c.Query("source")))
@@ -160,11 +140,15 @@ func (handler *Handler) DeleteDay(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid date")
 	}
 
-	if err := handler.deleteDailyLogByDate(user.ID, day); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-	}
-	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+	if err := handler.deleteDayAndRefreshLastPeriod(user.ID, day); err != nil {
+		switch {
+		case errors.Is(err, errDeleteDayFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+		case errors.Is(err, errSyncLastPeriodFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
+		default:
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
+		}
 	}
 
 	if isHTMX(c) {
