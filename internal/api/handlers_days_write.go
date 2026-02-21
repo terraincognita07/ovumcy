@@ -51,16 +51,7 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 
 	entry, wasPeriod, err := handler.upsertDayEntry(user.ID, dayStart, payload, cleanIDs)
 	if err != nil {
-		switch {
-		case errors.Is(err, errDayEntryLoadFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to load day")
-		case errors.Is(err, errDayEntryCreateFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to create day")
-		case errors.Is(err, errDayEntryUpdateFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to update day")
-		default:
-			return apiError(c, fiber.StatusInternalServerError, "failed to update day")
-		}
+		return upsertDayPersistenceAPIError(c, err)
 	}
 
 	if payload.IsPeriod {
@@ -99,14 +90,7 @@ func (handler *Handler) DeleteDailyLog(c *fiber.Ctx) error {
 	}
 
 	if err := handler.deleteDayAndRefreshLastPeriod(user.ID, day); err != nil {
-		switch {
-		case errors.Is(err, errDeleteDayFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-		case errors.Is(err, errSyncLastPeriodFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
-		default:
-			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-		}
+		return deleteDayPersistenceAPIError(c, err)
 	}
 
 	source := strings.ToLower(strings.TrimSpace(c.Query("source")))
@@ -141,14 +125,7 @@ func (handler *Handler) DeleteDay(c *fiber.Ctx) error {
 	}
 
 	if err := handler.deleteDayAndRefreshLastPeriod(user.ID, day); err != nil {
-		switch {
-		case errors.Is(err, errDeleteDayFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-		case errors.Is(err, errSyncLastPeriodFailed):
-			return apiError(c, fiber.StatusInternalServerError, "failed to sync last period start")
-		default:
-			return apiError(c, fiber.StatusInternalServerError, "failed to delete day")
-		}
+		return deleteDayPersistenceAPIError(c, err)
 	}
 
 	if isHTMX(c) {
