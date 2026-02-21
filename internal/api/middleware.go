@@ -1,13 +1,10 @@
 package api
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/terraincognita07/lume/internal/models"
 )
 
@@ -19,12 +16,6 @@ const (
 	contextLanguageKey = "current_language"
 	contextMessagesKey = "current_messages"
 )
-
-type authClaims struct {
-	UserID uint   `json:"uid"`
-	Role   string `json:"role"`
-	jwt.RegisteredClaims
-}
 
 func (handler *Handler) LanguageMiddleware(c *fiber.Ctx) error {
 	cookieLanguage := c.Cookies(languageCookieName)
@@ -74,35 +65,6 @@ func (handler *Handler) OwnerOnly(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "owner access required"})
 	}
 	return c.Next()
-}
-
-func (handler *Handler) authenticateRequest(c *fiber.Ctx) (*models.User, error) {
-	rawToken := c.Cookies(authCookieName)
-	if rawToken == "" {
-		return nil, errors.New("missing auth cookie")
-	}
-
-	claims := &authClaims{}
-	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
-		}
-		return handler.secretKey, nil
-	})
-	if err != nil || !token.Valid {
-		return nil, errors.New("invalid token")
-	}
-
-	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
-		return nil, errors.New("token expired")
-	}
-
-	var user models.User
-	if err := handler.db.First(&user, claims.UserID).Error; err != nil {
-		return nil, err
-	}
-
-	return &user, nil
 }
 
 func currentUser(c *fiber.Ctx) (*models.User, bool) {
