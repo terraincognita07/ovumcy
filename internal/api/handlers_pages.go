@@ -130,29 +130,9 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
-	today := dateAtLocation(now, handler.location)
-	isOwner := isOwnerUser(user)
-
-	stats, _, err := handler.buildCycleStatsForRange(user, today.AddDate(-2, 0, 0), today, now)
+	data, errorMessage, err := handler.buildDashboardViewData(user, language, messages, now)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load logs")
-	}
-	todayLog, symptoms, err := handler.fetchDayLogForViewer(user, today)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load today log")
-	}
-
-	data := fiber.Map{
-		"Title":             localizedPageTitle(messages, "meta.title.dashboard", "Lume | Dashboard"),
-		"CurrentUser":       user,
-		"Stats":             stats,
-		"Today":             today.Format("2006-01-02"),
-		"FormattedDate":     localizedDashboardDate(language, today),
-		"TodayLog":          todayLog,
-		"TodayHasData":      dayHasData(todayLog),
-		"Symptoms":          symptoms,
-		"SelectedSymptomID": symptomIDSet(todayLog.SymptomIDs),
-		"IsOwner":           isOwner,
+		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 
 	return handler.render(c, "dashboard", data)
@@ -218,30 +198,11 @@ func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, day time.Time) error {
+	language := currentLanguage(c)
 	messages := currentMessages(c)
-
-	hasDayData, err := handler.dayHasDataForDate(user.ID, day)
+	payload, errorMessage, err := handler.buildDayEditorPartialData(user, language, messages, day, time.Now().In(handler.location))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day state")
-	}
-
-	isOwner := isOwnerUser(user)
-	logEntry, symptoms, err := handler.fetchDayLogForViewer(user, day)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load day")
-	}
-
-	payload := fiber.Map{
-		"Date":              day,
-		"DateString":        day.Format("2006-01-02"),
-		"DateLabel":         localizedDateLabel(currentLanguage(c), day),
-		"IsFutureDate":      day.After(dateAtLocation(time.Now().In(handler.location), handler.location)),
-		"NoDataLabel":       translateMessage(messages, "common.not_available"),
-		"Log":               logEntry,
-		"Symptoms":          symptoms,
-		"SelectedSymptomID": symptomIDSet(logEntry.SymptomIDs),
-		"HasDayData":        hasDayData,
-		"IsOwner":           isOwner,
+		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 	return handler.renderPartial(c, "day_editor_partial", payload)
 }
