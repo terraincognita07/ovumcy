@@ -67,3 +67,40 @@ func (handler *Handler) autoFillFollowingPeriodDays(userID uint, startDay time.T
 
 	return nil
 }
+
+func (handler *Handler) loadDayAutoFillSettings(userID uint) (int, bool, error) {
+	periodLength := 5
+	settings := struct {
+		PeriodLength   int
+		AutoPeriodFill bool
+	}{}
+
+	if err := handler.db.Model(&models.User{}).
+		Select("period_length", "auto_period_fill").
+		First(&settings, userID).Error; err != nil {
+		return periodLength, false, err
+	}
+	if isValidOnboardingPeriodLength(settings.PeriodLength) {
+		periodLength = settings.PeriodLength
+	}
+	return periodLength, settings.AutoPeriodFill, nil
+}
+
+func (handler *Handler) shouldAutoFillPeriodDays(userID uint, dayStart time.Time, wasPeriod bool, autoPeriodFillEnabled bool, periodLength int) (bool, error) {
+	if !autoPeriodFillEnabled || periodLength <= 1 || wasPeriod {
+		return false, nil
+	}
+
+	previousDay := dayStart.AddDate(0, 0, -1)
+	previousDayEntry, err := handler.fetchLogByDate(userID, previousDay)
+	if err != nil {
+		return false, err
+	}
+
+	hasRecentPeriod, err := handler.hasPeriodInRecentDays(userID, dayStart, 3)
+	if err != nil {
+		return false, err
+	}
+
+	return !previousDayEntry.IsPeriod && !hasRecentPeriod, nil
+}
