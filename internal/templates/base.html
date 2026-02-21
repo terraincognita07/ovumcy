@@ -7,7 +7,7 @@
   {{if .MetaDescription}}<meta name="description" content="{{.MetaDescription}}">{{end}}
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260219-2">
+  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260221-1">
   <script defer src="/static/js/alpine.min.js"></script>
   <script defer src="/static/js/htmx.min.js"></script>
   <script defer src="/static/js/chart-lite.js"></script>
@@ -420,10 +420,6 @@
       if (!target.classList.contains("save-status")) return;
       var successNode = target.querySelector(".status-ok");
       if (!successNode) return;
-
-      if (window.showToast) {
-        window.showToast(successNode.textContent || "", "ok");
-      }
 
       var dayEditor = document.getElementById("day-editor");
       var form = target.closest("form[data-save-feedback]");

@@ -276,7 +276,7 @@ func createOnboardingTestUser(t *testing.T, database *gorm.DB, email string, pas
 		PasswordHash:        string(passwordHash),
 		Role:                models.RoleOwner,
 		OnboardingCompleted: onboardingCompleted,
-		CycleLength:         26,
+		CycleLength:         28,
 		PeriodLength:        5,
 		AutoPeriodFill:      true,
 		CreatedAt:           time.Now().UTC(),

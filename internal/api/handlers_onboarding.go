@@ -29,11 +29,11 @@ func (handler *Handler) ShowOnboarding(c *fiber.Ctx) error {
 
 	cycleLength := user.CycleLength
 	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = 26
+		cycleLength = models.DefaultCycleLength
 	}
 	periodLength := user.PeriodLength
 	if !isValidOnboardingPeriodLength(periodLength) {
-		periodLength = 5
+		periodLength = models.DefaultPeriodLength
 	}
 
 	data := fiber.Map{

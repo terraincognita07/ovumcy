@@ -99,7 +99,7 @@
   "onboarding.step2.title": "Set up cycle parameters",
   "onboarding.step2.cycle_length": "Typical cycle length",
   "onboarding.step2.period_length": "Period duration",
-  "onboarding.step2.hint": "Default cycle is 26 days",
+  "onboarding.step2.hint": "Default cycle is 28 days",
   "onboarding.step2.cycle_warning": "Cycle values above 45 days should be discussed with a doctor.",
   "onboarding.step2.period_warning": "Period duration above 8 days should be discussed with a doctor.",
   "onboarding.step2.auto_period_fill": "Auto-mark period days",

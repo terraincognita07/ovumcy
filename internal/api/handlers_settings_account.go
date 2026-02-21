@@ -186,8 +186,8 @@ func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
 			return err
 		}
 		return tx.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-			"cycle_length":      26,
-			"period_length":     5,
+			"cycle_length":      models.DefaultCycleLength,
+			"period_length":     models.DefaultPeriodLength,
 			"auto_period_fill":  true,
 			"last_period_start": nil,
 		}).Error
@@ -195,8 +195,8 @@ func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to clear data")
 	}
 
-	user.CycleLength = 26
-	user.PeriodLength = 5
+	user.CycleLength = models.DefaultCycleLength
+	user.PeriodLength = models.DefaultPeriodLength
 	user.AutoPeriodFill = true
 	user.LastPeriodStart = nil
 

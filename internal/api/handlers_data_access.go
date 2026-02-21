@@ -120,6 +120,15 @@ func (handler *Handler) ensureBuiltinSymptoms(userID uint) error {
 	return handler.db.Create(&missing).Error
 }
 
+func isChangePasswordErrorMessage(message string) bool {
+	switch strings.ToLower(strings.TrimSpace(message)) {
+	case "invalid settings input", "password mismatch", "invalid current password", "new password must differ", "weak password":
+		return true
+	default:
+		return false
+	}
+}
+
 func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
 	messages := currentMessages(c)
 	status := strings.TrimSpace(flash.SettingsSuccess)
@@ -131,11 +140,17 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	}
 	errorSource := strings.TrimSpace(flash.SettingsError)
 	errorKey := ""
+	changePasswordErrorKey := ""
 	if status == "" {
 		if errorSource == "" {
 			errorSource = strings.TrimSpace(c.Query("error"))
 		}
-		errorKey = authErrorTranslationKey(errorSource)
+		translatedErrorKey := authErrorTranslationKey(errorSource)
+		if isChangePasswordErrorMessage(errorSource) && translatedErrorKey != "" {
+			changePasswordErrorKey = translatedErrorKey
+		} else {
+			errorKey = translatedErrorKey
+		}
 	}
 
 	persisted := models.User{}
@@ -145,11 +160,11 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 
 	cycleLength := persisted.CycleLength
 	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = 26
+		cycleLength = models.DefaultCycleLength
 	}
 	periodLength := persisted.PeriodLength
 	if !isValidOnboardingPeriodLength(periodLength) {
-		periodLength = 5
+		periodLength = models.DefaultPeriodLength
 	}
 	autoPeriodFill := persisted.AutoPeriodFill
 	user.CycleLength = cycleLength
@@ -157,13 +172,14 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	user.AutoPeriodFill = autoPeriodFill
 
 	data := fiber.Map{
-		"Title":          localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
-		"CurrentUser":    user,
-		"ErrorKey":       errorKey,
-		"SuccessKey":     settingsStatusTranslationKey(status),
-		"CycleLength":    cycleLength,
-		"PeriodLength":   periodLength,
-		"AutoPeriodFill": autoPeriodFill,
+		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
+		"CurrentUser":            user,
+		"ErrorKey":               errorKey,
+		"ChangePasswordErrorKey": changePasswordErrorKey,
+		"SuccessKey":             settingsStatusTranslationKey(status),
+		"CycleLength":            cycleLength,
+		"PeriodLength":           periodLength,
+		"AutoPeriodFill":         autoPeriodFill,
 	}
 
 	if user.Role == models.RoleOwner {

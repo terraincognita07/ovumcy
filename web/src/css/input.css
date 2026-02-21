@@ -370,6 +370,60 @@
     resize: vertical;
   }
 
+  .range-field {
+    appearance: none;
+    width: 100%;
+    height: 0.56rem;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 165, 116, 0.42);
+    background: linear-gradient(90deg, rgba(232, 196, 168, 0.68), rgba(212, 165, 116, 0.4));
+    cursor: pointer;
+  }
+
+  .range-field:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.24);
+  }
+
+  .range-field::-webkit-slider-runnable-track {
+    height: 0.56rem;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  .range-field::-webkit-slider-thumb {
+    appearance: none;
+    width: 1.22rem;
+    height: 1.22rem;
+    margin-top: -0.37rem;
+    border-radius: 999px;
+    border: 1px solid rgba(169, 107, 58, 0.42);
+    background: linear-gradient(145deg, #d39a67, #c57f4d);
+    box-shadow: 0 4px 9px rgba(152, 94, 49, 0.28);
+  }
+
+  .range-field::-moz-range-track {
+    height: 0.56rem;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 165, 116, 0.42);
+    background: linear-gradient(90deg, rgba(232, 196, 168, 0.68), rgba(212, 165, 116, 0.4));
+  }
+
+  .range-field::-moz-range-progress {
+    height: 0.56rem;
+    border-radius: 999px;
+    background: rgba(199, 117, 109, 0.55);
+  }
+
+  .range-field::-moz-range-thumb {
+    width: 1.22rem;
+    height: 1.22rem;
+    border: 1px solid rgba(169, 107, 58, 0.42);
+    border-radius: 999px;
+    background: linear-gradient(145deg, #d39a67, #c57f4d);
+    box-shadow: 0 4px 9px rgba(152, 94, 49, 0.28);
+  }
+
   .btn-primary,
   .btn-secondary,
   .btn-soft,

@@ -105,9 +105,9 @@
             max="90"
             name="cycle_length"
             x-model.number="cycleLength"
-            class="w-full">
+            class="w-full range-field">
           <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
-          <p class="journal-muted text-sm">{{t .Messages "onboarding.step2.hint"}}</p>
+          <p class="journal-muted text-sm" x-cloak x-show="cycleLength === 28">{{t .Messages "onboarding.step2.hint"}}</p>
         </div>
 
         <div class="space-y-2">
@@ -122,7 +122,7 @@
             max="10"
             name="period_length"
             x-model.number="periodLength"
-            class="w-full">
+            class="w-full range-field">
           <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>
         </div>
 
@@ -166,7 +166,7 @@
     return {
       step: 0,
       selectedDate: safeConfig.lastPeriodStart || "",
-      cycleLength: Number(safeConfig.cycleLength || 26),
+      cycleLength: Number(safeConfig.cycleLength || 28),
       periodLength: Number(safeConfig.periodLength || 5),
       autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],

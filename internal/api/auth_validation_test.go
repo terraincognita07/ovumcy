@@ -662,8 +662,8 @@ func TestClearDataRemovesTrackedCalendarEntriesAndResetsCycleSettings(t *testing
 	if err := database.First(&updatedUser, user.ID).Error; err != nil {
 		t.Fatalf("load updated user: %v", err)
 	}
-	if updatedUser.CycleLength != 26 {
-		t.Fatalf("expected cycle length reset to 26, got %d", updatedUser.CycleLength)
+	if updatedUser.CycleLength != 28 {
+		t.Fatalf("expected cycle length reset to 28, got %d", updatedUser.CycleLength)
 	}
 	if updatedUser.PeriodLength != 5 {
 		t.Fatalf("expected period length reset to 5, got %d", updatedUser.PeriodLength)

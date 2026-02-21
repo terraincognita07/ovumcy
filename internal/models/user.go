@@ -3,8 +3,10 @@ package models
 import "time"
 
 const (
-	RoleOwner   = "owner"
-	RolePartner = "partner"
+	RoleOwner           = "owner"
+	RolePartner         = "partner"
+	DefaultCycleLength  = 28
+	DefaultPeriodLength = 5
 )
 
 type User struct {
@@ -16,7 +18,7 @@ type User struct {
 	MustChangePassword  bool       `gorm:"column:must_change_password;not null;default:false"`
 	Role                string     `gorm:"not null;default:owner"`
 	OnboardingCompleted bool       `gorm:"not null;default:false"`
-	CycleLength         int        `gorm:"not null;default:26"`
+	CycleLength         int        `gorm:"not null;default:28"`
 	PeriodLength        int        `gorm:"not null;default:5"`
 	AutoPeriodFill      bool       `gorm:"column:auto_period_fill;not null;default:true"`
 	LastPeriodStart     *time.Time `gorm:"type:date"`

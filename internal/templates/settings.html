@@ -65,7 +65,7 @@
           name="cycle_length"
           value="{{.CycleLength}}"
           x-model.number="cycleLength"
-          class="w-full">
+          class="w-full range-field">
         <p class="journal-muted text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "settings.cycle.cycle_warning"}}</p>
       </div>
 
@@ -82,7 +82,7 @@
           name="period_length"
           value="{{.PeriodLength}}"
           x-model.number="periodLength"
-          class="w-full">
+          class="w-full range-field">
         <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "settings.cycle.period_warning"}}</p>
       </div>
 
@@ -102,7 +102,7 @@
   </section>
   {{end}}
 
-  <section class="journal-card p-5 sm:p-6">
+  <section class="journal-card p-5 sm:p-6" id="settings-change-password">
     <h2 class="journal-subtitle">🔒 {{t .Messages "settings.change_password.title"}}</h2>
     <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.change_password.subtitle"}}</p>
 
@@ -115,6 +115,9 @@
       class="mt-5 space-y-4"
       data-save-feedback>
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      {{if .ChangePasswordErrorKey}}
+      <div class="status-error flex items-center gap-2" aria-live="polite"><span aria-hidden="true">⚠️</span><span>{{t .Messages .ChangePasswordErrorKey}}</span></div>
+      {{end}}
 
       <label class="field-label" for="settings-current-password">{{t .Messages "settings.current_password"}}</label>
       <div class="password-field">

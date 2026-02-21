@@ -40,6 +40,9 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		PasswordHash:     string(passwordHash),
 		RecoveryCodeHash: recoveryHash,
 		Role:             models.RoleOwner,
+		CycleLength:      models.DefaultCycleLength,
+		PeriodLength:     models.DefaultPeriodLength,
+		AutoPeriodFill:   true,
 		CreatedAt:        time.Now().In(handler.location),
 	}
 	if err := handler.db.Create(&user).Error; err != nil {

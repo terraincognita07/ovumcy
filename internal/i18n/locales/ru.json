@@ -99,7 +99,7 @@
   "onboarding.step2.title": "Настройте параметры цикла",
   "onboarding.step2.cycle_length": "Обычная длина цикла",
   "onboarding.step2.period_length": "Длина месячных",
-  "onboarding.step2.hint": "По умолчанию 26 дней",
+  "onboarding.step2.hint": "По умолчанию 28 дней",
   "onboarding.step2.cycle_warning": "Если значение больше 45 дней, рекомендуется консультация врача.",
   "onboarding.step2.period_warning": "Если длительность больше 8 дней, рекомендуется консультация врача.",
   "onboarding.step2.auto_period_fill": "Автоматически отмечать дни месячных",
