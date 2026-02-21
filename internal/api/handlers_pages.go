@@ -143,6 +143,7 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 	if !ok {
 		return c.Redirect("/login", fiber.StatusSeeOther)
 	}
+	language := currentLanguage(c)
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
@@ -150,34 +151,9 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid month")
 	}
-	monthStart := activeMonth
-	logRangeStart, logRangeEnd := calendarLogRange(monthStart)
-	logs, err := handler.fetchLogsForUser(user.ID, logRangeStart, logRangeEnd)
+	data, errorMessage, err := handler.buildCalendarViewData(user, language, messages, now, activeMonth, selectedDate)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load calendar")
-	}
-
-	stats, _, err := handler.buildCycleStatsForRange(user, now.AddDate(-2, 0, 0), now, now)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
-	}
-
-	days := handler.buildCalendarDays(monthStart, logs, stats, now)
-
-	prevMonth, nextMonth := calendarAdjacentMonthValues(monthStart)
-
-	data := fiber.Map{
-		"Title":        localizedPageTitle(messages, "meta.title.calendar", "Lume | Calendar"),
-		"CurrentUser":  user,
-		"MonthLabel":   localizedMonthYear(currentLanguage(c), monthStart),
-		"MonthValue":   monthStart.Format("2006-01"),
-		"PrevMonth":    prevMonth,
-		"NextMonth":    nextMonth,
-		"SelectedDate": selectedDate,
-		"CalendarDays": days,
-		"Today":        dateAtLocation(now, handler.location).Format("2006-01-02"),
-		"Stats":        stats,
-		"IsOwner":      isOwnerUser(user),
+		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 
 	return handler.render(c, "calendar", data)
