@@ -119,41 +119,29 @@
       <div class="status-error flex items-center gap-2" aria-live="polite"><span aria-hidden="true">⚠️</span><span>{{t .Messages .ChangePasswordErrorKey}}</span></div>
       {{end}}
 
-      <label class="field-label" for="settings-current-password">{{t .Messages "settings.current_password"}}</label>
-      <div class="password-field">
-        <input id="settings-current-password" type="password" name="current_password" required autocomplete="current-password" class="input-field input-with-toggle">
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "settings.current_password"
+        "FieldID" "settings-current-password"
+        "FieldName" "current_password"
+        "Autocomplete" "current-password"
+        "Required" true)}}
 
-      <label class="field-label" for="settings-new-password">{{t .Messages "auth.new_password"}}</label>
-      <div class="password-field">
-        <input id="settings-new-password" type="password" name="new_password" required autocomplete="new-password" class="input-field input-with-toggle">
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "auth.new_password"
+        "FieldID" "settings-new-password"
+        "FieldName" "new_password"
+        "Autocomplete" "new-password"
+        "Required" true)}}
 
-      <label class="field-label" for="settings-confirm-password">{{t .Messages "auth.confirm_password"}}</label>
-      <div class="password-field">
-        <input id="settings-confirm-password" type="password" name="confirm_password" required autocomplete="new-password" class="input-field input-with-toggle">
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "auth.confirm_password"
+        "FieldID" "settings-confirm-password"
+        "FieldName" "confirm_password"
+        "Autocomplete" "new-password"
+        "Required" true)}}
       <p class="journal-muted text-xs">{{t .Messages "auth.password_requirements"}}</p>
 
       <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "settings.change_password.submit"}}</button>
@@ -308,17 +296,13 @@
       class="mt-5 space-y-4">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-      <label class="field-label" for="settings-delete-password">{{t .Messages "settings.delete_account.password"}}</label>
-      <div class="password-field">
-        <input id="settings-delete-password" type="password" name="password" required autocomplete="current-password" class="input-field input-with-toggle">
-        <button
-          type="button"
-          class="password-toggle-btn"
-          data-password-toggle
-          data-show-label="{{t .Messages "auth.show_password"}}"
-          data-hide-label="{{t .Messages "auth.hide_password"}}"
-          aria-label="{{t .Messages "auth.show_password"}}">👁</button>
-      </div>
+      {{template "password_toggle_field" (dict
+        "Messages" .Messages
+        "LabelKey" "settings.delete_account.password"
+        "FieldID" "settings-delete-password"
+        "FieldName" "password"
+        "Autocomplete" "current-password"
+        "Required" true)}}
 
       <button type="submit" class="btn-danger">{{t .Messages "settings.delete_account.submit"}}</button>
       <div id="delete-account-feedback" class="save-status text-sm"></div>
