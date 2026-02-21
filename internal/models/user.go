@@ -9,6 +9,7 @@ const (
 
 type User struct {
 	ID                  uint       `gorm:"primaryKey"`
+	DisplayName         string     `gorm:"size:80"`
 	Email               string     `gorm:"uniqueIndex;not null"`
 	PasswordHash        string     `gorm:"not null"`
 	RecoveryCodeHash    string     `gorm:"column:recovery_code_hash"`

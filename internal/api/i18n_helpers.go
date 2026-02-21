@@ -26,6 +26,8 @@ var authErrorKeys = map[string]string{
 	"invalid current password":                      "settings.error.invalid_current_password",
 	"new password must differ":                      "settings.error.password_unchanged",
 	"invalid settings input":                        "settings.error.invalid_input",
+	"invalid profile input":                         "settings.error.invalid_profile_input",
+	"display name too long":                         "settings.error.display_name_too_long",
 	"invalid password":                              "settings.error.invalid_password",
 	"period flow is required":                       "calendar.error.period_flow_required",
 	"date is required":                              "onboarding.error.date_required",
@@ -109,6 +111,10 @@ func settingsStatusTranslationKey(status string) string {
 		return "settings.success.password_changed"
 	case "cycle_updated":
 		return "settings.success.cycle_updated"
+	case "profile_updated":
+		return "settings.success.profile_updated"
+	case "profile_name_cleared":
+		return "settings.success.profile_name_cleared"
 	case "data_cleared":
 		return "settings.success.data_cleared"
 	default:

@@ -16,6 +16,8 @@
     </div>
 
     <p x-show="copied" x-cloak class="status-ok mt-4">{{t .Messages "auth.code_copied"}}</p>
+    <p x-show="downloaded" x-cloak class="status-ok mt-4">{{t .Messages "auth.code_downloaded"}}</p>
+    <p x-show="downloadFailed" x-cloak class="status-error mt-4">{{t .Messages "auth.code_download_failed"}}</p>
 
     <form action="{{if .ContinuePath}}{{.ContinuePath}}{{else}}/dashboard{{end}}" method="get" class="mt-5 space-y-4">
       <label class="choice-option block">
@@ -31,11 +33,15 @@
   function recoveryCodeTools() {
     return {
       copied: false,
+      downloaded: false,
+      downloadFailed: false,
       copyCode() {
         var code = this.$refs.code ? this.$refs.code.textContent.trim() : '';
         if (!code) return;
         navigator.clipboard.writeText(code).then(() => {
           this.copied = true;
+          this.downloaded = false;
+          this.downloadFailed = false;
           window.setTimeout(() => {
             this.copied = false;
           }, 2000);
@@ -44,15 +50,30 @@
       downloadCode() {
         var code = this.$refs.code ? this.$refs.code.textContent.trim() : '';
         if (!code) return;
-        var content = 'Lume recovery code\n\n' + code + '\n\nStore this code offline and private.';
-        var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        var link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'lume-recovery-code.txt';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        this.copied = false;
+        this.downloaded = false;
+        this.downloadFailed = false;
+        try {
+          var content = 'Lume recovery code\n\n' + code + '\n\nStore this code offline and private.';
+          var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+          var objectURL = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = objectURL;
+          link.download = 'lume-recovery-code.txt';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(objectURL);
+          this.downloaded = true;
+          window.setTimeout(() => {
+            this.downloaded = false;
+          }, 2000);
+        } catch (_) {
+          this.downloadFailed = true;
+          window.setTimeout(() => {
+            this.downloadFailed = false;
+          }, 2500);
+        }
       }
     };
   }

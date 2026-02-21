@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/lume/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -103,6 +104,15 @@ func newTemplateFuncMap() template.FuncMap {
 		},
 		"roleLabel": func(messages map[string]string, role string) string {
 			return translateMessage(messages, roleTranslationKey(role))
+		},
+		"userIdentity": func(user *models.User) string {
+			if user == nil {
+				return ""
+			}
+			if displayName := strings.TrimSpace(user.DisplayName); displayName != "" {
+				return displayName
+			}
+			return strings.TrimSpace(user.Email)
 		},
 		"isActiveRoute": func(currentPath string, route string) bool {
 			path := strings.TrimSpace(currentPath)

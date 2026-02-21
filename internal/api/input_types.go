@@ -42,6 +42,10 @@ type cycleSettingsInput struct {
 	AutoPeriodFill bool `json:"auto_period_fill" form:"auto_period_fill"`
 }
 
+type profileSettingsInput struct {
+	DisplayName string `json:"display_name" form:"display_name"`
+}
+
 type deleteAccountInput struct {
 	Password string `json:"password" form:"password"`
 }

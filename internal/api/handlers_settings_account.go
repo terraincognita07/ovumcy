@@ -2,12 +2,61 @@ package api
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+const maxDisplayNameLength = 64
+
+func normalizeDisplayName(raw string) (string, error) {
+	displayName := strings.TrimSpace(raw)
+	if utf8.RuneCountInString(displayName) > maxDisplayNameLength {
+		return "", fiber.NewError(fiber.StatusBadRequest, "display name too long")
+	}
+	return displayName, nil
+}
+
+func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
+	user, ok := currentUser(c)
+	if !ok {
+		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	input := profileSettingsInput{}
+	if err := c.BodyParser(&input); err != nil {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid profile input")
+	}
+
+	displayName, err := normalizeDisplayName(input.DisplayName)
+	if err != nil {
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Update("display_name", displayName).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to update profile")
+	}
+
+	status := "profile_updated"
+	if strings.TrimSpace(user.DisplayName) != "" && displayName == "" {
+		status = "profile_name_cleared"
+	}
+
+	user.DisplayName = displayName
+
+	if acceptsJSON(c) {
+		return c.JSON(fiber.Map{
+			"ok":           true,
+			"display_name": displayName,
+			"status":       status,
+		})
+	}
+	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: status})
+	return redirectOrJSON(c, "/settings")
+}
 
 func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 	user, ok := currentUser(c)

@@ -65,6 +65,7 @@ func registerAPIRoutes(app *fiber.App, handler *Handler) {
 	export.Get("/json", handler.ExportJSON)
 
 	settings := api.Group("/settings", handler.AuthRequired)
+	settings.Post("/profile", handler.UpdateProfile)
 	settings.Post("/change-password", handler.ChangePassword)
 	settings.Post("/regenerate-recovery-code", handler.RegenerateRecoveryCode)
 	settings.Post("/clear-data", handler.OwnerOnly, handler.ClearAllData)

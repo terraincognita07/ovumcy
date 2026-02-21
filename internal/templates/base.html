@@ -41,6 +41,11 @@
           <a href="/stats" class="nav-link {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
 
+          <span
+            class="role-chip"
+            aria-label="{{t .Messages "nav.current_user"}}"
+            title="{{userIdentity .CurrentUser}}"
+            style="text-transform: none; letter-spacing: 0.01em; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{userIdentity .CurrentUser}}</span>
           <span class="role-chip" aria-label="{{t .Messages "nav.current_role"}}">⚙ {{roleLabel .Messages .CurrentUser.Role}}</span>
 
           <form action="/api/auth/logout" method="post" class="ml-1" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
@@ -50,6 +55,8 @@
         </nav>
 
         <nav x-show="mobileMenu" x-transition class="mt-2 space-y-2 sm:hidden">
+          <p class="journal-muted px-3 pt-1 text-xs">{{t .Messages "nav.current_user"}}: {{userIdentity .CurrentUser}}</p>
+          <p class="journal-muted px-3 text-xs">{{t .Messages "nav.current_role"}}: {{roleLabel .Messages .CurrentUser.Role}}</p>
           <a href="/dashboard" class="nav-link block {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
@@ -96,6 +103,44 @@
   </div>
 
   <script>
+    (function () {
+      var panel = document.querySelector("[data-auth-panel]");
+      if (!panel) return;
+
+      var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!prefersReducedMotion) {
+        panel.style.opacity = "0";
+        panel.style.transform = "translateY(8px)";
+        panel.style.transition = "opacity 180ms ease, transform 180ms ease";
+        window.requestAnimationFrame(function () {
+          panel.style.opacity = "1";
+          panel.style.transform = "translateY(0)";
+        });
+      }
+
+      document.addEventListener("click", function (event) {
+        var target = event.target;
+        if (!target || !target.closest) return;
+        var link = target.closest("a[data-auth-switch]");
+        if (!link) return;
+
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.getAttribute("target") === "_blank") return;
+
+        var href = (link.getAttribute("href") || "").trim();
+        if (!href) return;
+        if (prefersReducedMotion) return;
+
+        event.preventDefault();
+        panel.style.pointerEvents = "none";
+        panel.style.opacity = "0";
+        panel.style.transform = "translateY(-6px)";
+        window.setTimeout(function () {
+          window.location.href = href;
+        }, 140);
+      });
+    })();
+
     (function () {
       function normalizeLanguage(raw) {
         if (!raw) return "";
