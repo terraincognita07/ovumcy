@@ -129,28 +129,46 @@ func isChangePasswordErrorMessage(message string) bool {
 	}
 }
 
-func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
-	messages := currentMessages(c)
-	status := strings.TrimSpace(flash.SettingsSuccess)
-	if status == "" {
-		status = strings.TrimSpace(c.Query("success"))
-		if status == "" {
-			status = strings.TrimSpace(c.Query("status"))
+func pickFirstNonEmpty(values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return trimmed
 		}
 	}
-	errorSource := strings.TrimSpace(flash.SettingsError)
+	return ""
+}
+
+func settingsStatusFromFlashOrQuery(c *fiber.Ctx, flash FlashPayload) string {
+	return pickFirstNonEmpty(
+		flash.SettingsSuccess,
+		c.Query("success"),
+		c.Query("status"),
+	)
+}
+
+func settingsErrorSourceFromFlashOrQuery(c *fiber.Ctx, flash FlashPayload) string {
+	return pickFirstNonEmpty(
+		flash.SettingsError,
+		c.Query("error"),
+	)
+}
+
+func classifySettingsErrorSource(errorSource string) (string, string) {
+	translatedErrorKey := authErrorTranslationKey(errorSource)
+	if isChangePasswordErrorMessage(errorSource) && translatedErrorKey != "" {
+		return "", translatedErrorKey
+	}
+	return translatedErrorKey, ""
+}
+
+func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
+	messages := currentMessages(c)
+	status := settingsStatusFromFlashOrQuery(c, flash)
 	errorKey := ""
 	changePasswordErrorKey := ""
 	if status == "" {
-		if errorSource == "" {
-			errorSource = strings.TrimSpace(c.Query("error"))
-		}
-		translatedErrorKey := authErrorTranslationKey(errorSource)
-		if isChangePasswordErrorMessage(errorSource) && translatedErrorKey != "" {
-			changePasswordErrorKey = translatedErrorKey
-		} else {
-			errorKey = translatedErrorKey
-		}
+		errorKey, changePasswordErrorKey = classifySettingsErrorSource(settingsErrorSourceFromFlashOrQuery(c, flash))
 	}
 
 	persisted := models.User{}
