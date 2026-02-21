@@ -624,6 +624,31 @@
     return labels;
   }
 
+  window.appShellState = function () {
+    return {
+      mobileMenu: false,
+      toggleMobileMenu: function () {
+        this.mobileMenu = !this.mobileMenu;
+      }
+    };
+  };
+
+  window.settingsCycleForm = function (config) {
+    var safeConfig = config || {};
+    return {
+      cycleLength: Number(safeConfig.cycleLength || 28),
+      periodLength: Number(safeConfig.periodLength || 5),
+      autoPeriodFill: !!safeConfig.autoPeriodFill
+    };
+  };
+
+  window.dayEditorForm = function (config) {
+    var safeConfig = config || {};
+    return {
+      isPeriod: !!safeConfig.isPeriod
+    };
+  };
+
   window.dashboardTodayEditor = function (config) {
     var safeConfig = config || {};
 

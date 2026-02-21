@@ -16,7 +16,7 @@
     hx-swap="innerHTML"
     class="space-y-4"
     data-save-feedback
-    x-data="{ isPeriod: {{if .Log.IsPeriod}}true{{else}}false{{end}} }">
+    x-data='dayEditorForm({ isPeriod: {{if .Log.IsPeriod}}true{{else}}false{{end}} })'>
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
     <label class="period-toggle">

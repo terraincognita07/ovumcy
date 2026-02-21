@@ -39,7 +39,7 @@
   </section>
 
   {{if eq .CurrentUser.Role "owner"}}
-  <section class="journal-card p-5 sm:p-6" x-data="{ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} }">
+  <section class="journal-card p-5 sm:p-6" x-data='settingsCycleForm({ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} })'>
     <h2 class="journal-subtitle">🗓️ {{t .Messages "settings.cycle.title"}}</h2>
 
     <form

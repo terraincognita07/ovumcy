@@ -548,8 +548,8 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 		t.Fatalf("read body: %v", err)
 	}
 	rendered := string(body)
-	if !strings.Contains(rendered, `x-data="{ cycleLength: 29, periodLength: 6, autoPeriodFill: true }"`) {
-		t.Fatalf("expected settings x-data to include persisted values")
+	if !strings.Contains(rendered, `x-data='settingsCycleForm({ cycleLength: 29, periodLength: 6, autoPeriodFill: true })'`) {
+		t.Fatalf("expected settings cycle form state to include persisted values")
 	}
 
 	cycleInputPattern := regexp.MustCompile(`(?s)name="cycle_length".*?value="29"`)

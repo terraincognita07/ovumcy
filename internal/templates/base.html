@@ -17,7 +17,7 @@
   data-confirm-cancel="{{t .Messages "confirm.no"}}"
   data-confirm-delete="{{t .Messages "confirm.yes"}}"
   data-request-failed="{{t .Messages "common.error.request_failed"}}">
-  <div class="app-shell" x-data="{ mobileMenu: false }">
+  <div class="app-shell" x-data="appShellState()">
     <header class="paper-header">
       <div class="container-main flex items-center justify-between py-4">
         <a href="{{if .CurrentUser}}{{if .HideNavigation}}/onboarding{{else}}/dashboard{{end}}{{else}}/login{{end}}" class="brand-mark">{{t .Messages "app.name"}}</a>
@@ -29,7 +29,7 @@
           </div>
 
           {{if and .CurrentUser (not .HideNavigation)}}
-          <button type="button" class="menu-toggle sm:hidden" @click="mobileMenu = !mobileMenu">{{t .Messages "nav.menu"}}</button>
+          <button type="button" class="menu-toggle sm:hidden" @click="toggleMobileMenu()">{{t .Messages "nav.menu"}}</button>
           {{end}}
         </div>
       </div>

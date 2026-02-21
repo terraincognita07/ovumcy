@@ -724,7 +724,7 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	}
 	rendered := string(body)
 
-	if !strings.Contains(rendered, `x-data="{ isPeriod: false }"`) {
+	if !strings.Contains(rendered, `x-data='dayEditorForm({ isPeriod: false })'`) {
 		t.Fatalf("expected calendar panel form to initialize period state")
 	}
 	if !strings.Contains(rendered, `x-model="isPeriod"`) {
