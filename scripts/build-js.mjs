@@ -1,9 +1,28 @@
-import { copyFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+
+const appBundleSources = [
+  "./web/src/js/app/00-core.js",
+  "./web/src/js/app/10-language-auth-transitions.js",
+  "./web/src/js/app/20-auth-form-ui.js",
+  "./web/src/js/app/30-feedback-htmx.js",
+  "./web/src/js/app/40-shared-utils.js",
+  "./web/src/js/app/50-window-factories.js",
+  "./web/src/js/app/90-bootstrap.js"
+];
+
+function buildBundle(sources) {
+  return sources
+    .map((source) => readFileSync(source, "utf8").trimEnd())
+    .join("\n\n") + "\n";
+}
+
+const appBundle = buildBundle(appBundleSources);
+writeFileSync("./web/src/js/app.js", appBundle, "utf8");
+writeFileSync("./web/static/js/app.js", appBundle, "utf8");
 
 const buildTargets = [
   ["./node_modules/htmx.org/dist/htmx.min.js", "./web/static/js/htmx.min.js"],
   ["./node_modules/alpinejs/dist/cdn.min.js", "./web/static/js/alpine.min.js"],
-  ["./web/src/js/app.js", "./web/static/js/app.js"],
   ["./web/src/js/settings-export.js", "./web/static/js/settings-export.js"]
 ];
 
