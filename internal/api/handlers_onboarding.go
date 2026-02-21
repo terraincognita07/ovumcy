@@ -277,11 +277,12 @@ func (handler *Handler) upsertOnboardingPeriodRange(tx *gorm.DB, userID uint, st
 
 	for cursor := startDay; !cursor.After(endDay); cursor = cursor.AddDate(0, 0, 1) {
 		day := dateAtLocation(cursor, handler.location)
-		dayKey := day.Format("2006-01-02")
+		dayKey := dayStorageKey(day, handler.location)
+		nextDayKey := nextDayStorageKey(day, handler.location)
 
 		var entry models.DailyLog
 		result := tx.
-			Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
+			Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).
 			Order("date DESC, id DESC").
 			First(&entry)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

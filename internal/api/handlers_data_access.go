@@ -200,12 +200,10 @@ func (handler *Handler) fetchExportData(userID uint, from *time.Time, to *time.T
 	logs := make([]models.DailyLog, 0)
 	query := handler.db.Where("user_id = ?", userID)
 	if from != nil {
-		fromKey := dateAtLocation(*from, handler.location).Format("2006-01-02")
-		query = query.Where("substr(date, 1, 10) >= ?", fromKey)
+		query = query.Where("date >= ?", dayStorageKey(*from, handler.location))
 	}
 	if to != nil {
-		toKey := dateAtLocation(*to, handler.location).Format("2006-01-02")
-		query = query.Where("substr(date, 1, 10) <= ?", toKey)
+		query = query.Where("date < ?", nextDayStorageKey(*to, handler.location))
 	}
 	if err := query.Order("date ASC").Find(&logs).Error; err != nil {
 		return nil, nil, err
@@ -232,47 +230,52 @@ func (handler *Handler) fetchExportSummaryForRange(userID uint, from *time.Time,
 	queryWithRange := func() *gorm.DB {
 		query := handler.db.Where("user_id = ?", userID)
 		if from != nil {
-			fromKey := dateAtLocation(*from, handler.location).Format("2006-01-02")
-			query = query.Where("substr(date, 1, 10) >= ?", fromKey)
+			query = query.Where("date >= ?", dayStorageKey(*from, handler.location))
 		}
 		if to != nil {
-			toKey := dateAtLocation(*to, handler.location).Format("2006-01-02")
-			query = query.Where("substr(date, 1, 10) <= ?", toKey)
+			query = query.Where("date < ?", nextDayStorageKey(*to, handler.location))
 		}
 		return query
 	}
 
-	var total int64
-	if err := queryWithRange().Model(&models.DailyLog{}).Count(&total).Error; err != nil {
+	var aggregate struct {
+		Total     int64  `gorm:"column:total"`
+		FirstDate string `gorm:"column:first_date"`
+		LastDate  string `gorm:"column:last_date"`
+	}
+
+	if err := queryWithRange().
+		Model(&models.DailyLog{}).
+		Select("COUNT(*) AS total, MIN(date) AS first_date, MAX(date) AS last_date").
+		Scan(&aggregate).Error; err != nil {
 		return 0, "", "", err
 	}
-	if total == 0 {
+	if aggregate.Total == 0 || aggregate.FirstDate == "" || aggregate.LastDate == "" {
 		return 0, "", "", nil
 	}
 
-	var first models.DailyLog
-	if err := queryWithRange().Select("date").Order("date ASC").First(&first).Error; err != nil {
-		return 0, "", "", err
+	firstDate := aggregate.FirstDate
+	if len(firstDate) > 10 {
+		firstDate = firstDate[:10]
+	}
+	lastDate := aggregate.LastDate
+	if len(lastDate) > 10 {
+		lastDate = lastDate[:10]
 	}
 
-	var last models.DailyLog
-	if err := queryWithRange().Select("date").Order("date DESC").First(&last).Error; err != nil {
-		return 0, "", "", err
-	}
-
-	return total,
-		dateAtLocation(first.Date, handler.location).Format("2006-01-02"),
-		dateAtLocation(last.Date, handler.location).Format("2006-01-02"),
+	return aggregate.Total,
+		firstDate,
+		lastDate,
 		nil
 }
 
 func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Time) ([]models.DailyLog, error) {
 	logs := make([]models.DailyLog, 0)
-	fromKey := dateAtLocation(from, handler.location).Format("2006-01-02")
-	toKey := dateAtLocation(to, handler.location).Format("2006-01-02")
+	fromKey := dayStorageKey(from, handler.location)
+	toExclusiveKey := nextDayStorageKey(to, handler.location)
 	err := handler.db.
-		Where("user_id = ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?", userID, fromKey, toKey).
-		Order("substr(date, 1, 10) ASC, id ASC").
+		Where("user_id = ? AND date >= ? AND date < ?", userID, fromKey, toExclusiveKey).
+		Order("date ASC, id ASC").
 		Find(&logs).Error
 	return logs, err
 }
@@ -285,10 +288,11 @@ func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, err
 
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
-	dayStart, _ := dayRange(day, handler.location)
-	dayKey := dayStart.Format("2006-01-02")
+	dayStart, dayEnd := dayRange(day, handler.location)
+	dayKey := dayStorageKey(dayStart, handler.location)
+	nextDayKey := dayStorageKey(dayEnd, handler.location)
 	result := handler.db.
-		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
+		Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).
 		Order("date DESC, id DESC").
 		Limit(1).
 		Find(&entry)
@@ -307,16 +311,18 @@ func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.Daily
 }
 
 func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {
-	dayKey := dateAtLocation(day, handler.location).Format("2006-01-02")
-	return handler.db.Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).Delete(&models.DailyLog{}).Error
+	dayKey := dayStorageKey(day, handler.location)
+	nextDayKey := nextDayStorageKey(day, handler.location)
+	return handler.db.Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).Delete(&models.DailyLog{}).Error
 }
 
 func (handler *Handler) dayHasDataForDate(userID uint, day time.Time) (bool, error) {
-	dayKey := dateAtLocation(day, handler.location).Format("2006-01-02")
+	dayKey := dayStorageKey(day, handler.location)
+	nextDayKey := nextDayStorageKey(day, handler.location)
 	entries := make([]models.DailyLog, 0)
 	if err := handler.db.
 		Select("is_period", "flow", "symptom_ids", "notes").
-		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
+		Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).
 		Find(&entries).Error; err != nil {
 		return false, err
 	}

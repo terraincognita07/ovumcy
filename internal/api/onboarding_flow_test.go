@@ -136,7 +136,12 @@ func TestOnboardingFlowCompletesWithOngoingPeriodRangeAndFlowNone(t *testing.T) 
 		day := stepDate.AddDate(0, 0, offset)
 		var entry models.DailyLog
 		if err := database.
-			Where("user_id = ? AND substr(date, 1, 10) = ?", updatedUser.ID, day.Format("2006-01-02")).
+			Where(
+				"user_id = ? AND date >= ? AND date < ?",
+				updatedUser.ID,
+				day.Format("2006-01-02"),
+				day.AddDate(0, 0, 1).Format("2006-01-02"),
+			).
 			First(&entry).Error; err != nil {
 			t.Fatalf("expected onboarding log for %s: %v", day.Format("2006-01-02"), err)
 		}
@@ -150,7 +155,12 @@ func TestOnboardingFlowCompletesWithOngoingPeriodRangeAndFlowNone(t *testing.T) 
 
 	var todayLog models.DailyLog
 	if err := database.
-		Where("user_id = ? AND substr(date, 1, 10) = ?", updatedUser.ID, today.Format("2006-01-02")).
+		Where(
+			"user_id = ? AND date >= ? AND date < ?",
+			updatedUser.ID,
+			today.Format("2006-01-02"),
+			today.AddDate(0, 0, 1).Format("2006-01-02"),
+		).
 		First(&todayLog).Error; err != nil {
 		t.Fatalf("expected today log to be included in onboarding range: %v", err)
 	}
@@ -221,7 +231,12 @@ func TestOnboardingFlowFinishedPeriodUsesExactEndDateWithoutExtension(t *testing
 	for day := startDay; !day.After(endDay); day = day.AddDate(0, 0, 1) {
 		var entry models.DailyLog
 		if err := database.
-			Where("user_id = ? AND substr(date, 1, 10) = ?", user.ID, day.Format("2006-01-02")).
+			Where(
+				"user_id = ? AND date >= ? AND date < ?",
+				user.ID,
+				day.Format("2006-01-02"),
+				day.AddDate(0, 0, 1).Format("2006-01-02"),
+			).
 			First(&entry).Error; err != nil {
 			t.Fatalf("expected finished-period log for %s: %v", day.Format("2006-01-02"), err)
 		}
@@ -236,7 +251,12 @@ func TestOnboardingFlowFinishedPeriodUsesExactEndDateWithoutExtension(t *testing
 	afterEnd := endDay.AddDate(0, 0, 1)
 	var outside models.DailyLog
 	err = database.
-		Where("user_id = ? AND substr(date, 1, 10) = ?", user.ID, afterEnd.Format("2006-01-02")).
+		Where(
+			"user_id = ? AND date >= ? AND date < ?",
+			user.ID,
+			afterEnd.Format("2006-01-02"),
+			afterEnd.AddDate(0, 0, 1).Format("2006-01-02"),
+		).
 		First(&outside).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("expected no onboarding log after finished period end date, got err=%v", err)

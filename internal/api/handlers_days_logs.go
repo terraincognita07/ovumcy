@@ -122,14 +122,15 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	}
 
 	dayStart, _ := dayRange(day, handler.location)
-	dayKey := dayStart.Format("2006-01-02")
+	dayKey := dayStorageKey(dayStart, handler.location)
+	nextDayKey := nextDayStorageKey(dayStart, handler.location)
 	wasPeriod := false
 	autoPeriodFillEnabled := false
 	periodLength := 5
 
 	var entry models.DailyLog
 	result := handler.db.
-		Where("user_id = ? AND substr(date, 1, 10) = ?", user.ID, dayKey).
+		Where("user_id = ? AND date >= ? AND date < ?", user.ID, dayKey, nextDayKey).
 		Order("date DESC, id DESC").
 		First(&entry)
 	if result.Error == nil {

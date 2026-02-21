@@ -41,6 +41,8 @@
     var visibleMonth = null;
     var summaryTimer = 0;
     var summaryRequestID = 0;
+    var lastSummaryEndpoint = "";
+    var summaryAbortController = null;
     if (!links.length || !fromInput || !toInput) return;
 
     for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
@@ -266,7 +268,19 @@
 
     async function refreshSummary() {
       if (!hasBounds) return;
-      if (!validateExportRange("summary")) return;
+      if (!validateExportRange("summary")) {
+        lastSummaryEndpoint = "";
+        return;
+      }
+
+      var endpoint = buildSummaryEndpoint();
+      if (endpoint == lastSummaryEndpoint) return;
+      lastSummaryEndpoint = endpoint;
+
+      if (summaryAbortController) {
+        summaryAbortController.abort();
+      }
+      summaryAbortController = typeof AbortController == "function" ? new AbortController() : null;
 
       var requestID = ++summaryRequestID;
       var headers = {};
@@ -276,9 +290,10 @@
       }
 
       try {
-        var response = await fetch(buildSummaryEndpoint(), {
+        var response = await fetch(endpoint, {
           credentials: "same-origin",
-          headers: headers
+          headers: headers,
+          signal: summaryAbortController ? summaryAbortController.signal : undefined
         });
         if (!response.ok) {
           throw new Error("summary_failed");
@@ -286,8 +301,15 @@
         var payload = await response.json();
         if (requestID != summaryRequestID) return;
         updateSummaryText(payload.total_entries, payload.has_data, payload.date_from, payload.date_to);
-      } catch {
+      } catch (error) {
+        if (error && error.name == "AbortError") {
+          return;
+        }
         // Keep previous summary values if refresh fails.
+      } finally {
+        if (requestID == summaryRequestID) {
+          summaryAbortController = null;
+        }
       }
     }
 
@@ -535,6 +557,7 @@
     function openCalendarForInput(input) {
       if (!calendarPanel || !input) return;
       if (!hasBounds) return;
+      if (activeInput === input && !calendarPanel.classList.contains("hidden")) return;
       activeInput = input;
       var selectedValue = parseISODate(input.value);
       var reference = selectedValue || cloneDate(maxBound);
@@ -623,8 +646,9 @@
           if (!range) return;
           fromInput.value = formatISODate(range.from);
           toInput.value = formatISODate(range.to);
-          fromInput.dispatchEvent(new Event("input", { bubbles: true }));
-          toInput.dispatchEvent(new Event("input", { bubbles: true }));
+          validateExportRange("to");
+          updatePresetState();
+          scheduleSummaryRefresh();
         });
       })(presetButtons[presetIndex]);
     }
