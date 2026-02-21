@@ -28,8 +28,12 @@ func (handler *Handler) SetLanguage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
-	if user, err := handler.authenticateRequest(c); err == nil {
-		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
+	redirected, err := handler.redirectAuthenticatedUserIfPresent(c)
+	if err != nil {
+		return err
+	}
+	if redirected {
+		return nil
 	}
 
 	needsSetup, err := handler.requiresInitialSetup()
@@ -43,8 +47,12 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
-	if user, err := handler.authenticateRequest(c); err == nil {
-		return c.Redirect(postLoginRedirectPath(user), fiber.StatusSeeOther)
+	redirected, err := handler.redirectAuthenticatedUserIfPresent(c)
+	if err != nil {
+		return err
+	}
+	if redirected {
+		return nil
 	}
 
 	needsSetup, err := handler.requiresInitialSetup()
@@ -70,14 +78,14 @@ func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Redirect("/login", fiber.StatusSeeOther)
+	user, handled, err := handler.currentUserOrRedirectToLogin(c)
+	if err != nil {
+		return err
 	}
-	language := currentLanguage(c)
-	messages := currentMessages(c)
-
-	now := time.Now().In(handler.location)
+	if handled {
+		return nil
+	}
+	language, messages, now := handler.currentPageViewContext(c)
 	data, errorMessage, err := handler.buildDashboardViewData(user, language, messages, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
@@ -87,14 +95,14 @@ func (handler *Handler) ShowDashboard(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Redirect("/login", fiber.StatusSeeOther)
+	user, handled, err := handler.currentUserOrRedirectToLogin(c)
+	if err != nil {
+		return err
 	}
-	language := currentLanguage(c)
-	messages := currentMessages(c)
-
-	now := time.Now().In(handler.location)
+	if handled {
+		return nil
+	}
+	language, messages, now := handler.currentPageViewContext(c)
 	activeMonth, selectedDate, err := resolveCalendarMonthAndSelectedDate(c.Query("month"), c.Query("day"), now, handler.location)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid month")
@@ -108,9 +116,12 @@ func (handler *Handler) ShowCalendar(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).SendString("unauthorized")
+	user, handled, err := currentUserOrUnauthorized(c)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
 	}
 
 	day, err := parseDayParam(c.Params("date"), handler.location)
@@ -122,9 +133,8 @@ func (handler *Handler) CalendarDayPanel(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, day time.Time) error {
-	language := currentLanguage(c)
-	messages := currentMessages(c)
-	payload, errorMessage, err := handler.buildDayEditorPartialData(user, language, messages, day, time.Now().In(handler.location))
+	language, messages, now := handler.currentPageViewContext(c)
+	payload, errorMessage, err := handler.buildDayEditorPartialData(user, language, messages, day, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
@@ -132,14 +142,14 @@ func (handler *Handler) renderDayEditorPartial(c *fiber.Ctx, user *models.User, 
 }
 
 func (handler *Handler) ShowStats(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Redirect("/login", fiber.StatusSeeOther)
+	user, handled, err := handler.currentUserOrRedirectToLogin(c)
+	if err != nil {
+		return err
 	}
-	language := currentLanguage(c)
-	messages := currentMessages(c)
-
-	now := time.Now().In(handler.location)
+	if handled {
+		return nil
+	}
+	language, messages, now := handler.currentPageViewContext(c)
 	data, errorMessage, err := handler.buildStatsPageData(user, language, messages, now)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
@@ -149,9 +159,12 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return c.Redirect("/login", fiber.StatusSeeOther)
+	user, handled, err := handler.currentUserOrRedirectToLogin(c)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
 	}
 
 	data, errorMessage, err := handler.buildSettingsPageData(c, user)
@@ -163,10 +176,7 @@ func (handler *Handler) ShowSettings(c *fiber.Ctx) error {
 
 func (handler *Handler) ShowPrivacyPage(c *fiber.Ctx) error {
 	messages := currentMessages(c)
-	var authenticatedUser *models.User
-	if user, err := handler.authenticateRequest(c); err == nil {
-		authenticatedUser = user
-	}
+	authenticatedUser := handler.optionalAuthenticatedUser(c)
 	data := buildPrivacyPageData(messages, c.Query("back"), authenticatedUser)
 	return handler.render(c, "privacy", data)
 }
