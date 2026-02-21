@@ -10,6 +10,13 @@ const appBundleSources = [
   "./web/src/js/app/90-bootstrap.js"
 ];
 
+const settingsExportBundleSources = [
+  "./web/src/js/settings-export/00-core.js",
+  "./web/src/js/settings-export/10-context-range-summary.js",
+  "./web/src/js/settings-export/20-calendar-controller.js",
+  "./web/src/js/settings-export/30-export-and-bootstrap.js"
+];
+
 function buildBundle(sources) {
   return sources
     .map((source) => readFileSync(source, "utf8").trimEnd())
@@ -20,10 +27,13 @@ const appBundle = buildBundle(appBundleSources);
 writeFileSync("./web/src/js/app.js", appBundle, "utf8");
 writeFileSync("./web/static/js/app.js", appBundle, "utf8");
 
+const settingsExportBundle = buildBundle(settingsExportBundleSources);
+writeFileSync("./web/src/js/settings-export.js", settingsExportBundle, "utf8");
+writeFileSync("./web/static/js/settings-export.js", settingsExportBundle, "utf8");
+
 const buildTargets = [
   ["./node_modules/htmx.org/dist/htmx.min.js", "./web/static/js/htmx.min.js"],
-  ["./node_modules/alpinejs/dist/cdn.min.js", "./web/static/js/alpine.min.js"],
-  ["./web/src/js/settings-export.js", "./web/static/js/settings-export.js"]
+  ["./node_modules/alpinejs/dist/cdn.min.js", "./web/static/js/alpine.min.js"]
 ];
 
 for (const [source, destination] of buildTargets) {

@@ -235,6 +235,7 @@
     }
     return toMonthStart(bounds.maxBound);
   }
+
   function createContext(section) {
     var locale = (document.documentElement.getAttribute("lang") || "").toLowerCase().indexOf("ru") === 0 ? "ru-RU" : "en-US";
     var monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
