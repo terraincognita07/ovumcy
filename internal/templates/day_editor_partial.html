@@ -31,17 +31,7 @@
 
     <fieldset class="space-y-2">
       <legend class="field-label">{{t .Messages "dashboard.symptoms"}}</legend>
-      <div class="symptom-grid symptom-grid-compact">
-        {{range .Symptoms}}
-        <label class="choice-option">
-          <input type="checkbox" name="symptom_ids" value="{{.ID}}" class="choice-input" {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
-          <span class="check-chip check-chip-sm">
-            <span class="symptom-icon">{{.Icon}}</span>
-            <span class="symptom-label{{if eq $.Lang "en"}} symptom-label-nowrap{{end}}">{{symptomLabel $.Messages .Name}}</span>
-          </span>
-        </label>
-        {{end}}
-      </div>
+      {{template "symptom_options" (dict "Messages" .Messages "Symptoms" .Symptoms "SelectedSymptomID" .SelectedSymptomID "Lang" .Lang "Compact" true "IncludePreviewHooks" false)}}
     </fieldset>
 
     <label class="field-label" for="calendar-notes">{{t .Messages "dashboard.notes"}}</label>
