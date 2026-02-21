@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -403,18 +402,4 @@ func TestRegisterPageHidesFirstLaunchSubtitleWhenUserExists(t *testing.T) {
 	if strings.Contains(string(body), firstLaunchRegisterSubtitle) {
 		t.Fatalf("expected first launch subtitle to be hidden when users already exist")
 	}
-}
-
-func readAPIError(t *testing.T, body io.Reader) string {
-	t.Helper()
-
-	payload := map[string]string{}
-	bytes, err := io.ReadAll(body)
-	if err != nil {
-		t.Fatalf("read response body: %v", err)
-	}
-	if err := json.Unmarshal(bytes, &payload); err != nil {
-		t.Fatalf("decode response body: %v", err)
-	}
-	return payload["error"]
 }

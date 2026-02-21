@@ -581,32 +581,3 @@ func TestRecoveryCodePageIncludesDownloadFeedbackMessage(t *testing.T) {
 		t.Fatalf("expected recovery code download feedback message")
 	}
 }
-
-func responseCookieValue(cookies []*http.Cookie, name string) string {
-	for _, cookie := range cookies {
-		if cookie.Name == name {
-			return cookie.Value
-		}
-	}
-	return ""
-}
-
-func responseCookie(cookies []*http.Cookie, name string) *http.Cookie {
-	for _, cookie := range cookies {
-		if cookie.Name == name {
-			return cookie
-		}
-	}
-	return nil
-}
-
-func findCalendarDayByDateString(t *testing.T, days []CalendarDay, date string) CalendarDay {
-	t.Helper()
-	for _, day := range days {
-		if day.DateString == date {
-			return day
-		}
-	}
-	t.Fatalf("calendar day %s not found", date)
-	return CalendarDay{}
-}
