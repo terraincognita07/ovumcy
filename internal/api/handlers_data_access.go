@@ -214,15 +214,27 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	return data, nil
 }
 
-func (handler *Handler) fetchExportData(userID uint, from *time.Time, to *time.Time) ([]models.DailyLog, map[uint]string, error) {
-	logs := make([]models.DailyLog, 0)
-	query := handler.db.Where("user_id = ?", userID)
+func (handler *Handler) dailyLogQueryForUser(userID uint) *gorm.DB {
+	return handler.db.Model(&models.DailyLog{}).Where("user_id = ?", userID)
+}
+
+func (handler *Handler) applyDailyLogDateRange(query *gorm.DB, from *time.Time, to *time.Time) *gorm.DB {
 	if from != nil {
 		query = query.Where("date >= ?", dayStorageKey(*from, handler.location))
 	}
 	if to != nil {
 		query = query.Where("date < ?", nextDayStorageKey(*to, handler.location))
 	}
+	return query
+}
+
+func (handler *Handler) dailyLogRangeQueryForUser(userID uint, from *time.Time, to *time.Time) *gorm.DB {
+	return handler.applyDailyLogDateRange(handler.dailyLogQueryForUser(userID), from, to)
+}
+
+func (handler *Handler) fetchExportData(userID uint, from *time.Time, to *time.Time) ([]models.DailyLog, map[uint]string, error) {
+	logs := make([]models.DailyLog, 0)
+	query := handler.dailyLogRangeQueryForUser(userID, from, to)
 	if err := query.Order("date ASC").Find(&logs).Error; err != nil {
 		return nil, nil, err
 	}
@@ -245,25 +257,13 @@ func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, 
 }
 
 func (handler *Handler) fetchExportSummaryForRange(userID uint, from *time.Time, to *time.Time) (int64, string, string, error) {
-	queryWithRange := func() *gorm.DB {
-		query := handler.db.Where("user_id = ?", userID)
-		if from != nil {
-			query = query.Where("date >= ?", dayStorageKey(*from, handler.location))
-		}
-		if to != nil {
-			query = query.Where("date < ?", nextDayStorageKey(*to, handler.location))
-		}
-		return query
-	}
-
 	var aggregate struct {
 		Total     int64  `gorm:"column:total"`
 		FirstDate string `gorm:"column:first_date"`
 		LastDate  string `gorm:"column:last_date"`
 	}
 
-	if err := queryWithRange().
-		Model(&models.DailyLog{}).
+	if err := handler.dailyLogRangeQueryForUser(userID, from, to).
 		Select("COUNT(*) AS total, MIN(date) AS first_date, MAX(date) AS last_date").
 		Scan(&aggregate).Error; err != nil {
 		return 0, "", "", err
@@ -289,10 +289,7 @@ func (handler *Handler) fetchExportSummaryForRange(userID uint, from *time.Time,
 
 func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Time) ([]models.DailyLog, error) {
 	logs := make([]models.DailyLog, 0)
-	fromKey := dayStorageKey(from, handler.location)
-	toExclusiveKey := nextDayStorageKey(to, handler.location)
-	err := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, fromKey, toExclusiveKey).
+	err := handler.dailyLogRangeQueryForUser(userID, &from, &to).
 		Order("date ASC, id ASC").
 		Find(&logs).Error
 	return logs, err
