@@ -8,6 +8,22 @@
   var STATUS_CLEAR_MS = 2000;
   var DOWNLOAD_REVOKE_MS = 500;
 
+  function getEventTarget(event) {
+    return event && event.target ? event.target : null;
+  }
+
+  function closestFromEvent(event, selector) {
+    var target = getEventTarget(event);
+    if (!target || !target.closest) {
+      return null;
+    }
+    return target.closest(selector);
+  }
+
+  function isPrimaryClick(event) {
+    return !!event && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+  }
+
   function onDocumentReady(callback) {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", callback);
@@ -91,12 +107,7 @@
     }
 
     document.addEventListener("click", function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-
-      var link = target.closest("a.lang-link");
+      var link = closestFromEvent(event, "a.lang-link");
       if (!link) {
         return;
       }
@@ -127,17 +138,12 @@
     }
 
     document.addEventListener("click", function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-
-      var link = target.closest("a[data-auth-switch]");
+      var link = closestFromEvent(event, "a[data-auth-switch]");
       if (!link) {
         return;
       }
 
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      if (event.defaultPrevented || !isPrimaryClick(event)) {
         return;
       }
       if (link.getAttribute("target") === "_blank") {
@@ -395,6 +401,59 @@
     };
   }
 
+  function getSaveFeedbackFormFromEvent(event) {
+    var target = getEventTarget(event);
+    if (!target || !target.closest) {
+      return null;
+    }
+    return target.closest("form[data-save-feedback]");
+  }
+
+  function setSaveButtonState(form, isBusy) {
+    if (!form) {
+      return;
+    }
+    var button = form.querySelector("[data-save-button]");
+    if (!button) {
+      return;
+    }
+
+    button.disabled = isBusy;
+    if (isBusy) {
+      button.setAttribute("aria-busy", "true");
+      button.classList.add("btn-loading");
+      return;
+    }
+    button.removeAttribute("aria-busy");
+    button.classList.remove("btn-loading");
+  }
+
+  function scheduleClearSuccessStatus(target) {
+    window.setTimeout(function () {
+      if (target.querySelector(".status-ok")) {
+        target.textContent = "";
+      }
+    }, STATUS_CLEAR_MS);
+  }
+
+  function maybeRefreshDayEditor(target) {
+    var dayEditor = document.getElementById("day-editor");
+    var form = target.closest("form[data-save-feedback]");
+    if (!dayEditor || !form || !form.closest("#day-editor")) {
+      return;
+    }
+
+    if (window.htmx && typeof window.htmx.trigger === "function") {
+      window.htmx.trigger(document.body, "calendar-day-updated");
+    }
+
+    var postPath = form.getAttribute("hx-post") || "";
+    var match = postPath.match(/\/api\/days\/(\d{4}-\d{2}-\d{2})$/);
+    if (match && window.htmx && typeof window.htmx.ajax === "function") {
+      window.htmx.ajax("GET", "/calendar/day/" + match[1], { target: "#day-editor", swap: "innerHTML" });
+    }
+  }
+
   function initHTMXHooks() {
     document.body.addEventListener("htmx:configRequest", function (event) {
       var tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -414,37 +473,11 @@
     });
 
     document.body.addEventListener("htmx:beforeRequest", function (event) {
-      var source = event && event.target && event.target.closest ? event.target : null;
-      var form = source ? source.closest("form[data-save-feedback]") : null;
-      if (!form) {
-        return;
-      }
-
-      var button = form.querySelector("[data-save-button]");
-      if (!button) {
-        return;
-      }
-
-      button.disabled = true;
-      button.setAttribute("aria-busy", "true");
-      button.classList.add("btn-loading");
+      setSaveButtonState(getSaveFeedbackFormFromEvent(event), true);
     });
 
     document.body.addEventListener("htmx:afterRequest", function (event) {
-      var source = event && event.target && event.target.closest ? event.target : null;
-      var form = source ? source.closest("form[data-save-feedback]") : null;
-      if (!form) {
-        return;
-      }
-
-      var button = form.querySelector("[data-save-button]");
-      if (!button) {
-        return;
-      }
-
-      button.disabled = false;
-      button.removeAttribute("aria-busy");
-      button.classList.remove("btn-loading");
+      setSaveButtonState(getSaveFeedbackFormFromEvent(event), false);
     });
 
     document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -458,25 +491,8 @@
         return;
       }
 
-      var dayEditor = document.getElementById("day-editor");
-      var form = target.closest("form[data-save-feedback]");
-      if (dayEditor && form && form.closest("#day-editor")) {
-        if (window.htmx && typeof window.htmx.trigger === "function") {
-          window.htmx.trigger(document.body, "calendar-day-updated");
-        }
-
-        var postPath = form.getAttribute("hx-post") || "";
-        var match = postPath.match(/\/api\/days\/(\d{4}-\d{2}-\d{2})$/);
-        if (match && window.htmx && typeof window.htmx.ajax === "function") {
-          window.htmx.ajax("GET", "/calendar/day/" + match[1], { target: "#day-editor", swap: "innerHTML" });
-        }
-      }
-
-      window.setTimeout(function () {
-        if (target.querySelector(".status-ok")) {
-          target.textContent = "";
-        }
-      }, STATUS_CLEAR_MS);
+      maybeRefreshDayEditor(target);
+      scheduleClearSuccessStatus(target);
     });
 
     document.body.addEventListener("htmx:responseError", function (event) {
@@ -526,6 +542,72 @@
     });
   }
 
+  function parseDateValue(value) {
+    if (!value) {
+      return null;
+    }
+    var parsed = new Date(value + "T00:00:00");
+    if (isNaN(parsed.getTime())) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function formatDateValue(value) {
+    var year = value.getFullYear();
+    var month = String(value.getMonth() + 1).padStart(2, "0");
+    var day = String(value.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+  }
+
+  function buildDayOptions(minDateRaw, maxDateRaw, locale) {
+    var minDate = parseDateValue(minDateRaw);
+    var maxDate = parseDateValue(maxDateRaw);
+    if (!minDate || !maxDate || minDate > maxDate) {
+      return [];
+    }
+
+    var result = [];
+    var formatter = new Intl.DateTimeFormat(locale || "en", {
+      day: "numeric",
+      month: "short"
+    });
+
+    for (var cursor = new Date(maxDate); cursor >= minDate; cursor.setDate(cursor.getDate() - 1)) {
+      var current = new Date(cursor);
+      result.push({
+        value: formatDateValue(current),
+        label: formatter.format(current)
+      });
+    }
+    return result;
+  }
+
+  function isDateWithinRange(value, minRaw, maxRaw) {
+    if (!value) {
+      return false;
+    }
+    var current = parseDateValue(value);
+    var min = parseDateValue(minRaw);
+    var max = parseDateValue(maxRaw);
+    if (!current || !min || !max) {
+      return false;
+    }
+    return current >= min && current <= max;
+  }
+
+  function setTimedFlag(target, key, timeoutMs) {
+    target[key] = true;
+    window.setTimeout(function () {
+      target[key] = false;
+    }, timeoutMs);
+  }
+
+  function getRecoveryCodeText(refs) {
+    var node = refs && refs.code ? refs.code : null;
+    return node ? String(node.textContent || "").trim() : "";
+  }
+
   window.calendarView = function (config) {
     var safeConfig = config || {};
     return {
@@ -565,7 +647,7 @@
       dayOptions: [],
       endDayOptions: [],
       init: function () {
-        this.dayOptions = this.buildDayOptions(this.minDate, this.maxDate, lang);
+        this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
         this.onStartDateChanged();
       },
       setStartDate: function (value) {
@@ -594,60 +676,10 @@
           this.periodEndDate = "";
           return;
         }
-        this.endDayOptions = this.buildDayOptions(this.selectedDate, this.maxDate, lang);
-        if (!this.isDateWithinRange(this.periodEndDate, this.selectedDate, this.maxDate)) {
+        this.endDayOptions = buildDayOptions(this.selectedDate, this.maxDate, lang);
+        if (!isDateWithinRange(this.periodEndDate, this.selectedDate, this.maxDate)) {
           this.periodEndDate = "";
         }
-      },
-      isDateWithinRange: function (value, minRaw, maxRaw) {
-        if (!value) {
-          return false;
-        }
-        var current = this.parseDate(value);
-        var min = this.parseDate(minRaw);
-        var max = this.parseDate(maxRaw);
-        if (!current || !min || !max) {
-          return false;
-        }
-        return current >= min && current <= max;
-      },
-      buildDayOptions: function (minDateRaw, maxDateRaw, locale) {
-        var minDate = this.parseDate(minDateRaw);
-        var maxDate = this.parseDate(maxDateRaw);
-        if (!minDate || !maxDate || minDate > maxDate) {
-          return [];
-        }
-
-        var result = [];
-        var formatter = new Intl.DateTimeFormat(locale || "en", {
-          day: "numeric",
-          month: "short"
-        });
-
-        for (var cursor = new Date(maxDate); cursor >= minDate; cursor.setDate(cursor.getDate() - 1)) {
-          var current = new Date(cursor);
-          result.push({
-            value: this.formatDateValue(current),
-            label: formatter.format(current)
-          });
-        }
-        return result;
-      },
-      parseDate: function (value) {
-        if (!value) {
-          return null;
-        }
-        var parsed = new Date(value + "T00:00:00");
-        if (isNaN(parsed.getTime())) {
-          return null;
-        }
-        return parsed;
-      },
-      formatDateValue: function (value) {
-        var year = value.getFullYear();
-        var month = String(value.getMonth() + 1).padStart(2, "0");
-        var day = String(value.getDate()).padStart(2, "0");
-        return year + "-" + month + "-" + day;
       }
     };
   };
@@ -658,7 +690,7 @@
       downloaded: false,
       downloadFailed: false,
       copyCode: function () {
-        var code = this.$refs.code ? this.$refs.code.textContent.trim() : "";
+        var code = getRecoveryCodeText(this.$refs);
         if (!code) {
           return;
         }
@@ -668,18 +700,13 @@
           self.copied = true;
           self.downloaded = false;
           self.downloadFailed = false;
-          window.setTimeout(function () {
-            self.copied = false;
-          }, STATUS_CLEAR_MS);
+          setTimedFlag(self, "copied", STATUS_CLEAR_MS);
         }).catch(function () {
-          self.downloadFailed = true;
-          window.setTimeout(function () {
-            self.downloadFailed = false;
-          }, STATUS_CLEAR_MS);
+          setTimedFlag(self, "downloadFailed", STATUS_CLEAR_MS);
         });
       },
       downloadCode: function () {
-        var code = this.$refs.code ? this.$refs.code.textContent.trim() : "";
+        var code = getRecoveryCodeText(this.$refs);
         if (!code) {
           return;
         }
@@ -704,15 +731,9 @@
             URL.revokeObjectURL(objectURL);
           }, DOWNLOAD_REVOKE_MS);
 
-          self.downloaded = true;
-          window.setTimeout(function () {
-            self.downloaded = false;
-          }, STATUS_CLEAR_MS);
+          setTimedFlag(self, "downloaded", STATUS_CLEAR_MS);
         } catch {
-          self.downloadFailed = true;
-          window.setTimeout(function () {
-            self.downloadFailed = false;
-          }, STATUS_CLEAR_MS);
+          setTimedFlag(self, "downloadFailed", STATUS_CLEAR_MS);
         }
       }
     };
