@@ -1,8 +1,17 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/models"
+import (
+	"errors"
+
+	"github.com/terraincognita07/lume/internal/models"
+)
 
 const maxDayNotesLength = 2000
+
+var (
+	errInvalidFlowValue   = errors.New("invalid flow value")
+	errPeriodFlowRequired = errors.New("period flow is required")
+)
 
 func normalizeDayPayload(payload dayPayload) (dayPayload, error) {
 	if !isValidFlow(payload.Flow) {

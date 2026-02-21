@@ -9,8 +9,6 @@ import (
 )
 
 var (
-	errInvalidFlowValue     = errors.New("invalid flow value")
-	errPeriodFlowRequired   = errors.New("period flow is required")
 	errDayEntryLoadFailed   = errors.New("load day entry failed")
 	errDayEntryCreateFailed = errors.New("create day entry failed")
 	errDayEntryUpdateFailed = errors.New("update day entry failed")
