@@ -2,7 +2,6 @@ package api
 
 import (
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
@@ -16,22 +15,6 @@ const (
 	contextLanguageKey = "current_language"
 	contextMessagesKey = "current_messages"
 )
-
-func (handler *Handler) LanguageMiddleware(c *fiber.Ctx) error {
-	cookieLanguage := c.Cookies(languageCookieName)
-	language := handler.i18n.DetectFromAcceptLanguage(c.Get("Accept-Language"))
-	if cookieLanguage != "" {
-		language = handler.i18n.NormalizeLanguage(cookieLanguage)
-	}
-
-	if cookieLanguage != language {
-		handler.setLanguageCookie(c, language)
-	}
-
-	c.Locals(contextLanguageKey, language)
-	c.Locals(contextMessagesKey, handler.i18n.Messages(language))
-	return c.Next()
-}
 
 func (handler *Handler) AuthRequired(c *fiber.Ctx) error {
 	user, err := handler.authenticateRequest(c)
@@ -70,18 +53,6 @@ func (handler *Handler) OwnerOnly(c *fiber.Ctx) error {
 func currentUser(c *fiber.Ctx) (*models.User, bool) {
 	user, ok := c.Locals(contextUserKey).(*models.User)
 	return user, ok
-}
-
-func (handler *Handler) setLanguageCookie(c *fiber.Ctx, language string) {
-	c.Cookie(&fiber.Cookie{
-		Name:     languageCookieName,
-		Value:    handler.i18n.NormalizeLanguage(language),
-		Path:     "/",
-		HTTPOnly: false,
-		Secure:   handler.cookieSecure,
-		SameSite: "Lax",
-		Expires:  time.Now().AddDate(1, 0, 0),
-	})
 }
 
 func isOnboardingPath(path string) bool {
