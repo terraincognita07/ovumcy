@@ -11,8 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const maxDayNotesLength = 2000
-
 var (
 	errInvalidFlowValue     = errors.New("invalid flow value")
 	errPeriodFlowRequired   = errors.New("period flow is required")
@@ -22,27 +20,6 @@ var (
 	errDeleteDayFailed      = errors.New("delete day failed")
 	errSyncLastPeriodFailed = errors.New("sync last period failed")
 )
-
-func normalizeDayPayload(payload dayPayload) (dayPayload, error) {
-	if !isValidFlow(payload.Flow) {
-		return payload, errInvalidFlowValue
-	}
-	if payload.IsPeriod && payload.Flow == models.FlowNone {
-		return payload, errPeriodFlowRequired
-	}
-	if !payload.IsPeriod {
-		payload.Flow = models.FlowNone
-	}
-	payload.Notes = trimDayNotes(payload.Notes)
-	return payload, nil
-}
-
-func trimDayNotes(value string) string {
-	if len(value) > maxDayNotesLength {
-		return value[:maxDayNotesLength]
-	}
-	return value
-}
 
 func (handler *Handler) loadDayAutoFillSettings(userID uint) (int, bool, error) {
 	periodLength := 5
