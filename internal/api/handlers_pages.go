@@ -64,12 +64,7 @@ func (handler *Handler) ShowLoginPage(c *fiber.Ctx) error {
 	}
 
 	flash := handler.popFlashCookie(c)
-	data := fiber.Map{
-		"Title":         localizedPageTitle(currentMessages(c), "meta.title.login", "Lume | Login"),
-		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
-		"Email":         loginEmailFromFlashOrQuery(c, flash.LoginEmail),
-		"IsFirstLaunch": needsSetup,
-	}
+	data := buildLoginPageData(c, currentMessages(c), flash, needsSetup)
 	return handler.render(c, "login", data)
 }
 
@@ -84,40 +79,19 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 	}
 
 	flash := handler.popFlashCookie(c)
-	data := fiber.Map{
-		"Title":         localizedPageTitle(currentMessages(c), "meta.title.register", "Lume | Sign Up"),
-		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
-		"Email":         loginEmailFromFlashOrQuery(c, flash.RegisterEmail),
-		"IsFirstLaunch": needsSetup,
-	}
+	data := buildRegisterPageData(c, currentMessages(c), flash, needsSetup)
 	return handler.render(c, "register", data)
 }
 
 func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 	flash := handler.popFlashCookie(c)
-	data := fiber.Map{
-		"Title":    localizedPageTitle(currentMessages(c), "meta.title.forgot_password", "Lume | Password Recovery"),
-		"ErrorKey": authErrorKeyFromFlashOrQuery(c, flash.AuthError),
-	}
+	data := buildForgotPasswordPageData(c, currentMessages(c), flash)
 	return handler.render(c, "forgot_password", data)
 }
 
 func (handler *Handler) ShowResetPasswordPage(c *fiber.Ctx) error {
-	token := strings.TrimSpace(c.Query("token"))
 	flash := handler.popFlashCookie(c)
-
-	invalidToken := false
-	if _, err := handler.parsePasswordResetToken(token); err != nil {
-		invalidToken = true
-	}
-
-	data := fiber.Map{
-		"Title":        localizedPageTitle(currentMessages(c), "meta.title.reset_password", "Lume | Reset Password"),
-		"Token":        token,
-		"InvalidToken": invalidToken,
-		"ForcedReset":  parseBoolValue(c.Query("forced")),
-		"ErrorKey":     authErrorKeyFromFlashOrQuery(c, flash.AuthError),
-	}
+	data := handler.buildResetPasswordPageData(c, currentMessages(c), flash)
 	return handler.render(c, "reset_password", data)
 }
 

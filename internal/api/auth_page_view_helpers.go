@@ -1,0 +1,48 @@
+package api
+
+import (
+	"strings"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+func buildLoginPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload, needsSetup bool) fiber.Map {
+	return fiber.Map{
+		"Title":         localizedPageTitle(messages, "meta.title.login", "Lume | Login"),
+		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+		"Email":         loginEmailFromFlashOrQuery(c, flash.LoginEmail),
+		"IsFirstLaunch": needsSetup,
+	}
+}
+
+func buildRegisterPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload, needsSetup bool) fiber.Map {
+	return fiber.Map{
+		"Title":         localizedPageTitle(messages, "meta.title.register", "Lume | Sign Up"),
+		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+		"Email":         loginEmailFromFlashOrQuery(c, flash.RegisterEmail),
+		"IsFirstLaunch": needsSetup,
+	}
+}
+
+func buildForgotPasswordPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload) fiber.Map {
+	return fiber.Map{
+		"Title":    localizedPageTitle(messages, "meta.title.forgot_password", "Lume | Password Recovery"),
+		"ErrorKey": authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+	}
+}
+
+func (handler *Handler) buildResetPasswordPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload) fiber.Map {
+	token := strings.TrimSpace(c.Query("token"))
+	invalidToken := false
+	if _, err := handler.parsePasswordResetToken(token); err != nil {
+		invalidToken = true
+	}
+
+	return fiber.Map{
+		"Title":        localizedPageTitle(messages, "meta.title.reset_password", "Lume | Reset Password"),
+		"Token":        token,
+		"InvalidToken": invalidToken,
+		"ForcedReset":  parseBoolValue(c.Query("forced")),
+		"ErrorKey":     authErrorKeyFromFlashOrQuery(c, flash.AuthError),
+	}
+}
