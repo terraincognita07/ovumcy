@@ -1,390 +1,295 @@
 (function () {
-    var section = document.querySelector("[data-export-section]");
-    if (!section) return;
+  "use strict";
 
-    var rawMinDate = section.getAttribute("data-export-min") || "";
-    var rawMaxDate = section.getAttribute("data-export-max") || "";
-    var successMessage = section.getAttribute("data-export-success") || "Data exported successfully";
-    var failedMessage = section.getAttribute("data-export-failed") || "Failed to export data";
-    var invalidRangeMessage = section.getAttribute("data-export-invalid-range") || "End date must be on or after start date";
-    var invalidDateMessage = section.getAttribute("data-export-invalid-date") || "Use YYYY-MM-DD";
-    var openCalendarLabel = section.getAttribute("data-export-open-calendar") || "Open calendar";
-    var jumpTitle = section.getAttribute("data-export-jump-title") || "Choose month and year";
-    var summaryTotalTemplate = section.getAttribute("data-export-summary-total-template") || "Total entries: %d";
-    var summaryRangeTemplate = section.getAttribute("data-export-summary-range-template") || "Date range: %s to %s";
-    var summaryRangeEmpty = section.getAttribute("data-export-summary-range-empty") || "Date range: -";
-    var links = section.querySelectorAll("a[data-export-link]");
-    var presetButtons = section.querySelectorAll("button[data-export-preset]");
-    var fromInput = section.querySelector("input[data-export-from]");
-    var toInput = section.querySelector("input[data-export-to]");
-    var summaryTotalNode = section.querySelector("[data-export-summary-total]");
-    var summaryRangeNode = section.querySelector("[data-export-summary-range]");
-    var calendarPanel = section.querySelector("[data-export-calendar-panel]");
-    var calendarTitle = section.querySelector("[data-export-calendar-title]");
-    var calendarTitleToggle = section.querySelector("[data-export-calendar-title-toggle]");
-    var calendarActive = section.querySelector("[data-export-calendar-active]");
-    var calendarJump = section.querySelector("[data-export-calendar-jump]");
-    var calendarMonth = section.querySelector("[data-export-calendar-month]");
-    var calendarYear = section.querySelector("[data-export-calendar-year]");
-    var calendarApply = section.querySelector("[data-export-calendar-apply]");
-    var calendarWeekdays = section.querySelector("[data-export-calendar-weekdays]");
-    var calendarDays = section.querySelector("[data-export-calendar-days]");
-    var calendarPrev = section.querySelector("[data-export-calendar-prev]");
-    var calendarNext = section.querySelector("[data-export-calendar-next]");
-    var calendarClose = section.querySelector("[data-export-calendar-close]");
+  var SUMMARY_ENDPOINT = "/api/export/summary";
+  var SUMMARY_REFRESH_DELAY_MS = 160;
+  var DOWNLOAD_REVOKE_DELAY_MS = 500;
+  var CALENDAR_MIN_YEAR = 1900;
+  var CALENDAR_MAX_YEAR = 2200;
+
+  function readTextAttribute(node, name, fallback) {
+    return node.getAttribute(name) || fallback;
+  }
+
+  function padNumber(value) {
+    return value < 10 ? "0" + String(value) : String(value);
+  }
+
+  function formatISODate(value) {
+    if (!value) {
+      return "";
+    }
+    return [
+      String(value.getFullYear()),
+      padNumber(value.getMonth() + 1),
+      padNumber(value.getDate())
+    ].join("-");
+  }
+
+  function parseISODate(raw) {
+    var normalized = String(raw || "").trim();
+    if (!normalized) {
+      return null;
+    }
+
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+    if (!match) {
+      return null;
+    }
+
+    var year = Number(match[1]);
+    var month = Number(match[2]) - 1;
+    var day = Number(match[3]);
+    var parsed = new Date(year, month, day);
+
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function sanitizeDateInputValue(input) {
+    if (!input) {
+      return;
+    }
+
+    var digits = String(input.value || "").replace(/\D/g, "").slice(0, 8);
+    var year = digits.slice(0, 4);
+    var month = digits.slice(4, 6);
+    var day = digits.slice(6, 8);
+
+    if (month.length === 2) {
+      var monthNumber = Number(month);
+      if (monthNumber < 1) {
+        month = "01";
+      } else if (monthNumber > 12) {
+        month = "12";
+      } else {
+        month = monthNumber < 10 ? "0" + String(monthNumber) : String(monthNumber);
+      }
+    }
+
+    if (day.length === 2) {
+      var dayNumber = Number(day);
+      if (dayNumber < 1) {
+        day = "01";
+      } else if (dayNumber > 31) {
+        day = "31";
+      } else {
+        day = dayNumber < 10 ? "0" + String(dayNumber) : String(dayNumber);
+      }
+    }
+
+    var normalized = year;
+    if (month.length > 0) {
+      normalized += "-" + month;
+    }
+    if (day.length > 0) {
+      normalized += "-" + day;
+    }
+
+    if (normalized !== input.value) {
+      input.value = normalized;
+    }
+  }
+
+  function formatTemplate(template, values) {
+    var index = 0;
+    return String(template || "").replace(/%[sd]/g, function () {
+      var value = index < values.length ? values[index] : "";
+      index += 1;
+      return String(value);
+    });
+  }
+
+  function cloneDate(value) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  function dateKey(value) {
+    return Number(formatISODate(value).replace(/-/g, ""));
+  }
+
+  function toMonthStart(value) {
+    return new Date(value.getFullYear(), value.getMonth(), 1);
+  }
+
+  function monthEnd(value) {
+    return new Date(value.getFullYear(), value.getMonth() + 1, 0);
+  }
+
+  function isSameDay(left, right) {
+    if (!left || !right) {
+      return false;
+    }
+    return dateKey(left) === dateKey(right);
+  }
+
+  function setButtonDisabled(button, disabled) {
+    if (!button) {
+      return;
+    }
+    button.disabled = disabled;
+    button.setAttribute("aria-disabled", disabled ? "true" : "false");
+  }
+
+  function buildEndpoint(basePath, fromValue, toValue) {
+    var url = new URL(basePath, window.location.origin);
+    if (fromValue) {
+      url.searchParams.set("from", fromValue);
+    }
+    if (toValue) {
+      url.searchParams.set("to", toValue);
+    }
+    return url.toString();
+  }
+
+  function buildAcceptLanguageHeaders() {
+    var headers = {};
+    var currentLang = (document.documentElement.getAttribute("lang") || "").trim();
+    if (currentLang) {
+      headers["Accept-Language"] = currentLang;
+    }
+    return headers;
+  }
+
+  function parseFilenameFromDisposition(disposition, fallbackName) {
+    if (!disposition) {
+      return fallbackName;
+    }
+    var match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    if (!match || !match[1]) {
+      return fallbackName;
+    }
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }
+
+  function buildMonthNames(formatter) {
+    var monthNames = [];
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      monthNames.push(formatter.format(new Date(2024, monthIndex, 1)));
+    }
+    return monthNames;
+  }
+
+  function populateMonthSelect(selectNode, monthNames) {
+    if (!selectNode) {
+      return;
+    }
+    selectNode.innerHTML = "";
+    for (var index = 0; index < monthNames.length; index++) {
+      var option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = monthNames[index];
+      selectNode.appendChild(option);
+    }
+  }
+
+  function createBounds(rawMinDate, rawMaxDate) {
+    var minBound = parseISODate(rawMinDate);
+    var maxBound = parseISODate(rawMaxDate);
+    var hasBounds = !!(minBound && maxBound && dateKey(minBound) <= dateKey(maxBound));
+    return {
+      minBound: minBound,
+      maxBound: maxBound,
+      hasBounds: hasBounds
+    };
+  }
+
+  function isWithinBounds(bounds, value) {
+    if (!bounds.hasBounds || !value) {
+      return true;
+    }
+    var key = dateKey(value);
+    return key >= dateKey(bounds.minBound) && key <= dateKey(bounds.maxBound);
+  }
+
+  function monthIntersectsBounds(bounds, monthValue) {
+    if (!bounds.hasBounds) {
+      return true;
+    }
+    var start = toMonthStart(monthValue);
+    var end = monthEnd(monthValue);
+    return dateKey(end) >= dateKey(bounds.minBound) && dateKey(start) <= dateKey(bounds.maxBound);
+  }
+
+  function clampMonthToBounds(bounds, monthValue) {
+    if (!monthValue) {
+      return bounds.hasBounds ? toMonthStart(bounds.maxBound) : toMonthStart(new Date());
+    }
+    var normalized = toMonthStart(monthValue);
+    if (!bounds.hasBounds || monthIntersectsBounds(bounds, normalized)) {
+      return normalized;
+    }
+
+    if (dateKey(normalized) < dateKey(toMonthStart(bounds.minBound))) {
+      return toMonthStart(bounds.minBound);
+    }
+    return toMonthStart(bounds.maxBound);
+  }
+  function createContext(section) {
     var locale = (document.documentElement.getAttribute("lang") || "").toLowerCase().indexOf("ru") === 0 ? "ru-RU" : "en-US";
     var monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
     var weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
     var monthNameFormatter = new Intl.DateTimeFormat(locale, { month: "long" });
-    var monthNames = [];
-    var activeInput = null;
-    var visibleMonth = null;
-    var summaryTimer = 0;
-    var summaryRequestID = 0;
-    var lastSummaryEndpoint = "";
-    var summaryAbortController = null;
-    if (!links.length || !fromInput || !toInput) return;
 
-    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-      monthNames.push(monthNameFormatter.format(new Date(2024, monthIndex, 1)));
+    var context = {
+      section: section,
+      rawMinDate: readTextAttribute(section, "data-export-min", ""),
+      rawMaxDate: readTextAttribute(section, "data-export-max", ""),
+      successMessage: readTextAttribute(section, "data-export-success", "Data exported successfully"),
+      failedMessage: readTextAttribute(section, "data-export-failed", "Failed to export data"),
+      invalidRangeMessage: readTextAttribute(section, "data-export-invalid-range", "End date must be on or after start date"),
+      invalidDateMessage: readTextAttribute(section, "data-export-invalid-date", "Use YYYY-MM-DD"),
+      openCalendarLabel: readTextAttribute(section, "data-export-open-calendar", "Open calendar"),
+      jumpTitle: readTextAttribute(section, "data-export-jump-title", "Choose month and year"),
+      summaryTotalTemplate: readTextAttribute(section, "data-export-summary-total-template", "Total entries: %d"),
+      summaryRangeTemplate: readTextAttribute(section, "data-export-summary-range-template", "Date range: %s to %s"),
+      summaryRangeEmpty: readTextAttribute(section, "data-export-summary-range-empty", "Date range: -"),
+      links: section.querySelectorAll("a[data-export-link]"),
+      presetButtons: section.querySelectorAll("button[data-export-preset]"),
+      fromInput: section.querySelector("input[data-export-from]"),
+      toInput: section.querySelector("input[data-export-to]"),
+      summaryTotalNode: section.querySelector("[data-export-summary-total]"),
+      summaryRangeNode: section.querySelector("[data-export-summary-range]"),
+      calendarPanel: section.querySelector("[data-export-calendar-panel]"),
+      calendarTitle: section.querySelector("[data-export-calendar-title]"),
+      calendarTitleToggle: section.querySelector("[data-export-calendar-title-toggle]"),
+      calendarActive: section.querySelector("[data-export-calendar-active]"),
+      calendarJump: section.querySelector("[data-export-calendar-jump]"),
+      calendarMonth: section.querySelector("[data-export-calendar-month]"),
+      calendarYear: section.querySelector("[data-export-calendar-year]"),
+      calendarApply: section.querySelector("[data-export-calendar-apply]"),
+      calendarWeekdays: section.querySelector("[data-export-calendar-weekdays]"),
+      calendarDays: section.querySelector("[data-export-calendar-days]"),
+      calendarPrev: section.querySelector("[data-export-calendar-prev]"),
+      calendarNext: section.querySelector("[data-export-calendar-next]"),
+      calendarClose: section.querySelector("[data-export-calendar-close]"),
+      monthFormatter: monthFormatter,
+      weekdayFormatter: weekdayFormatter,
+      monthNames: buildMonthNames(monthNameFormatter)
+    };
+
+    if (!context.links.length || !context.fromInput || !context.toInput) {
+      return null;
     }
+    return context;
+  }
 
-    if (calendarMonth) {
-      calendarMonth.innerHTML = "";
-      for (var optionMonth = 0; optionMonth < 12; optionMonth++) {
-        var option = document.createElement("option");
-        option.value = String(optionMonth);
-        option.textContent = monthNames[optionMonth];
-        calendarMonth.appendChild(option);
-      }
-    }
-
-    function padNumber(value) {
-      if (value < 10) {
-        return "0" + String(value);
-      }
-      return String(value);
-    }
-
-    function formatISODate(value) {
-      if (!value) return "";
-      return [
-        String(value.getFullYear()),
-        padNumber(value.getMonth() + 1),
-        padNumber(value.getDate())
-      ].join("-");
-    }
-
-    function parseISODate(raw) {
-      var normalized = String(raw || "").trim();
-      if (!normalized) return null;
-      var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
-      if (!match) return null;
-
-      var year = Number(match[1]);
-      var month = Number(match[2]) - 1;
-      var day = Number(match[3]);
-      var parsed = new Date(year, month, day);
-      if (
-        parsed.getFullYear() !== year ||
-        parsed.getMonth() !== month ||
-        parsed.getDate() !== day
-      ) {
-        return null;
-      }
-      return parsed;
-    }
-
-    function sanitizeDateInputValue(input) {
-      if (!input) return;
-      var digits = String(input.value || "").replace(/\D/g, "").slice(0, 8);
-      var year = digits.slice(0, 4);
-      var month = digits.slice(4, 6);
-      var day = digits.slice(6, 8);
-
-      if (month.length === 2) {
-        var monthNumber = Number(month);
-        if (monthNumber < 1) {
-          month = "01";
-        } else if (monthNumber > 12) {
-          month = "12";
-        } else {
-          month = monthNumber < 10 ? "0" + String(monthNumber) : String(monthNumber);
-        }
-      }
-
-      if (day.length === 2) {
-        var dayNumber = Number(day);
-        if (dayNumber < 1) {
-          day = "01";
-        } else if (dayNumber > 31) {
-          day = "31";
-        } else {
-          day = dayNumber < 10 ? "0" + String(dayNumber) : String(dayNumber);
-        }
-      }
-
-      var normalized = year;
-      if (month.length > 0) {
-        normalized += "-" + month;
-      }
-      if (day.length > 0) {
-        normalized += "-" + day;
-      }
-
-      if (normalized !== input.value) {
-        input.value = normalized;
-      }
-    }
-
-    function formatTemplate(template, values) {
-      var index = 0;
-      return String(template || "").replace(/%[sd]/g, function () {
-        var value = index < values.length ? values[index] : "";
-        index += 1;
-        return String(value);
-      });
-    }
-
-    function cloneDate(value) {
-      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-    }
-
-    function dateKey(value) {
-      return Number(formatISODate(value).replace(/-/g, ""));
-    }
-
-    function toMonthStart(value) {
-      return new Date(value.getFullYear(), value.getMonth(), 1);
-    }
-
-    function monthEnd(value) {
-      return new Date(value.getFullYear(), value.getMonth() + 1, 0);
-    }
-
-    var minBound = parseISODate(rawMinDate);
-    var maxBound = parseISODate(rawMaxDate);
-    var hasBounds = !!(minBound && maxBound && dateKey(minBound) <= dateKey(maxBound));
-
-    function isSameDay(left, right) {
-      if (!left || !right) return false;
-      return dateKey(left) === dateKey(right);
-    }
-
-    function isWithinBounds(value) {
-      if (!hasBounds || !value) return true;
-      var key = dateKey(value);
-      return key >= dateKey(minBound) && key <= dateKey(maxBound);
-    }
-
-    function monthIntersectsBounds(monthValue) {
-      if (!hasBounds) return true;
-      var start = toMonthStart(monthValue);
-      var end = monthEnd(monthValue);
-      return dateKey(end) >= dateKey(minBound) && dateKey(start) <= dateKey(maxBound);
-    }
-
-    function clampMonthToBounds(monthValue) {
-      if (!monthValue) {
-        return hasBounds ? toMonthStart(maxBound) : toMonthStart(new Date());
-      }
-      var normalized = toMonthStart(monthValue);
-      if (!hasBounds || monthIntersectsBounds(normalized)) {
-        return normalized;
-      }
-      if (dateKey(normalized) < dateKey(toMonthStart(minBound))) {
-        return toMonthStart(minBound);
-      }
-      return toMonthStart(maxBound);
-    }
-
-    function inputLabel(input) {
-      if (!input || !input.id) return "";
-      var label = section.querySelector('label[for="' + input.id + '"]');
-      if (!label) return "";
-      return String(label.textContent || "").trim();
-    }
-
-    function renderWeekdayLabels() {
-      if (!calendarWeekdays) return;
-      calendarWeekdays.innerHTML = "";
-
-      for (var weekday = 0; weekday < 7; weekday++) {
-        var sample = new Date(2023, 0, 1 + weekday);
-        var label = weekdayFormatter.format(sample).replace(/\./g, "");
-        var cell = document.createElement("span");
-        cell.textContent = label;
-        calendarWeekdays.appendChild(cell);
-      }
-    }
-
-    function setButtonDisabled(button, disabled) {
-      if (!button) return;
-      button.disabled = disabled;
-      button.setAttribute("aria-disabled", disabled ? "true" : "false");
-    }
-
+  function createDateRangeController(context, bounds) {
     function setExportLinksDisabled(disabled) {
-      for (var index = 0; index < links.length; index++) {
-        var link = links[index];
+      for (var index = 0; index < context.links.length; index++) {
+        var link = context.links[index];
         link.classList.toggle("export-link-disabled", disabled);
         link.setAttribute("aria-disabled", disabled ? "true" : "false");
-      }
-    }
-
-    function updateSummaryText(totalEntries, hasData, dateFrom, dateTo) {
-      if (summaryTotalNode) {
-        summaryTotalNode.textContent = formatTemplate(summaryTotalTemplate, [Number(totalEntries) || 0]);
-      }
-      if (!summaryRangeNode) return;
-
-      if (hasData && dateFrom && dateTo) {
-        summaryRangeNode.textContent = formatTemplate(summaryRangeTemplate, [dateFrom, dateTo]);
-      } else {
-        summaryRangeNode.textContent = summaryRangeEmpty;
-      }
-    }
-
-    function buildSummaryEndpoint() {
-      var url = new URL("/api/export/summary", window.location.origin);
-      if (fromInput.value) {
-        url.searchParams.set("from", fromInput.value);
-      }
-      if (toInput.value) {
-        url.searchParams.set("to", toInput.value);
-      }
-      return url.toString();
-    }
-
-    function scheduleSummaryRefresh() {
-      if (!hasBounds) return;
-      if (summaryTimer) {
-        window.clearTimeout(summaryTimer);
-      }
-      summaryTimer = window.setTimeout(function () {
-        refreshSummary();
-      }, 160);
-    }
-
-    async function refreshSummary() {
-      if (!hasBounds) return;
-      if (!validateExportRange("summary")) {
-        lastSummaryEndpoint = "";
-        return;
-      }
-
-      var endpoint = buildSummaryEndpoint();
-      if (endpoint == lastSummaryEndpoint) return;
-      lastSummaryEndpoint = endpoint;
-
-      if (summaryAbortController) {
-        summaryAbortController.abort();
-      }
-      summaryAbortController = typeof AbortController == "function" ? new AbortController() : null;
-
-      var requestID = ++summaryRequestID;
-      var headers = {};
-      var currentLang = (document.documentElement.getAttribute("lang") || "").trim();
-      if (currentLang) {
-        headers["Accept-Language"] = currentLang;
-      }
-
-      try {
-        var response = await fetch(endpoint, {
-          credentials: "same-origin",
-          headers: headers,
-          signal: summaryAbortController ? summaryAbortController.signal : undefined
-        });
-        if (!response.ok) {
-          throw new Error("summary_failed");
-        }
-        var payload = await response.json();
-        if (requestID != summaryRequestID) return;
-        updateSummaryText(payload.total_entries, payload.has_data, payload.date_from, payload.date_to);
-      } catch (error) {
-        if (error && error.name == "AbortError") {
-          return;
-        }
-        // Keep previous summary values if refresh fails.
-      } finally {
-        if (requestID == summaryRequestID) {
-          summaryAbortController = null;
-        }
-      }
-    }
-
-    function syncJumpControls() {
-      if (!visibleMonth) return;
-
-      if (calendarYear) {
-        if (hasBounds) {
-          calendarYear.min = String(minBound.getFullYear());
-          calendarYear.max = String(maxBound.getFullYear());
-        } else {
-          calendarYear.min = "1900";
-          calendarYear.max = "2200";
-        }
-        calendarYear.value = String(visibleMonth.getFullYear());
-      }
-
-      if (calendarMonth) {
-        calendarMonth.value = String(visibleMonth.getMonth());
-        var jumpYear = visibleMonth.getFullYear();
-        for (var index = 0; index < calendarMonth.options.length; index++) {
-          var option = calendarMonth.options[index];
-          option.disabled = hasBounds && !monthIntersectsBounds(new Date(jumpYear, index, 1));
-        }
-      }
-
-      if (calendarApply && calendarMonth && calendarYear) {
-        var yearValue = Number(calendarYear.value);
-        var monthValue = Number(calendarMonth.value);
-        var candidate = new Date(yearValue, monthValue, 1);
-        var invalidCandidate = Number.isNaN(yearValue) || Number.isNaN(monthValue);
-        setButtonDisabled(calendarApply, invalidCandidate || (hasBounds && !monthIntersectsBounds(candidate)));
-      }
-    }
-
-    function updateNavButtons() {
-      if (!visibleMonth) return;
-      if (calendarPrev) {
-        var previousMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
-        setButtonDisabled(calendarPrev, hasBounds && !monthIntersectsBounds(previousMonth));
-      }
-      if (calendarNext) {
-        var nextMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
-        setButtonDisabled(calendarNext, hasBounds && !monthIntersectsBounds(nextMonth));
-      }
-    }
-
-    function computePresetRange(rawPreset) {
-      if (!hasBounds) return null;
-      var preset = String(rawPreset || "").trim().toLowerCase();
-      if (preset == "all") {
-        return { from: cloneDate(minBound), to: cloneDate(maxBound) };
-      }
-      var days = Number(preset);
-      if (!Number.isFinite(days) || days < 1) return null;
-
-      var toDate = cloneDate(maxBound);
-      var fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate() - days + 1);
-      return { from: fromDate, to: toDate };
-    }
-
-    function updatePresetState() {
-      if (!presetButtons.length) return;
-      var fromDate = parseISODate(fromInput.value);
-      var toDate = parseISODate(toInput.value);
-
-      for (var index = 0; index < presetButtons.length; index++) {
-        var button = presetButtons[index];
-        var presetValue = button.getAttribute("data-export-preset") || "";
-        var range = computePresetRange(presetValue);
-        var active = !!(range && fromDate && toDate && isSameDay(fromDate, range.from) && isSameDay(toDate, range.to));
-
-        setButtonDisabled(button, !hasBounds);
-        button.classList.toggle("btn-primary", active);
-        button.classList.toggle("btn-soft", !active);
       }
     }
 
@@ -400,7 +305,7 @@
 
       var parsed = parseISODate(raw);
       if (!parsed) {
-        input.setCustomValidity(invalidDateMessage);
+        input.setCustomValidity(context.invalidDateMessage);
         return { ok: false, date: null };
       }
 
@@ -409,9 +314,9 @@
       return { ok: true, date: parsed };
     }
 
-    function validateExportRange(changedSide) {
-      var fromResult = parseAndNormalizeInput(fromInput);
-      var toResult = parseAndNormalizeInput(toInput);
+    function validate(changedSide) {
+      var fromResult = parseAndNormalizeInput(context.fromInput);
+      var toResult = parseAndNormalizeInput(context.toInput);
       if (!fromResult.ok || !toResult.ok) {
         setExportLinksDisabled(true);
         return false;
@@ -419,96 +324,331 @@
 
       var fromDate = fromResult.date;
       var toDate = toResult.date;
-      if (hasBounds) {
+
+      if (bounds.hasBounds) {
         if (!fromDate) {
-          fromDate = cloneDate(minBound);
-          fromInput.value = formatISODate(fromDate);
+          fromDate = cloneDate(bounds.minBound);
+          context.fromInput.value = formatISODate(fromDate);
         }
         if (!toDate) {
-          toDate = cloneDate(maxBound);
-          toInput.value = formatISODate(toDate);
+          toDate = cloneDate(bounds.maxBound);
+          context.toInput.value = formatISODate(toDate);
         }
       }
+
       if (fromDate && toDate && dateKey(toDate) < dateKey(fromDate)) {
-        if (changedSide == "to") {
-          toInput.value = formatISODate(fromDate);
+        if (changedSide === "to") {
+          context.toInput.value = formatISODate(fromDate);
           toDate = fromDate;
         } else {
-          fromInput.value = formatISODate(toDate);
+          context.fromInput.value = formatISODate(toDate);
           fromDate = toDate;
         }
       }
 
-      fromInput.setCustomValidity("");
-      toInput.setCustomValidity("");
+      context.fromInput.setCustomValidity("");
+      context.toInput.setCustomValidity("");
       if (fromDate && toDate && dateKey(toDate) < dateKey(fromDate)) {
-        toInput.setCustomValidity(invalidRangeMessage);
+        context.toInput.setCustomValidity(context.invalidRangeMessage);
         setExportLinksDisabled(true);
         return false;
       }
+
       setExportLinksDisabled(false);
       return true;
     }
 
-    function buildExportEndpoint(baseEndpoint) {
-      var url = new URL(baseEndpoint, window.location.origin);
-      if (fromInput.value) {
-        url.searchParams.set("from", fromInput.value);
+    function computePresetRange(rawPreset) {
+      if (!bounds.hasBounds) {
+        return null;
       }
-      if (toInput.value) {
-        url.searchParams.set("to", toInput.value);
+
+      var preset = String(rawPreset || "").trim().toLowerCase();
+      if (preset === "all") {
+        return { from: cloneDate(bounds.minBound), to: cloneDate(bounds.maxBound) };
       }
-      return url.toString();
+
+      var days = Number(preset);
+      if (!Number.isFinite(days) || days < 1) {
+        return null;
+      }
+
+      var toDate = cloneDate(bounds.maxBound);
+      var fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate() - days + 1);
+      return { from: fromDate, to: toDate };
+    }
+
+    function updatePresetState() {
+      if (!context.presetButtons.length) {
+        return;
+      }
+
+      var fromDate = parseISODate(context.fromInput.value);
+      var toDate = parseISODate(context.toInput.value);
+
+      for (var index = 0; index < context.presetButtons.length; index++) {
+        var button = context.presetButtons[index];
+        var presetValue = button.getAttribute("data-export-preset") || "";
+        var range = computePresetRange(presetValue);
+        var active = !!(range && fromDate && toDate && isSameDay(fromDate, range.from) && isSameDay(toDate, range.to));
+
+        setButtonDisabled(button, !bounds.hasBounds);
+        button.classList.toggle("btn-primary", active);
+        button.classList.toggle("btn-soft", !active);
+      }
+    }
+
+    function applyPreset(rawPreset) {
+      var range = computePresetRange(rawPreset);
+      if (!range) {
+        return false;
+      }
+      context.fromInput.value = formatISODate(range.from);
+      context.toInput.value = formatISODate(range.to);
+      validate("to");
+      updatePresetState();
+      return true;
+    }
+
+    function syncInitialRange() {
+      if (!bounds.hasBounds) {
+        return;
+      }
+
+      var fromValue = parseISODate(context.fromInput.value);
+      var toValue = parseISODate(context.toInput.value);
+      fromValue = fromValue || cloneDate(bounds.minBound);
+      toValue = toValue || cloneDate(bounds.maxBound);
+
+      context.fromInput.value = formatISODate(fromValue);
+      context.toInput.value = formatISODate(toValue);
+      validate("init");
+    }
+
+    return {
+      setExportLinksDisabled: setExportLinksDisabled,
+      validate: validate,
+      updatePresetState: updatePresetState,
+      applyPreset: applyPreset,
+      syncInitialRange: syncInitialRange,
+      buildExportEndpoint: function (baseEndpoint) {
+        return buildEndpoint(baseEndpoint, context.fromInput.value, context.toInput.value);
+      }
+    };
+  }
+  function createSummaryController(context, bounds, rangeController) {
+    var summaryTimer = 0;
+    var summaryRequestID = 0;
+    var lastSummaryEndpoint = "";
+    var summaryAbortController = null;
+
+    function updateSummaryText(totalEntries, hasData, dateFrom, dateTo) {
+      if (context.summaryTotalNode) {
+        context.summaryTotalNode.textContent = formatTemplate(context.summaryTotalTemplate, [Number(totalEntries) || 0]);
+      }
+      if (!context.summaryRangeNode) {
+        return;
+      }
+
+      if (hasData && dateFrom && dateTo) {
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [dateFrom, dateTo]);
+      } else {
+        context.summaryRangeNode.textContent = context.summaryRangeEmpty;
+      }
+    }
+
+    function buildSummaryEndpoint() {
+      return buildEndpoint(SUMMARY_ENDPOINT, context.fromInput.value, context.toInput.value);
+    }
+
+    async function refresh() {
+      if (!bounds.hasBounds) {
+        return;
+      }
+      if (!rangeController.validate("summary")) {
+        lastSummaryEndpoint = "";
+        return;
+      }
+
+      var endpoint = buildSummaryEndpoint();
+      if (endpoint === lastSummaryEndpoint) {
+        return;
+      }
+      lastSummaryEndpoint = endpoint;
+
+      if (summaryAbortController) {
+        summaryAbortController.abort();
+      }
+      summaryAbortController = typeof AbortController === "function" ? new AbortController() : null;
+
+      var requestID = ++summaryRequestID;
+      try {
+        var response = await fetch(endpoint, {
+          credentials: "same-origin",
+          headers: buildAcceptLanguageHeaders(),
+          signal: summaryAbortController ? summaryAbortController.signal : undefined
+        });
+        if (!response.ok) {
+          throw new Error("summary_failed");
+        }
+
+        var payload = await response.json();
+        if (requestID !== summaryRequestID) {
+          return;
+        }
+        updateSummaryText(payload.total_entries, payload.has_data, payload.date_from, payload.date_to);
+      } catch (error) {
+        if (error && error.name === "AbortError") {
+          return;
+        }
+        // Keep previous summary values if refresh fails.
+      } finally {
+        if (requestID === summaryRequestID) {
+          summaryAbortController = null;
+        }
+      }
+    }
+
+    function scheduleRefresh() {
+      if (!bounds.hasBounds) {
+        return;
+      }
+      if (summaryTimer) {
+        window.clearTimeout(summaryTimer);
+      }
+      summaryTimer = window.setTimeout(function () {
+        refresh();
+      }, SUMMARY_REFRESH_DELAY_MS);
+    }
+
+    return {
+      scheduleRefresh: scheduleRefresh
+    };
+  }
+
+  function createCalendarController(context, bounds, onRangeChanged) {
+    var activeInput = null;
+    var visibleMonth = null;
+
+    populateMonthSelect(context.calendarMonth, context.monthNames);
+
+    function inputLabel(input) {
+      if (!input || !input.id) {
+        return "";
+      }
+      var label = context.section.querySelector('label[for="' + input.id + '"]');
+      if (!label) {
+        return "";
+      }
+      return String(label.textContent || "").trim();
+    }
+
+    function renderWeekdayLabels() {
+      if (!context.calendarWeekdays) {
+        return;
+      }
+
+      context.calendarWeekdays.innerHTML = "";
+      for (var weekday = 0; weekday < 7; weekday++) {
+        var sample = new Date(2023, 0, 1 + weekday);
+        var label = context.weekdayFormatter.format(sample).replace(/\./g, "");
+        var cell = document.createElement("span");
+        cell.textContent = label;
+        context.calendarWeekdays.appendChild(cell);
+      }
     }
 
     function closeCalendar() {
-      if (!calendarPanel) return;
-      calendarPanel.classList.add("hidden");
-      if (calendarJump) {
-        calendarJump.classList.add("hidden");
+      if (!context.calendarPanel) {
+        return;
+      }
+      context.calendarPanel.classList.add("hidden");
+      if (context.calendarJump) {
+        context.calendarJump.classList.add("hidden");
       }
       activeInput = null;
     }
 
     function toggleCalendarJump() {
-      if (!calendarJump) return;
-      calendarJump.classList.toggle("hidden");
-      if (!calendarJump.classList.contains("hidden") && calendarYear) {
-        calendarYear.focus();
+      if (!context.calendarJump) {
+        return;
+      }
+      context.calendarJump.classList.toggle("hidden");
+      if (!context.calendarJump.classList.contains("hidden") && context.calendarYear) {
+        context.calendarYear.focus();
       }
     }
 
-    function syncInitialRange() {
-      if (!hasBounds) return;
+    function syncJumpControls() {
+      if (!visibleMonth) {
+        return;
+      }
 
-      var fromValue = parseISODate(fromInput.value);
-      var toValue = parseISODate(toInput.value);
-      fromValue = fromValue || cloneDate(minBound);
-      toValue = toValue || cloneDate(maxBound);
+      if (context.calendarYear) {
+        if (bounds.hasBounds) {
+          context.calendarYear.min = String(bounds.minBound.getFullYear());
+          context.calendarYear.max = String(bounds.maxBound.getFullYear());
+        } else {
+          context.calendarYear.min = String(CALENDAR_MIN_YEAR);
+          context.calendarYear.max = String(CALENDAR_MAX_YEAR);
+        }
+        context.calendarYear.value = String(visibleMonth.getFullYear());
+      }
 
-      fromInput.value = formatISODate(fromValue);
-      toInput.value = formatISODate(toValue);
-      validateExportRange("init");
+      if (context.calendarMonth) {
+        context.calendarMonth.value = String(visibleMonth.getMonth());
+        var jumpYear = visibleMonth.getFullYear();
+        for (var monthOption = 0; monthOption < context.calendarMonth.options.length; monthOption++) {
+          var option = context.calendarMonth.options[monthOption];
+          option.disabled = bounds.hasBounds && !monthIntersectsBounds(bounds, new Date(jumpYear, monthOption, 1));
+        }
+      }
+
+      if (context.calendarApply && context.calendarMonth && context.calendarYear) {
+        var yearValue = Number(context.calendarYear.value);
+        var monthValue = Number(context.calendarMonth.value);
+        var candidate = new Date(yearValue, monthValue, 1);
+        var invalidCandidate = Number.isNaN(yearValue) || Number.isNaN(monthValue);
+        setButtonDisabled(context.calendarApply, invalidCandidate || (bounds.hasBounds && !monthIntersectsBounds(bounds, candidate)));
+      }
+    }
+
+    function updateNavButtons() {
+      if (!visibleMonth) {
+        return;
+      }
+
+      if (context.calendarPrev) {
+        var previousMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
+        setButtonDisabled(context.calendarPrev, bounds.hasBounds && !monthIntersectsBounds(bounds, previousMonth));
+      }
+
+      if (context.calendarNext) {
+        var nextMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
+        setButtonDisabled(context.calendarNext, bounds.hasBounds && !monthIntersectsBounds(bounds, nextMonth));
+      }
     }
 
     function renderCalendar() {
-      if (!calendarPanel || !calendarTitle || !calendarDays || !activeInput || !visibleMonth) return;
-      if (!hasBounds) {
+      if (!context.calendarPanel || !context.calendarTitle || !context.calendarDays || !activeInput || !visibleMonth) {
+        return;
+      }
+      if (!bounds.hasBounds) {
         closeCalendar();
         return;
       }
 
-      visibleMonth = clampMonthToBounds(visibleMonth);
-      calendarPanel.classList.remove("hidden");
-      calendarTitle.textContent = monthFormatter.format(visibleMonth);
-      if (calendarActive) {
-        calendarActive.textContent = inputLabel(activeInput);
+      visibleMonth = clampMonthToBounds(bounds, visibleMonth);
+      context.calendarPanel.classList.remove("hidden");
+      context.calendarTitle.textContent = context.monthFormatter.format(visibleMonth);
+      if (context.calendarActive) {
+        context.calendarActive.textContent = inputLabel(activeInput);
       }
 
       renderWeekdayLabels();
       syncJumpControls();
       updateNavButtons();
-      calendarDays.innerHTML = "";
+      context.calendarDays.innerHTML = "";
 
       var year = visibleMonth.getFullYear();
       var month = visibleMonth.getMonth();
@@ -519,7 +659,7 @@
       for (var blank = 0; blank < firstWeekday; blank++) {
         var placeholder = document.createElement("span");
         placeholder.className = "h-2";
-        calendarDays.appendChild(placeholder);
+        context.calendarDays.appendChild(placeholder);
       }
 
       for (var day = 1; day <= daysInMonth; day++) {
@@ -529,243 +669,152 @@
         button.textContent = String(day);
         button.className = "btn-secondary text-sm export-calendar-day-button";
 
-        var isAllowedDay = isWithinBounds(dayDate);
+        var isAllowedDay = isWithinBounds(bounds, dayDate);
         if (!isAllowedDay) {
           button.disabled = true;
           button.className = "btn-soft text-sm export-calendar-day-button export-calendar-day-disabled";
         } else {
           (function (selectedDay) {
             button.addEventListener("click", function () {
-              if (!activeInput) return;
+              if (!activeInput) {
+                return;
+              }
               activeInput.value = formatISODate(selectedDay);
-              validateExportRange(activeInput === toInput ? "to" : "from");
-              updatePresetState();
-              scheduleSummaryRefresh();
+              onRangeChanged(activeInput === context.toInput ? "to" : "from");
               closeCalendar();
             });
           })(dayDate);
         }
 
-        if (selectedDate && dateKey(selectedDate) === dateKey(dayDate)) {
+        if (selectedDate && isSameDay(selectedDate, dayDate)) {
           button.className = "btn-primary text-sm export-calendar-day-button";
         }
 
-        calendarDays.appendChild(button);
+        context.calendarDays.appendChild(button);
       }
     }
-
     function openCalendarForInput(input) {
-      if (!calendarPanel || !input) return;
-      if (!hasBounds) return;
-      if (activeInput === input && !calendarPanel.classList.contains("hidden")) return;
+      if (!context.calendarPanel || !input || !bounds.hasBounds) {
+        return;
+      }
+      if (activeInput === input && !context.calendarPanel.classList.contains("hidden")) {
+        return;
+      }
+
       activeInput = input;
       var selectedValue = parseISODate(input.value);
-      var reference = selectedValue || cloneDate(maxBound);
-      visibleMonth = clampMonthToBounds(reference);
+      var reference = selectedValue || cloneDate(bounds.maxBound);
+      visibleMonth = clampMonthToBounds(bounds, reference);
       renderCalendar();
     }
 
-    function parseFilenameFromDisposition(disposition, fallbackName) {
-      if (!disposition) return fallbackName;
-      var match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
-      if (!match || !match[1]) return fallbackName;
-      try {
-        return decodeURIComponent(match[1]);
-      } catch {
-        return match[1];
+    function moveMonth(step) {
+      if (!visibleMonth || !activeInput) {
+        return;
+      }
+      var targetMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + step, 1);
+      if (bounds.hasBounds && !monthIntersectsBounds(bounds, targetMonth)) {
+        return;
+      }
+      visibleMonth = targetMonth;
+      renderCalendar();
+    }
+
+    function applyJumpSelection() {
+      if (!context.calendarMonth || !context.calendarYear || !activeInput) {
+        return;
+      }
+
+      var monthValue = Number(context.calendarMonth.value);
+      var yearValue = Number(String(context.calendarYear.value || "").trim());
+      if (Number.isNaN(monthValue) || monthValue < 0 || monthValue > 11) {
+        return;
+      }
+      if (Number.isNaN(yearValue) || yearValue < CALENDAR_MIN_YEAR || yearValue > CALENDAR_MAX_YEAR) {
+        return;
+      }
+
+      visibleMonth = clampMonthToBounds(bounds, new Date(yearValue, monthValue, 1));
+      renderCalendar();
+      if (context.calendarJump) {
+        context.calendarJump.classList.add("hidden");
       }
     }
 
-    fromInput.title = openCalendarLabel;
-    toInput.title = openCalendarLabel;
-    if (calendarTitleToggle) {
-      calendarTitleToggle.title = jumpTitle;
-    }
-
-    if (!hasBounds) {
-      fromInput.disabled = true;
-      toInput.disabled = true;
-      fromInput.value = "";
-      toInput.value = "";
-      setButtonDisabled(calendarPrev, true);
-      setButtonDisabled(calendarNext, true);
-      setButtonDisabled(calendarApply, true);
-      setButtonDisabled(calendarTitleToggle, true);
-      updatePresetState();
-      setExportLinksDisabled(false);
-    } else {
-      syncInitialRange();
-      updatePresetState();
-      setExportLinksDisabled(false);
-      scheduleSummaryRefresh();
-    }
-
-    fromInput.addEventListener("input", function () {
-      sanitizeDateInputValue(fromInput);
-      validateExportRange("from");
-      updatePresetState();
-      scheduleSummaryRefresh();
-    });
-    fromInput.addEventListener("blur", function () {
-      validateExportRange("from");
-      updatePresetState();
-      scheduleSummaryRefresh();
-    });
-
-    toInput.addEventListener("input", function () {
-      sanitizeDateInputValue(toInput);
-      validateExportRange("to");
-      updatePresetState();
-      scheduleSummaryRefresh();
-    });
-    toInput.addEventListener("blur", function () {
-      validateExportRange("to");
-      updatePresetState();
-      scheduleSummaryRefresh();
-    });
-
-    fromInput.addEventListener("focus", function () {
-      openCalendarForInput(fromInput);
-    });
-    fromInput.addEventListener("click", function () {
-      openCalendarForInput(fromInput);
-    });
-
-    toInput.addEventListener("focus", function () {
-      openCalendarForInput(toInput);
-    });
-    toInput.addEventListener("click", function () {
-      openCalendarForInput(toInput);
-    });
-
-    for (var presetIndex = 0; presetIndex < presetButtons.length; presetIndex++) {
-      (function (button) {
-        button.addEventListener("click", function () {
-          var presetValue = button.getAttribute("data-export-preset") || "";
-          var range = computePresetRange(presetValue);
-          if (!range) return;
-          fromInput.value = formatISODate(range.from);
-          toInput.value = formatISODate(range.to);
-          validateExportRange("to");
-          updatePresetState();
-          scheduleSummaryRefresh();
-        });
-      })(presetButtons[presetIndex]);
-    }
-
-    if (calendarTitleToggle) {
-      calendarTitleToggle.addEventListener("click", toggleCalendarJump);
-    }
-
-    if (calendarMonth) {
-      calendarMonth.addEventListener("change", syncJumpControls);
-    }
-    if (calendarYear) {
-      calendarYear.addEventListener("input", syncJumpControls);
-    }
-
-    if (calendarPrev) {
-      calendarPrev.addEventListener("click", function () {
-        if (!visibleMonth || !activeInput) return;
-        var previousMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
-        if (hasBounds && !monthIntersectsBounds(previousMonth)) return;
-        visibleMonth = previousMonth;
-        renderCalendar();
-      });
-    }
-
-    if (calendarNext) {
-      calendarNext.addEventListener("click", function () {
-        if (!visibleMonth || !activeInput) return;
-        var nextMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
-        if (hasBounds && !monthIntersectsBounds(nextMonth)) return;
-        visibleMonth = nextMonth;
-        renderCalendar();
-      });
-    }
-
-    if (calendarApply) {
-      calendarApply.addEventListener("click", function () {
-        if (!calendarMonth || !calendarYear || !activeInput) return;
-        var monthValue = Number(calendarMonth.value);
-        var yearValue = Number(String(calendarYear.value || "").trim());
-        if (Number.isNaN(monthValue) || monthValue < 0 || monthValue > 11) return;
-        if (Number.isNaN(yearValue) || yearValue < 1900 || yearValue > 2200) return;
-        visibleMonth = clampMonthToBounds(new Date(yearValue, monthValue, 1));
-        renderCalendar();
-        if (calendarJump) {
-          calendarJump.classList.add("hidden");
-        }
-      });
-    }
-
-    if (calendarYear) {
-      calendarYear.addEventListener("keydown", function (event) {
-        if (event.key === "Enter" && calendarApply) {
-          event.preventDefault();
-          calendarApply.click();
-        }
-      });
-    }
-
-    if (calendarClose) {
-      calendarClose.addEventListener("click", closeCalendar);
-    }
-
-    document.addEventListener("click", function (event) {
-      if (!calendarPanel || calendarPanel.classList.contains("hidden")) return;
-      var target = event.target;
-      if (calendarPanel.contains(target)) return;
-      if (target === fromInput || target === toInput) return;
-      closeCalendar();
-    });
-
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") {
-        closeCalendar();
+    function onYearKeydown(event) {
+      if (event.key === "Enter" && context.calendarApply) {
+        event.preventDefault();
+        context.calendarApply.click();
       }
-    });
+    }
 
-    async function handleExport(event) {
+    function disableControls() {
+      setButtonDisabled(context.calendarPrev, true);
+      setButtonDisabled(context.calendarNext, true);
+      setButtonDisabled(context.calendarApply, true);
+      setButtonDisabled(context.calendarTitleToggle, true);
+    }
+
+    return {
+      closeCalendar: closeCalendar,
+      toggleCalendarJump: toggleCalendarJump,
+      syncJumpControls: syncJumpControls,
+      openCalendarForInput: openCalendarForInput,
+      moveMonth: moveMonth,
+      applyJumpSelection: applyJumpSelection,
+      onYearKeydown: onYearKeydown,
+      disableControls: disableControls
+    };
+  }
+
+  function bindRangeInput(input, side, onRangeChanged) {
+    input.addEventListener("input", function () {
+      sanitizeDateInputValue(input);
+      onRangeChanged(side);
+    });
+    input.addEventListener("blur", function () {
+      onRangeChanged(side);
+    });
+  }
+
+  function createExportHandler(context, rangeController) {
+    return async function handleExport(event) {
       event.preventDefault();
       var link = event.currentTarget;
       var baseEndpoint = link.getAttribute("href");
-      if (!baseEndpoint) return;
+      if (!baseEndpoint) {
+        return;
+      }
 
-      if (!validateExportRange("export")) {
-        if (fromInput && fromInput.validationMessage) {
-          fromInput.reportValidity();
-        } else if (toInput) {
-          toInput.reportValidity();
+      if (!rangeController.validate("export")) {
+        if (context.fromInput.validationMessage) {
+          context.fromInput.reportValidity();
+        } else if (context.toInput) {
+          context.toInput.reportValidity();
         }
+
         if (typeof window.showToast === "function") {
-          var message = invalidRangeMessage;
-          if (fromInput && fromInput.validationMessage) {
-            message = fromInput.validationMessage;
-          } else if (toInput && toInput.validationMessage) {
-            message = toInput.validationMessage;
+          var message = context.invalidRangeMessage;
+          if (context.fromInput.validationMessage) {
+            message = context.fromInput.validationMessage;
+          } else if (context.toInput.validationMessage) {
+            message = context.toInput.validationMessage;
           }
           window.showToast(message, "error");
         }
         return;
       }
 
-      var endpoint = buildExportEndpoint(baseEndpoint);
+      var endpoint = rangeController.buildExportEndpoint(baseEndpoint);
       var type = (link.getAttribute("data-export-type") || "csv").toLowerCase();
 
       link.classList.add("btn-loading");
       link.setAttribute("aria-disabled", "true");
 
       try {
-        var headers = {};
-        var currentLang = (document.documentElement.getAttribute("lang") || "").trim();
-        if (currentLang) {
-          headers["Accept-Language"] = currentLang;
-        }
-
         var response = await fetch(endpoint, {
           credentials: "same-origin",
-          headers: headers
+          headers: buildAcceptLanguageHeaders()
         });
         if (!response.ok) {
           throw new Error("request_failed");
@@ -785,22 +834,144 @@
         downloadLink.remove();
         window.setTimeout(function () {
           URL.revokeObjectURL(objectURL);
-        }, 500);
+        }, DOWNLOAD_REVOKE_DELAY_MS);
 
         if (typeof window.showToast === "function") {
-          window.showToast(successMessage, "success");
+          window.showToast(context.successMessage, "success");
         }
       } catch {
         if (typeof window.showToast === "function") {
-          window.showToast(failedMessage, "error");
+          window.showToast(context.failedMessage, "error");
         }
       } finally {
         link.classList.remove("btn-loading");
         link.removeAttribute("aria-disabled");
       }
-    }
+    };
+  }
+  var section = document.querySelector("[data-export-section]");
+  if (!section) {
+    return;
+  }
 
-    links.forEach(function (link) {
-      link.addEventListener("click", handleExport);
+  var context = createContext(section);
+  if (!context) {
+    return;
+  }
+
+  var bounds = createBounds(context.rawMinDate, context.rawMaxDate);
+  var rangeController = createDateRangeController(context, bounds);
+  var summaryController = createSummaryController(context, bounds, rangeController);
+
+  function onRangeChanged(side) {
+    rangeController.validate(side);
+    rangeController.updatePresetState();
+    summaryController.scheduleRefresh();
+  }
+
+  var calendarController = createCalendarController(context, bounds, onRangeChanged);
+
+  context.fromInput.title = context.openCalendarLabel;
+  context.toInput.title = context.openCalendarLabel;
+  if (context.calendarTitleToggle) {
+    context.calendarTitleToggle.title = context.jumpTitle;
+  }
+
+  if (!bounds.hasBounds) {
+    context.fromInput.disabled = true;
+    context.toInput.disabled = true;
+    context.fromInput.value = "";
+    context.toInput.value = "";
+    calendarController.disableControls();
+    rangeController.updatePresetState();
+    rangeController.setExportLinksDisabled(false);
+  } else {
+    rangeController.syncInitialRange();
+    rangeController.updatePresetState();
+    rangeController.setExportLinksDisabled(false);
+    summaryController.scheduleRefresh();
+  }
+
+  bindRangeInput(context.fromInput, "from", onRangeChanged);
+  bindRangeInput(context.toInput, "to", onRangeChanged);
+
+  context.fromInput.addEventListener("focus", function () {
+    calendarController.openCalendarForInput(context.fromInput);
+  });
+  context.fromInput.addEventListener("click", function () {
+    calendarController.openCalendarForInput(context.fromInput);
+  });
+
+  context.toInput.addEventListener("focus", function () {
+    calendarController.openCalendarForInput(context.toInput);
+  });
+  context.toInput.addEventListener("click", function () {
+    calendarController.openCalendarForInput(context.toInput);
+  });
+
+  for (var presetIndex = 0; presetIndex < context.presetButtons.length; presetIndex++) {
+    (function (button) {
+      button.addEventListener("click", function () {
+        var presetValue = button.getAttribute("data-export-preset") || "";
+        if (rangeController.applyPreset(presetValue)) {
+          summaryController.scheduleRefresh();
+        }
+      });
+    })(context.presetButtons[presetIndex]);
+  }
+
+  if (context.calendarTitleToggle) {
+    context.calendarTitleToggle.addEventListener("click", calendarController.toggleCalendarJump);
+  }
+  if (context.calendarMonth) {
+    context.calendarMonth.addEventListener("change", calendarController.syncJumpControls);
+  }
+  if (context.calendarYear) {
+    context.calendarYear.addEventListener("input", calendarController.syncJumpControls);
+    context.calendarYear.addEventListener("keydown", calendarController.onYearKeydown);
+  }
+  if (context.calendarPrev) {
+    context.calendarPrev.addEventListener("click", function () {
+      calendarController.moveMonth(-1);
     });
-  })();
+  }
+  if (context.calendarNext) {
+    context.calendarNext.addEventListener("click", function () {
+      calendarController.moveMonth(1);
+    });
+  }
+  if (context.calendarApply) {
+    context.calendarApply.addEventListener("click", calendarController.applyJumpSelection);
+  }
+  if (context.calendarClose) {
+    context.calendarClose.addEventListener("click", calendarController.closeCalendar);
+  }
+
+  document.addEventListener("click", function (event) {
+    if (!context.calendarPanel || context.calendarPanel.classList.contains("hidden")) {
+      return;
+    }
+    var target = event.target;
+    if (!target) {
+      return;
+    }
+    if (context.calendarPanel.contains(target)) {
+      return;
+    }
+    if (target === context.fromInput || target === context.toInput) {
+      return;
+    }
+    calendarController.closeCalendar();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      calendarController.closeCalendar();
+    }
+  });
+
+  var handleExport = createExportHandler(context, rangeController);
+  for (var linkIndex = 0; linkIndex < context.links.length; linkIndex++) {
+    context.links[linkIndex].addEventListener("click", handleExport);
+  }
+})();
