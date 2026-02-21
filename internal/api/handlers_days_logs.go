@@ -2,8 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
@@ -95,19 +93,15 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	if err != nil {
 		return apiError(c, fiber.StatusBadRequest, "invalid payload")
 	}
-
-	if !isValidFlow(payload.Flow) {
-		return apiError(c, fiber.StatusBadRequest, "invalid flow value")
-	}
-	if payload.IsPeriod && payload.Flow == models.FlowNone {
-		return apiError(c, fiber.StatusBadRequest, "period flow is required")
-	}
-	if !payload.IsPeriod {
-		payload.Flow = models.FlowNone
-	}
-
-	if len(payload.Notes) > 2000 {
-		payload.Notes = payload.Notes[:2000]
+	payload, err = normalizeDayPayload(payload)
+	if err != nil {
+		if errors.Is(err, errInvalidFlowValue) {
+			return apiError(c, fiber.StatusBadRequest, "invalid flow value")
+		}
+		if errors.Is(err, errPeriodFlowRequired) {
+			return apiError(c, fiber.StatusBadRequest, "period flow is required")
+		}
+		return apiError(c, fiber.StatusBadRequest, "invalid payload")
 	}
 
 	cleanIDs, err := handler.validateSymptomIDs(user.ID, payload.SymptomIDs)
@@ -132,19 +126,10 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 	}
 
 	if payload.IsPeriod {
-		settings := struct {
-			PeriodLength   int
-			AutoPeriodFill bool
-		}{}
-		if err := handler.db.Model(&models.User{}).
-			Select("period_length", "auto_period_fill").
-			First(&settings, user.ID).Error; err != nil {
+		periodLength, autoPeriodFillEnabled, err = handler.loadDayAutoFillSettings(user.ID)
+		if err != nil {
 			return apiError(c, fiber.StatusInternalServerError, "failed to load day")
 		}
-		if isValidOnboardingPeriodLength(settings.PeriodLength) {
-			periodLength = settings.PeriodLength
-		}
-		autoPeriodFillEnabled = settings.AutoPeriodFill
 	}
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -171,19 +156,12 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		}
 	}
 
-	if payload.IsPeriod && autoPeriodFillEnabled && periodLength > 1 && !wasPeriod {
-		previousDay := dayStart.AddDate(0, 0, -1)
-		previousDayEntry, err := handler.fetchLogByDate(user.ID, previousDay)
+	if payload.IsPeriod {
+		shouldAutoFill, err := handler.shouldAutoFillPeriodDays(user.ID, dayStart, wasPeriod, autoPeriodFillEnabled, periodLength)
 		if err != nil {
 			return apiError(c, fiber.StatusInternalServerError, "failed to load day")
 		}
-
-		hasRecentPeriod, err := handler.hasPeriodInRecentDays(user.ID, dayStart, 3)
-		if err != nil {
-			return apiError(c, fiber.StatusInternalServerError, "failed to load day")
-		}
-
-		if !previousDayEntry.IsPeriod && !hasRecentPeriod {
+		if shouldAutoFill {
 			if err := handler.autoFillFollowingPeriodDays(user.ID, dayStart, periodLength, payload.Flow); err != nil {
 				return apiError(c, fiber.StatusInternalServerError, "failed to update day")
 			}
@@ -196,13 +174,7 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 
 	if isHTMX(c) {
 		c.Set("HX-Trigger", "calendar-day-updated")
-		timestamp := time.Now().In(handler.location).Format("15:04")
-		pattern := translateMessage(currentMessages(c), "common.saved_at")
-		if pattern == "common.saved_at" {
-			pattern = "Saved at %s"
-		}
-		message := fmt.Sprintf(pattern, timestamp)
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
+		return handler.sendDaySaveStatus(c)
 	}
 
 	return c.JSON(entry)
