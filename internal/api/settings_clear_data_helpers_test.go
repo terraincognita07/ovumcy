@@ -1,17 +1,25 @@
 package api
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
+	"gorm.io/gorm"
 )
 
-func TestClearDataRemovesTrackedCalendarEntriesAndResetsCycleSettings(t *testing.T) {
+type clearDataScenario struct {
+	app           *fiber.App
+	database      *gorm.DB
+	user          models.User
+	authCookie    string
+	customSymptom models.SymptomType
+}
+
+func setupClearDataScenario(t *testing.T) clearDataScenario {
+	t.Helper()
+
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "clear-data@example.com", "StrongPass1", true)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
@@ -59,20 +67,17 @@ func TestClearDataRemovesTrackedCalendarEntriesAndResetsCycleSettings(t *testing
 		t.Fatalf("create log entry: %v", err)
 	}
 
-	request := httptest.NewRequest(http.MethodPost, "/api/settings/clear-data", strings.NewReader(url.Values{}.Encode()))
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Cookie", authCookie)
-
-	response, err := app.Test(request, -1)
-	if err != nil {
-		t.Fatalf("clear data request failed: %v", err)
+	return clearDataScenario{
+		app:           app,
+		database:      database,
+		user:          user,
+		authCookie:    authCookie,
+		customSymptom: customSymptom,
 	}
-	defer response.Body.Close()
+}
 
-	if response.StatusCode != http.StatusOK {
-		t.Fatalf("expected clear data status 200, got %d", response.StatusCode)
-	}
+func assertClearDataPostconditions(t *testing.T, database *gorm.DB, user models.User) {
+	t.Helper()
 
 	var logsCount int64
 	if err := database.Model(&models.DailyLog{}).Where("user_id = ?", user.ID).Count(&logsCount).Error; err != nil {
