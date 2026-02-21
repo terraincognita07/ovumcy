@@ -129,3 +129,26 @@
   <p class="journal-muted">{{t .Messages "dashboard.partner_readonly"}}</p>
 </div>
 {{end}}
+{{define "period_flow_option"}}
+<label class="choice-option">
+  <input
+    type="radio"
+    name="flow"
+    value="{{.Value}}"
+    class="choice-input"
+    {{if .DisableWhenNotPeriod}}:disabled="!isPeriod"{{end}}
+    {{if eq .SelectedFlow .Value}}checked{{end}}>
+  <span class="{{if .Compact}}radio-tile radio-tile-sm{{else}}radio-tile{{end}}">
+    <span class="radio-icon">{{.Icon}}</span>
+    <span>{{flowLabel .Messages .Value}}</span>
+  </span>
+</label>
+{{end}}
+{{define "period_flow_options"}}
+<div class="{{if .Compact}}grid grid-cols-2 gap-2{{else}}grid gap-2 sm:grid-cols-4{{end}}">
+  {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "none" "Icon" "🌫️" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "light" "Icon" "🌷" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "medium" "Icon" "🌺" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "heavy" "Icon" "🔥" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+</div>
+{{end}}
