@@ -4,51 +4,16 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func (handler *Handler) parseExportRange(c *fiber.Ctx) (*time.Time, *time.Time, string) {
-	rawFrom := strings.TrimSpace(c.Query("from"))
-	rawTo := strings.TrimSpace(c.Query("to"))
-
-	var from *time.Time
-	if rawFrom != "" {
-		parsedFrom, err := parseDayParam(rawFrom, handler.location)
-		if err != nil {
-			return nil, nil, "invalid from date"
-		}
-		from = &parsedFrom
-	}
-
-	var to *time.Time
-	if rawTo != "" {
-		parsedTo, err := parseDayParam(rawTo, handler.location)
-		if err != nil {
-			return nil, nil, "invalid to date"
-		}
-		to = &parsedTo
-	}
-
-	if from != nil && to != nil && to.Before(*from) {
-		return nil, nil, "invalid range"
-	}
-
-	return from, to, ""
-}
-
 func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	from, to, rangeError := handler.parseExportRange(c)
-	if rangeError != "" {
-		return apiError(c, fiber.StatusBadRequest, rangeError)
+	user, from, to, status, message := handler.exportUserAndRange(c)
+	if status != 0 {
+		return apiError(c, status, message)
 	}
 
 	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
@@ -96,21 +61,14 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
 	}
 
-	filename := fmt.Sprintf("lume-export-%s.csv", now.Format("2006-01-02"))
-	c.Set(fiber.HeaderContentType, "text/csv")
-	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", filename))
+	setExportAttachmentHeaders(c, "text/csv", buildExportFilename(now, "csv"))
 	return c.Send(output.Bytes())
 }
 
 func (handler *Handler) ExportSummary(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	from, to, rangeError := handler.parseExportRange(c)
-	if rangeError != "" {
-		return apiError(c, fiber.StatusBadRequest, rangeError)
+	user, from, to, status, message := handler.exportUserAndRange(c)
+	if status != 0 {
+		return apiError(c, status, message)
 	}
 
 	totalEntries, firstDate, lastDate, err := handler.fetchExportSummaryForRange(user.ID, from, to)
@@ -127,14 +85,9 @@ func (handler *Handler) ExportSummary(c *fiber.Ctx) error {
 }
 
 func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
-	user, ok := currentUser(c)
-	if !ok {
-		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	from, to, rangeError := handler.parseExportRange(c)
-	if rangeError != "" {
-		return apiError(c, fiber.StatusBadRequest, rangeError)
+	user, from, to, status, message := handler.exportUserAndRange(c)
+	if status != 0 {
+		return apiError(c, status, message)
 	}
 
 	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
@@ -155,8 +108,6 @@ func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
 	}
 
-	filename := fmt.Sprintf("lume-export-%s.json", now.Format("2006-01-02"))
-	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", filename))
+	setExportAttachmentHeaders(c, fiber.MIMEApplicationJSON, buildExportFilename(now, "json"))
 	return c.Send(serialized)
 }
