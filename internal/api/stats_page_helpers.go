@@ -74,3 +74,28 @@ func (handler *Handler) buildStatsSymptomCounts(user *models.User, language stri
 	localizeSymptomFrequencySummaries(language, symptomCounts)
 	return symptomCounts, "", nil
 }
+
+func (handler *Handler) buildStatsPageData(user *models.User, language string, messages map[string]string, now time.Time) (fiber.Map, string, error) {
+	stats, logs, err := handler.buildCycleStatsForRange(user, now.AddDate(-2, 0, 0), now, now)
+	if err != nil {
+		return nil, "failed to load stats", err
+	}
+
+	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
+	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
+	if err != nil {
+		return nil, symptomErrorMessage, err
+	}
+
+	data := fiber.Map{
+		"Title":           localizedPageTitle(messages, "meta.title.stats", "Lume | Stats"),
+		"CurrentUser":     user,
+		"Stats":           stats,
+		"ChartData":       chartPayload,
+		"ChartBaseline":   baselineCycleLength,
+		"TrendPointCount": trendPointCount,
+		"SymptomCounts":   symptomCounts,
+		"IsOwner":         isOwnerUser(user),
+	}
+	return data, "", nil
+}

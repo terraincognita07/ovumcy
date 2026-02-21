@@ -140,26 +140,9 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	messages := currentMessages(c)
 
 	now := time.Now().In(handler.location)
-	stats, logs, err := handler.buildCycleStatsForRange(user, now.AddDate(-2, 0, 0), now, now)
+	data, errorMessage, err := handler.buildStatsPageData(user, language, messages, now)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to load stats")
-	}
-	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
-
-	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(symptomErrorMessage)
-	}
-
-	data := fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.stats", "Lume | Stats"),
-		"CurrentUser":     user,
-		"Stats":           stats,
-		"ChartData":       chartPayload,
-		"ChartBaseline":   baselineCycleLength,
-		"TrendPointCount": trendPointCount,
-		"SymptomCounts":   symptomCounts,
-		"IsOwner":         isOwnerUser(user),
+		return c.Status(fiber.StatusInternalServerError).SendString(errorMessage)
 	}
 
 	return handler.render(c, "stats", data)
