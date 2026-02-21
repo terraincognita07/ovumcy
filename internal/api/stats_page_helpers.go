@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/lume/internal/services"
 )
 
 const maxStatsTrendPoints = 12
@@ -34,6 +35,26 @@ func (handler *Handler) buildStatsTrendView(user *models.User, logs []models.Dai
 	baselineCycleLength := ownerBaselineCycleLength(user)
 	chartPayload := buildStatsChartData(messages, lengths, baselineCycleLength)
 	return chartPayload, baselineCycleLength, len(lengths)
+}
+
+func (handler *Handler) completedCycleTrendLengths(logs []models.DailyLog, now time.Time) []int {
+	starts := services.DetectCycleStarts(logs)
+	if len(starts) < 2 {
+		return nil
+	}
+
+	today := dateAtLocation(now, handler.location)
+	lengths := make([]int, 0, len(starts)-1)
+	for index := 1; index < len(starts); index++ {
+		previousStart := dateAtLocation(starts[index-1], handler.location)
+		currentStart := dateAtLocation(starts[index], handler.location)
+		if !currentStart.Before(today) {
+			break
+		}
+		lengths = append(lengths, int(currentStart.Sub(previousStart).Hours()/24))
+	}
+
+	return lengths
 }
 
 func (handler *Handler) buildStatsSymptomCounts(user *models.User, language string) ([]SymptomCount, string, error) {

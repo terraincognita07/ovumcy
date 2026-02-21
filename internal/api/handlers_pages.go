@@ -1,37 +1,11 @@
 package api
 
 import (
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
 )
-
-func (handler *Handler) requiresInitialSetup() (bool, error) {
-	var usersCount int64
-	if err := handler.db.Model(&models.User{}).Count(&usersCount).Error; err != nil {
-		return false, err
-	}
-	return usersCount == 0, nil
-}
-
-func authErrorKeyFromFlashOrQuery(c *fiber.Ctx, flashAuthError string) string {
-	errorSource := strings.TrimSpace(flashAuthError)
-	if errorSource == "" {
-		errorSource = strings.TrimSpace(c.Query("error"))
-	}
-	return authErrorTranslationKey(errorSource)
-}
-
-func loginEmailFromFlashOrQuery(c *fiber.Ctx, flashEmail string) string {
-	email := normalizeLoginEmail(flashEmail)
-	if email == "" {
-		email = normalizeLoginEmail(c.Query("email"))
-	}
-	return email
-}
 
 func (handler *Handler) SetupStatus(c *fiber.Ctx) error {
 	needsSetup, err := handler.requiresInitialSetup()
@@ -189,26 +163,6 @@ func (handler *Handler) ShowStats(c *fiber.Ctx) error {
 	}
 
 	return handler.render(c, "stats", data)
-}
-
-func (handler *Handler) completedCycleTrendLengths(logs []models.DailyLog, now time.Time) []int {
-	starts := services.DetectCycleStarts(logs)
-	if len(starts) < 2 {
-		return nil
-	}
-
-	today := dateAtLocation(now, handler.location)
-	lengths := make([]int, 0, len(starts)-1)
-	for index := 1; index < len(starts); index++ {
-		previousStart := dateAtLocation(starts[index-1], handler.location)
-		currentStart := dateAtLocation(starts[index], handler.location)
-		if !currentStart.Before(today) {
-			break
-		}
-		lengths = append(lengths, int(currentStart.Sub(previousStart).Hours()/24))
-	}
-
-	return lengths
 }
 
 func (handler *Handler) ShowSettings(c *fiber.Ctx) error {

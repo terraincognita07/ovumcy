@@ -6,6 +6,22 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func authErrorKeyFromFlashOrQuery(c *fiber.Ctx, flashAuthError string) string {
+	errorSource := strings.TrimSpace(flashAuthError)
+	if errorSource == "" {
+		errorSource = strings.TrimSpace(c.Query("error"))
+	}
+	return authErrorTranslationKey(errorSource)
+}
+
+func loginEmailFromFlashOrQuery(c *fiber.Ctx, flashEmail string) string {
+	email := normalizeLoginEmail(flashEmail)
+	if email == "" {
+		email = normalizeLoginEmail(c.Query("email"))
+	}
+	return email
+}
+
 func buildLoginPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload, needsSetup bool) fiber.Map {
 	return fiber.Map{
 		"Title":         localizedPageTitle(messages, "meta.title.login", "Lume | Login"),
