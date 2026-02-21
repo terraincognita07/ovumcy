@@ -2,11 +2,22 @@ package api
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const maxDisplayNameLength = 64
+
+func normalizeDisplayName(raw string) (string, error) {
+	displayName := strings.TrimSpace(raw)
+	if utf8.RuneCountInString(displayName) > maxDisplayNameLength {
+		return "", fiber.NewError(fiber.StatusBadRequest, "display name too long")
+	}
+	return displayName, nil
+}
 
 func parseChangePasswordInput(c *fiber.Ctx) (changePasswordInput, string) {
 	input := changePasswordInput{}
