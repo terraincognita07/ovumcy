@@ -1,20 +1,45 @@
 package api
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
 )
 
 func parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInput, string) {
 	input := cycleSettingsInput{}
-	if err := c.BodyParser(&input); err != nil {
-		return cycleSettingsInput{}, "invalid settings input"
+
+	contentType := strings.ToLower(c.Get("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		if err := c.BodyParser(&input); err != nil {
+			return cycleSettingsInput{}, "invalid settings input"
+		}
+	} else {
+		cycleLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("cycle_length")))
+		if err != nil {
+			return cycleSettingsInput{}, "invalid settings input"
+		}
+		periodLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("period_length")))
+		if err != nil {
+			return cycleSettingsInput{}, "invalid settings input"
+		}
+		input = cycleSettingsInput{
+			CycleLength:    cycleLength,
+			PeriodLength:   periodLength,
+			AutoPeriodFill: parseBoolValue(c.FormValue("auto_period_fill")),
+		}
 	}
+
 	if !isValidOnboardingCycleLength(input.CycleLength) {
 		return cycleSettingsInput{}, "cycle length must be between 15 and 90"
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
 		return cycleSettingsInput{}, "period length must be between 1 and 10"
+	}
+	if input.PeriodLength > input.CycleLength {
+		return cycleSettingsInput{}, "period length must not exceed cycle length"
 	}
 	return input, ""
 }

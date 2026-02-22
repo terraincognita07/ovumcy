@@ -13,10 +13,12 @@ func (handler *Handler) dailyLogQueryForUser(userID uint) *gorm.DB {
 
 func (handler *Handler) applyDailyLogDateRange(query *gorm.DB, from *time.Time, to *time.Time) *gorm.DB {
 	if from != nil {
-		query = query.Where("date >= ?", dayStorageKey(*from, handler.location))
+		fromStart, _ := dayRange(*from, handler.location)
+		query = query.Where("date >= ?", fromStart)
 	}
 	if to != nil {
-		query = query.Where("date < ?", nextDayStorageKey(*to, handler.location))
+		_, toEnd := dayRange(*to, handler.location)
+		query = query.Where("date < ?", toEnd)
 	}
 	return query
 }

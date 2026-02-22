@@ -48,14 +48,6 @@ func dayRange(value time.Time, location *time.Location) (time.Time, time.Time) {
 	return start, start.AddDate(0, 0, 1)
 }
 
-func dayStorageKey(value time.Time, location *time.Location) string {
-	return dateAtLocation(value, location).Format("2006-01-02")
-}
-
-func nextDayStorageKey(value time.Time, location *time.Location) string {
-	return dateAtLocation(value, location).AddDate(0, 0, 1).Format("2006-01-02")
-}
-
 func symptomIDSet(ids []uint) map[uint]bool {
 	set := make(map[uint]bool, len(ids))
 	for _, id := range ids {

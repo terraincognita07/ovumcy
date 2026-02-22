@@ -33,6 +33,7 @@ var authErrorKeys = map[string]string{
 	"period end must be between start and today":    "onboarding.error.period_end_range",
 	"cycle length must be between 15 and 90":        "onboarding.error.cycle_length_range",
 	"period length must be between 1 and 10":        "onboarding.error.period_length_range",
+	"period length must not exceed cycle length":    "onboarding.error.period_length_exceeds_cycle",
 	"complete onboarding steps first":               "onboarding.error.incomplete",
 	"failed to save onboarding step":                "onboarding.error.generic",
 	"failed to finish onboarding":                   "onboarding.error.generic",

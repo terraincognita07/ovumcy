@@ -8,9 +8,8 @@ import (
 )
 
 func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {
-	dayKey := dayStorageKey(day, handler.location)
-	nextDayKey := nextDayStorageKey(day, handler.location)
-	return handler.db.Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).Delete(&models.DailyLog{}).Error
+	dayStart, dayEnd := dayRange(day, handler.location)
+	return handler.db.Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).Delete(&models.DailyLog{}).Error
 }
 
 func (handler *Handler) refreshUserLastPeriodStart(userID uint) error {

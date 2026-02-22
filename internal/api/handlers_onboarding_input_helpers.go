@@ -1,6 +1,7 @@
 package api
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,14 +63,35 @@ func (handler *Handler) parseOnboardingStep1Values(c *fiber.Ctx, today time.Time
 
 func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 	input := onboardingStep2Input{}
-	if err := c.BodyParser(&input); err != nil {
-		return onboardingStep2Input{}, "invalid input"
+
+	contentType := strings.ToLower(c.Get("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		if err := c.BodyParser(&input); err != nil {
+			return onboardingStep2Input{}, "invalid input"
+		}
+	} else {
+		cycleLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("cycle_length")))
+		if err != nil {
+			return onboardingStep2Input{}, "invalid input"
+		}
+		periodLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("period_length")))
+		if err != nil {
+			return onboardingStep2Input{}, "invalid input"
+		}
+		input = onboardingStep2Input{
+			CycleLength:    cycleLength,
+			PeriodLength:   periodLength,
+			AutoPeriodFill: parseBoolValue(c.FormValue("auto_period_fill")),
+		}
 	}
 	if !isValidOnboardingCycleLength(input.CycleLength) {
 		return onboardingStep2Input{}, "cycle length must be between 15 and 90"
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
 		return onboardingStep2Input{}, "period length must be between 1 and 10"
+	}
+	if input.PeriodLength > input.CycleLength {
+		return onboardingStep2Input{}, "period length must not exceed cycle length"
 	}
 	return input, ""
 }

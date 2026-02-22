@@ -35,16 +35,15 @@ func assertNoOnboardingLogForDay(t *testing.T, database *gorm.DB, userID uint, d
 
 func findOnboardingLogByDay(database *gorm.DB, userID uint, day time.Time) (models.DailyLog, error) {
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, day.Location())
-	dayKey := dayStart.Format("2006-01-02")
-	nextDayKey := dayStart.AddDate(0, 0, 1).Format("2006-01-02")
+	dayEnd := dayStart.AddDate(0, 0, 1)
 
 	var entry models.DailyLog
 	err := database.
 		Where(
 			"user_id = ? AND date >= ? AND date < ?",
 			userID,
-			dayKey,
-			nextDayKey,
+			dayStart,
+			dayEnd,
 		).
 		First(&entry).Error
 	return entry, err

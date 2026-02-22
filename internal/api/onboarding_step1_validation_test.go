@@ -78,3 +78,28 @@ func TestOnboardingStep1RequiresPeriodEndForFinishedStatus(t *testing.T) {
 		t.Fatalf("expected status 400, got %d", response.StatusCode)
 	}
 }
+
+func TestOnboardingStep1RejectsFarHistoricalDate(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "step1-far-past-validation@example.com", "StrongPass1", false)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	form := url.Values{
+		"last_period_start": {"2024-01-01"},
+		"period_status":     {onboardingPeriodStatusOngoing},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/onboarding/step1", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("HX-Request", "true")
+	request.Header.Set("Cookie", authCookie)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("far historical date request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected far historical date status 400, got %d", response.StatusCode)
+	}
+}

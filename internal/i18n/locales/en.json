@@ -123,6 +123,7 @@
   "onboarding.error.period_end_range": "End date must be between your start date and today.",
   "onboarding.error.cycle_length_range": "Cycle length must be between 15 and 90 days.",
   "onboarding.error.period_length_range": "Period length must be between 1 and 10 days.",
+  "onboarding.error.period_length_exceeds_cycle": "Period length cannot be longer than cycle length.",
   "onboarding.error.incomplete": "Complete previous onboarding steps first.",
   "onboarding.error.generic": "Failed to save onboarding data. Please try again.",
   "settings.title": "Settings",

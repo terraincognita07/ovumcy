@@ -1,6 +1,11 @@
 package api
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"fmt"
+	"html/template"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 	user, ok := currentUser(c)
@@ -22,6 +27,14 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})
 	}
+	if isHTMX(c) {
+		message := translateMessage(currentMessages(c), "settings.success.cycle_updated")
+		if message == "settings.success.cycle_updated" {
+			message = "Cycle settings updated successfully."
+		}
+		return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
+	}
+
 	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: "cycle_updated"})
 	return redirectOrJSON(c, "/settings")
 }

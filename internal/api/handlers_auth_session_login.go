@@ -17,6 +17,16 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, validationError)
 	}
 
+	var existingUsers int64
+	if err := handler.db.Model(&models.User{}).
+		Where("lower(trim(email)) = ?", credentials.Email).
+		Count(&existingUsers).Error; err != nil {
+		return apiError(c, fiber.StatusInternalServerError, "failed to create account")
+	}
+	if existingUsers > 0 {
+		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
+	}
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
@@ -59,7 +69,7 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	if err := handler.db.Where("email = ?", credentials.Email).First(&user).Error; err != nil {
+	if err := handler.db.Where("lower(trim(email)) = ?", credentials.Email).First(&user).Error; err != nil {
 		return handler.respondAuthError(c, fiber.StatusUnauthorized, "invalid credentials")
 	}
 

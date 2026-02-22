@@ -595,6 +595,7 @@
   .check-chip {
     justify-content: flex-start;
     min-height: 2.65rem;
+    position: relative;
   }
 
   .check-chip-sm {
@@ -731,9 +732,28 @@
 
   .choice-input:checked + .radio-tile,
   .choice-input:checked + .check-chip {
-    border-color: rgba(212, 165, 116, 0.95);
-    background: rgba(232, 196, 168, 0.5);
-    box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2);
+    border-color: rgba(186, 131, 80, 0.95);
+    background: linear-gradient(135deg, rgba(243, 215, 189, 0.9), rgba(232, 196, 168, 0.7));
+    box-shadow:
+      0 0 0 2px rgba(186, 131, 80, 0.22),
+      0 8px 18px rgba(186, 131, 80, 0.12);
+  }
+
+  .choice-input:checked + .check-chip::after {
+    content: "✓";
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(162, 83, 75, 0.45);
+    background: rgba(255, 255, 255, 0.85);
+    color: #8f4a2f;
+    font-size: 0.8rem;
+    line-height: 1;
+    font-weight: 800;
   }
 
   .choice-chip-active {
