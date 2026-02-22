@@ -39,7 +39,7 @@
   </section>
 
   {{if eq .CurrentUser.Role "owner"}}
-  <section class="journal-card p-5 sm:p-6" x-data='settingsCycleForm({ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} })'>
+  <section class="journal-card p-5 sm:p-6" x-data='typeof settingsCycleForm === "function" ? settingsCycleForm({ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} }) : { cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} }'>
     <h2 class="journal-subtitle">🗓️ {{t .Messages "settings.cycle.title"}}</h2>
 
     <form
@@ -55,7 +55,7 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between gap-2">
           <label class="field-label" for="settings-cycle-length">{{t .Messages "settings.cycle.cycle_length"}}</label>
-          <span class="journal-muted text-sm"><span x-text="cycleLength"></span> {{t .Messages "common.days_short"}}</span>
+          <span class="journal-muted text-sm"><span x-text="cycleLength">{{.CycleLength}}</span> {{t .Messages "common.days_short"}}</span>
         </div>
         <input
           id="settings-cycle-length"
@@ -72,7 +72,7 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between gap-2">
           <label class="field-label" for="settings-period-length">{{t .Messages "settings.cycle.period_length"}}</label>
-          <span class="journal-muted text-sm"><span x-text="periodLength"></span> {{t .Messages "common.days_short"}}</span>
+          <span class="journal-muted text-sm"><span x-text="periodLength">{{.PeriodLength}}</span> {{t .Messages "common.days_short"}}</span>
         </div>
         <input
           id="settings-period-length"
@@ -310,6 +310,6 @@
   </section>
 </section>
 {{if eq .CurrentUser.Role "owner"}}
-<script src="/static/js/settings-export.js"></script>
+<script src="/static/js/settings-export.js?v=20260221-2"></script>
 {{end}}
 {{end}}

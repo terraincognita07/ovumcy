@@ -1,7 +1,7 @@
 {{define "content"}}
 <section
   class="mx-auto max-w-4xl"
-  x-data='onboardingFlow({
+  x-data='typeof onboardingFlow === "function" ? onboardingFlow({
     minDate: "{{.MinDate}}",
     maxDate: "{{.MaxDate}}",
     lastPeriodStart: "{{.LastPeriodStart}}",
@@ -11,8 +11,54 @@
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     lang: "{{.Lang}}"
-  })'
-  x-cloak
+  }) : {
+    step: 0,
+    minDate: "{{.MinDate}}",
+    maxDate: "{{.MaxDate}}",
+    selectedDate: "{{.LastPeriodStart}}",
+    periodStatus: "{{.OnboardingPeriodStatus}}",
+    periodEndDate: "{{.OnboardingPeriodEnd}}",
+    cycleLength: {{.CycleLength}},
+    periodLength: {{.PeriodLength}},
+    autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
+    dayOptions: [],
+    endDayOptions: [],
+    begin: function () {
+      this.step = 1
+    },
+    goToStep: function (value) {
+      var nextStep = Number(value)
+      this.step = Number.isFinite(nextStep) ? nextStep : 0
+    },
+    onStepOneSaved: function (event) {
+      if (event && event.detail && event.detail.successful) {
+        this.goToStep(2)
+      }
+    },
+    onStepTwoSaved: function (event) {
+      if (event && event.detail && event.detail.successful) {
+        this.goToStep(3)
+      }
+    },
+    setStartDate: function (value) {
+      this.selectedDate = value || ""
+    },
+    setPeriodEndDate: function (value) {
+      this.periodEndDate = value || ""
+    },
+    setPeriodStatus: function (value) {
+      this.periodStatus = value || ""
+      if (this.periodStatus !== "finished") {
+        this.periodEndDate = ""
+      }
+    },
+    onStartDateChanged: function () {
+      if (!this.selectedDate) {
+        this.periodStatus = ""
+        this.periodEndDate = ""
+      }
+    }
+  }'
 >
   <div class="journal-card journal-hero p-6 sm:p-8">
     <div class="space-y-3" x-show="step > 0" x-transition>
@@ -145,7 +191,7 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <label class="field-label" for="cycle-length">{{t .Messages "onboarding.step2.cycle_length"}}</label>
-            <span class="journal-muted text-sm"><span x-text="cycleLength"></span> {{t .Messages "common.days_short"}}</span>
+            <span class="journal-muted text-sm"><span x-text="cycleLength">{{.CycleLength}}</span> {{t .Messages "common.days_short"}}</span>
           </div>
           <input
             id="cycle-length"
@@ -153,6 +199,7 @@
             min="15"
             max="90"
             name="cycle_length"
+            value="{{.CycleLength}}"
             x-model.number="cycleLength"
             class="w-full range-field">
           <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
@@ -162,7 +209,7 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between gap-2">
             <label class="field-label" for="period-length">{{t .Messages "onboarding.step2.period_length"}}</label>
-            <span class="journal-muted text-sm"><span x-text="periodLength"></span> {{t .Messages "common.days_short"}}</span>
+            <span class="journal-muted text-sm"><span x-text="periodLength">{{.PeriodLength}}</span> {{t .Messages "common.days_short"}}</span>
           </div>
           <input
             id="period-length"
@@ -170,6 +217,7 @@
             min="1"
             max="10"
             name="period_length"
+            value="{{.PeriodLength}}"
             x-model.number="periodLength"
             class="w-full range-field">
           <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>

@@ -11,25 +11,24 @@ import (
 	"github.com/terraincognita07/lume/internal/models"
 )
 
-func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
+func TestOnboardingPageRendersPersistedStep2Values(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	user := createOnboardingTestUser(t, database, "settings-values@example.com", "StrongPass1", true)
+	user := createOnboardingTestUser(t, database, "onboarding-values@example.com", "StrongPass1", false)
 	if err := database.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"cycle_length":     29,
-		"period_length":    6,
+		"cycle_length":     31,
+		"period_length":    7,
 		"auto_period_fill": true,
 	}).Error; err != nil {
-		t.Fatalf("update cycle values: %v", err)
+		t.Fatalf("update onboarding values: %v", err)
 	}
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
-	request := httptest.NewRequest(http.MethodGet, "/settings", nil)
-	request.Header.Set("Accept-Language", "en")
+	request := httptest.NewRequest(http.MethodGet, "/onboarding", nil)
 	request.Header.Set("Cookie", authCookie)
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("settings request failed: %v", err)
+		t.Fatalf("onboarding request failed: %v", err)
 	}
 	defer response.Body.Close()
 
@@ -42,21 +41,18 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 		t.Fatalf("read body: %v", err)
 	}
 	rendered := string(body)
-	if !strings.Contains(rendered, `x-data='typeof settingsCycleForm === "function" ? settingsCycleForm({ cycleLength: 29, periodLength: 6, autoPeriodFill: true }) : { cycleLength: 29, periodLength: 6, autoPeriodFill: true }'`) {
-		t.Fatalf("expected settings cycle form state to include persisted values")
-	}
-	if !strings.Contains(rendered, `<span x-text="cycleLength">29</span>`) {
+	if !strings.Contains(rendered, `<span x-text="cycleLength">31</span>`) {
 		t.Fatalf("expected cycle label fallback text to include persisted value")
 	}
-	if !strings.Contains(rendered, `<span x-text="periodLength">6</span>`) {
+	if !strings.Contains(rendered, `<span x-text="periodLength">7</span>`) {
 		t.Fatalf("expected period label fallback text to include persisted value")
 	}
 
-	cycleInputPattern := regexp.MustCompile(`(?s)name="cycle_length".*?value="29"`)
+	cycleInputPattern := regexp.MustCompile(`(?s)name="cycle_length".*?value="31"`)
 	if !cycleInputPattern.MatchString(rendered) {
 		t.Fatalf("expected cycle slider value attribute to be rendered from DB")
 	}
-	periodInputPattern := regexp.MustCompile(`(?s)name="period_length".*?value="6"`)
+	periodInputPattern := regexp.MustCompile(`(?s)name="period_length".*?value="7"`)
 	if !periodInputPattern.MatchString(rendered) {
 		t.Fatalf("expected period slider value attribute to be rendered from DB")
 	}
