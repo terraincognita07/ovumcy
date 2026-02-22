@@ -35,15 +35,33 @@ func assertNoOnboardingLogForDay(t *testing.T, database *gorm.DB, userID uint, d
 
 func findOnboardingLogByDay(database *gorm.DB, userID uint, day time.Time) (models.DailyLog, error) {
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, day.Location())
-	dayKey := dayStart.Format("2006-01-02")
+	dayEnd := dayStart.AddDate(0, 0, 1)
+	dayKeys := []string{
+		dayStart.Format("2006-01-02"),
+		dayStart.UTC().Format("2006-01-02"),
+		dayEnd.Add(-time.Nanosecond).UTC().Format("2006-01-02"),
+	}
 
-	var entry models.DailyLog
+	candidates := make([]models.DailyLog, 0)
 	err := database.
 		Where(
-			"user_id = ? AND substr(date, 1, 10) = ?",
+			"user_id = ? AND substr(date, 1, 10) IN ?",
 			userID,
-			dayKey,
+			dayKeys,
 		).
-		First(&entry).Error
-	return entry, err
+		Order("date DESC, id DESC").
+		Find(&candidates).Error
+	if err != nil {
+		return models.DailyLog{}, err
+	}
+
+	for _, candidate := range candidates {
+		candidateLocal := candidate.Date.In(day.Location())
+		candidateStart := time.Date(candidateLocal.Year(), candidateLocal.Month(), candidateLocal.Day(), 0, 0, 0, 0, day.Location())
+		if candidateStart.Equal(dayStart) {
+			return candidate, nil
+		}
+	}
+
+	return models.DailyLog{}, gorm.ErrRecordNotFound
 }

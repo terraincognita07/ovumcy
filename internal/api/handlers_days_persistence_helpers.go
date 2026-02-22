@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/terraincognita07/lume/internal/models"
-	"gorm.io/gorm"
 )
 
 var (
@@ -17,19 +16,31 @@ var (
 )
 
 func (handler *Handler) upsertDayEntry(userID uint, dayStart time.Time, payload dayPayload, cleanIDs []uint) (models.DailyLog, bool, error) {
-	dayKey := dayStorageKey(dayStart, handler.location)
+	dayKeys := dayLookupKeys(dayStart, handler.location)
 
 	wasPeriod := false
 	var entry models.DailyLog
+	candidates := make([]models.DailyLog, 0)
 	result := handler.db.
-		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
+		Where("user_id = ? AND substr(date, 1, 10) IN ?", userID, dayKeys).
 		Order("date DESC, id DESC").
-		First(&entry)
-	if result.Error == nil {
-		wasPeriod = entry.IsPeriod
+		Find(&candidates)
+
+	if result.Error != nil {
+		return models.DailyLog{}, false, errDayEntryLoadFailed
 	}
 
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	found := false
+	for _, candidate := range candidates {
+		if sameCalendarDayAtLocation(candidate.Date, dayStart, handler.location) {
+			entry = candidate
+			wasPeriod = candidate.IsPeriod
+			found = true
+			break
+		}
+	}
+
+	if !found {
 		entry = models.DailyLog{
 			UserID:   userID,
 			Date:     dayStart,
@@ -42,9 +53,6 @@ func (handler *Handler) upsertDayEntry(userID uint, dayStart time.Time, payload 
 			return models.DailyLog{}, false, errDayEntryCreateFailed
 		}
 		return entry, wasPeriod, nil
-	}
-	if result.Error != nil {
-		return models.DailyLog{}, false, errDayEntryLoadFailed
 	}
 
 	entry.IsPeriod = payload.IsPeriod

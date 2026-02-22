@@ -17,13 +17,11 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, validationError)
 	}
 
-	var existingUsers int64
-	if err := handler.db.Model(&models.User{}).
-		Where("lower(trim(email)) = ?", credentials.Email).
-		Count(&existingUsers).Error; err != nil {
+	exists, err := handler.registrationEmailExists(credentials.Email)
+	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create account")
 	}
-	if existingUsers > 0 {
+	if exists {
 		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
 	}
 

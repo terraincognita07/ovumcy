@@ -52,6 +52,33 @@ func dayStorageKey(value time.Time, location *time.Location) string {
 	return dateAtLocation(value, location).Format("2006-01-02")
 }
 
+func dayLookupKeys(value time.Time, location *time.Location) []string {
+	start, end := dayRange(value, location)
+	keys := []string{
+		dayStorageKey(value, location),
+		start.UTC().Format("2006-01-02"),
+		end.Add(-time.Nanosecond).UTC().Format("2006-01-02"),
+	}
+
+	seen := make(map[string]struct{}, len(keys))
+	unique := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if key == "" {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, key)
+	}
+	return unique
+}
+
+func sameCalendarDayAtLocation(a time.Time, b time.Time, location *time.Location) bool {
+	return dayStorageKey(a, location) == dayStorageKey(b, location)
+}
+
 func symptomIDSet(ids []uint) map[uint]bool {
 	set := make(map[uint]bool, len(ids))
 	for _, id := range ids {
