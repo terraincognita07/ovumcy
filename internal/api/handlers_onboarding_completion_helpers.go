@@ -22,7 +22,7 @@ func (handler *Handler) completeOnboardingForUser(userID uint, today time.Time) 
 		}
 		startDay = dateAtLocation(*current.LastPeriodStart, handler.location)
 
-		endDay := startDay
+		var endDay time.Time
 		status := normalizeOnboardingPeriodStatus(current.OnboardingPeriodStatus)
 		if status == "" {
 			status = onboardingPeriodStatusOngoing
