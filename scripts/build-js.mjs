@@ -3,7 +3,9 @@ import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 const appBundleSources = [
   "./web/src/js/app/00-core.js",
   "./web/src/js/app/10-language-auth-transitions.js",
-  "./web/src/js/app/20-auth-form-ui.js",
+  "./web/src/js/app/20-password-toggles.js",
+  "./web/src/js/app/21-login-form-ui.js",
+  "./web/src/js/app/22-confirm-modal.js",
   "./web/src/js/app/30-feedback-htmx.js",
   "./web/src/js/app/40-shared-utils.js",
   "./web/src/js/app/50-window-factories.js",
