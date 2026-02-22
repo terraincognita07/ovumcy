@@ -22,10 +22,11 @@ func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, err
 
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	entry := models.DailyLog{}
-	dayStart, dayEnd := dayRange(day, handler.location)
-	dayKey := dayStorageKey(dayStart, handler.location)
-	nextDayKey := dayStorageKey(dayEnd, handler.location)
+	dayStart := dateAtLocation(day, handler.location)
+	dayKey := dayStorageKey(day, handler.location)
+	nextDayKey := nextDayStorageKey(day, handler.location)
 	result := handler.db.
+		Select("id", "user_id", "date", "is_period", "flow", "symptom_ids", "notes", "created_at", "updated_at").
 		Where("user_id = ? AND date >= ? AND date < ?", userID, dayKey, nextDayKey).
 		Order("date DESC, id DESC").
 		Limit(1).

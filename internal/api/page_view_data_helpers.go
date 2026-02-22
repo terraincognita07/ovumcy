@@ -36,6 +36,7 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 		"OvulationInPast":   ovulationInPast,
 		"Today":             today.Format("2006-01-02"),
 		"FormattedDate":     localizedDashboardDate(language, today),
+		"TodayEntry":        todayLog,
 		"TodayLog":          todayLog,
 		"TodayHasData":      dayHasData(todayLog),
 		"Symptoms":          symptoms,

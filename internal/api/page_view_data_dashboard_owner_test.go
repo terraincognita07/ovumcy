@@ -57,6 +57,13 @@ func TestBuildDashboardViewDataOwnerIncludesSymptomsAndNotes(t *testing.T) {
 	if logEntry.Notes != "owner note" {
 		t.Fatalf("expected owner notes preserved, got %q", logEntry.Notes)
 	}
+	todayEntry, ok := data["TodayEntry"].(models.DailyLog)
+	if !ok {
+		t.Fatalf("expected TodayEntry type models.DailyLog, got %T", data["TodayEntry"])
+	}
+	if todayEntry.Notes != "owner note" {
+		t.Fatalf("expected owner TodayEntry notes preserved, got %q", todayEntry.Notes)
+	}
 	if len(logEntry.SymptomIDs) != 1 || logEntry.SymptomIDs[0] != symptom.ID {
 		t.Fatalf("expected owner symptom ids preserved, got %#v", logEntry.SymptomIDs)
 	}

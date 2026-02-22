@@ -34,7 +34,7 @@
   <div
     class="grid gap-6"
     x-data='dashboardTodayEditor({
-      isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}}
+      isPeriod: {{if .TodayEntry.IsPeriod}}true{{else}}false{{end}}
     })'>
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-5 flex items-center justify-between gap-3">
@@ -49,13 +49,13 @@
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
         <label class="period-toggle">
-          <input type="checkbox" name="is_period" value="true" x-model="isPeriod" {{if .TodayLog.IsPeriod}}checked{{end}}>
+          <input type="checkbox" name="is_period" value="true" x-model="isPeriod" {{if .TodayEntry.IsPeriod}}checked{{end}}>
           <span>🩸 {{t .Messages "dashboard.period_day"}}</span>
         </label>
 
         <fieldset class="space-y-3" x-cloak x-show="isPeriod">
           <legend class="field-label">{{t .Messages "dashboard.flow"}}</legend>
-          {{template "period_flow_options" (dict "Messages" .Messages "SelectedFlow" .TodayLog.Flow "Compact" false "DisableWhenNotPeriod" true)}}
+          {{template "period_flow_options" (dict "Messages" .Messages "SelectedFlow" .TodayEntry.Flow "Compact" false "DisableWhenNotPeriod" true)}}
         </fieldset>
 
         <fieldset class="space-y-3">
@@ -64,7 +64,7 @@
         </fieldset>
 
         <label class="field-label" for="today-notes">{{t .Messages "dashboard.notes"}}</label>
-        <textarea id="today-notes" name="notes" rows="4" maxlength="2000" class="textarea-field" x-model="notesPreview">{{.TodayLog.Notes}}</textarea>
+        <textarea id="today-notes" name="notes" rows="4" maxlength="2000" class="textarea-field" x-model="notesPreview">{{.TodayEntry.Notes}}</textarea>
 
         <div class="flex flex-wrap items-center gap-3">
           <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "dashboard.save_today"}}</button>
@@ -84,11 +84,15 @@
         {{end}}
       </form>
       {{else}}
-      {{template "readonly_log_summary" (dict "Messages" .Messages "Log" .TodayLog)}}
+      {{template "readonly_log_summary" (dict "Messages" .Messages "Log" .TodayEntry)}}
       {{end}}
     </section>
 
-    <section class="journal-card p-5 sm:p-6">
+    <section
+      class="journal-card p-5 sm:p-6"
+      x-cloak
+      x-show="isPeriod || hasActiveSymptoms() || hasNotesPreview()"
+      x-transition.opacity.duration.220ms>
       <h2 class="journal-subtitle" x-show="isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.cycle_snapshot"}}</h2>
       <h2 class="journal-subtitle" x-show="!isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.symptoms_notes"}}</h2>
 

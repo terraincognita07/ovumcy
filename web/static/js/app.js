@@ -675,11 +675,7 @@
     });
   }
 
-  function writeTextToClipboard(text) {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-      return navigator.clipboard.writeText(text);
-    }
-
+  function copyTextWithExecCommand(text) {
     return new Promise(function (resolve, reject) {
       var textarea = document.createElement("textarea");
       textarea.value = text;
@@ -702,6 +698,16 @@
 
       reject(new Error("copy_failed"));
     });
+  }
+
+  function writeTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      return navigator.clipboard.writeText(text).catch(function () {
+        return copyTextWithExecCommand(text);
+      });
+    }
+
+    return copyTextWithExecCommand(text);
   }
 
   function parseDateValue(value) {

@@ -52,6 +52,13 @@ func TestBuildDashboardViewDataPartnerSanitizesPrivateFields(t *testing.T) {
 	if logEntry.Notes != "" {
 		t.Fatalf("expected partner notes hidden, got %q", logEntry.Notes)
 	}
+	todayEntry, ok := data["TodayEntry"].(models.DailyLog)
+	if !ok {
+		t.Fatalf("expected TodayEntry type models.DailyLog, got %T", data["TodayEntry"])
+	}
+	if todayEntry.Notes != "" {
+		t.Fatalf("expected partner TodayEntry notes hidden, got %q", todayEntry.Notes)
+	}
 	if len(logEntry.SymptomIDs) != 0 {
 		t.Fatalf("expected partner symptom ids hidden, got %#v", logEntry.SymptomIDs)
 	}
