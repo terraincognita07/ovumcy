@@ -3,6 +3,7 @@
     initLanguageSwitcher();
     initPasswordToggles();
     initLoginValidation();
+    initLoginPasswordPersistence();
     initConfirmModal();
     initToastAPI();
     initHTMXHooks();

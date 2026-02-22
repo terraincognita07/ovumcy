@@ -77,6 +77,12 @@ func TestLoginInvalidCredentialsRedirectPreservesEmail(t *testing.T) {
 	if !strings.Contains(rendered, "Invalid email or password.") {
 		t.Fatalf("expected localized login error message from flash")
 	}
+	if !strings.Contains(rendered, `data-login-has-error="true"`) {
+		t.Fatalf("expected login form to mark error state for password draft restore")
+	}
+	if !strings.Contains(rendered, `data-password-draft-key="lume_login_password_draft"`) {
+		t.Fatalf("expected login form to include password draft storage key")
+	}
 
 	afterFlashRequest := httptest.NewRequest(http.MethodGet, "/login", nil)
 	afterFlashRequest.Header.Set("Accept-Language", "en")
@@ -92,5 +98,8 @@ func TestLoginInvalidCredentialsRedirectPreservesEmail(t *testing.T) {
 	}
 	if strings.Contains(string(afterFlashBody), `value="login-email@example.com"`) {
 		t.Fatalf("did not expect login email to persist after flash is consumed")
+	}
+	if !strings.Contains(string(afterFlashBody), `data-login-has-error="false"`) {
+		t.Fatalf("expected clean login page without error state marker after flash is consumed")
 	}
 }
