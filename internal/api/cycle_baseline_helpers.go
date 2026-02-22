@@ -49,9 +49,31 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 
 	if !stats.LastPeriodStart.IsZero() && cycleLength > 0 && (!reliableCycleData || stats.NextPeriodStart.IsZero()) {
 		stats.NextPeriodStart = dateAtLocation(stats.LastPeriodStart.AddDate(0, 0, cycleLength), handler.location)
-		stats.OvulationDate = dateAtLocation(stats.NextPeriodStart.AddDate(0, 0, -handler.lutealPhaseDays), handler.location)
-		stats.FertilityWindowStart = dateAtLocation(stats.OvulationDate.AddDate(0, 0, -5), handler.location)
-		stats.FertilityWindowEnd = dateAtLocation(stats.OvulationDate.AddDate(0, 0, 1), handler.location)
+		predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
+		if predictedPeriodLength <= 0 {
+			predictedPeriodLength = models.DefaultPeriodLength
+		}
+		ovulationDate, fertilityWindowStart, fertilityWindowEnd := services.PredictCycleWindow(
+			stats.LastPeriodStart,
+			cycleLength,
+			predictedPeriodLength,
+			handler.lutealPhaseDays,
+		)
+		if ovulationDate.IsZero() {
+			stats.OvulationDate = time.Time{}
+		} else {
+			stats.OvulationDate = dateAtLocation(ovulationDate, handler.location)
+		}
+		if fertilityWindowStart.IsZero() {
+			stats.FertilityWindowStart = time.Time{}
+		} else {
+			stats.FertilityWindowStart = dateAtLocation(fertilityWindowStart, handler.location)
+		}
+		if fertilityWindowEnd.IsZero() {
+			stats.FertilityWindowEnd = time.Time{}
+		} else {
+			stats.FertilityWindowEnd = dateAtLocation(fertilityWindowEnd, handler.location)
+		}
 	}
 
 	today := dateAtLocation(now.In(handler.location), handler.location)

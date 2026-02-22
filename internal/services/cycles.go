@@ -72,10 +72,18 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 		predictionCycleLength = models.DefaultCycleLength
 	}
 
+	predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
+	if predictedPeriodLength <= 0 {
+		predictedPeriodLength = models.DefaultPeriodLength
+	}
+
 	stats.NextPeriodStart = dateOnly(stats.LastPeriodStart.AddDate(0, 0, predictionCycleLength))
-	stats.OvulationDate = dateOnly(stats.NextPeriodStart.AddDate(0, 0, -lutealPhaseDays))
-	stats.FertilityWindowStart = dateOnly(stats.OvulationDate.AddDate(0, 0, -5))
-	stats.FertilityWindowEnd = dateOnly(stats.OvulationDate.AddDate(0, 0, 1))
+	stats.OvulationDate, stats.FertilityWindowStart, stats.FertilityWindowEnd = PredictCycleWindow(
+		stats.LastPeriodStart,
+		predictionCycleLength,
+		predictedPeriodLength,
+		lutealPhaseDays,
+	)
 
 	today := dateOnly(now)
 	if !today.Before(stats.LastPeriodStart) {
@@ -91,6 +99,8 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 
 	if periodByDate[today.Format("2006-01-02")] {
 		stats.CurrentPhase = "menstrual"
+	} else if stats.OvulationDate.IsZero() {
+		stats.CurrentPhase = "unknown"
 	} else if betweenInclusive(today, stats.FertilityWindowStart, stats.FertilityWindowEnd) {
 		if sameDay(today, stats.OvulationDate) {
 			stats.CurrentPhase = "ovulation"
@@ -104,6 +114,57 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 	}
 
 	return stats
+}
+
+// PredictCycleWindow returns ovulation date and fertility window for the cycle
+// that starts at periodStart.
+// Invariants:
+// - ovulation is strictly after period end and before next period start
+// - fertility window never overlaps period days
+// - if the clamped fertility range becomes empty, it is suppressed
+func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int, lutealPhaseDays int) (time.Time, time.Time, time.Time) {
+	if periodStart.IsZero() || cycleLength <= 0 {
+		return time.Time{}, time.Time{}, time.Time{}
+	}
+	if periodLength <= 0 {
+		periodLength = models.DefaultPeriodLength
+	}
+	if lutealPhaseDays <= 0 {
+		lutealPhaseDays = 14
+	}
+
+	nextPeriodStart := dateOnly(periodStart.AddDate(0, 0, cycleLength))
+	periodEnd := dateOnly(periodStart.AddDate(0, 0, periodLength-1))
+	firstNonPeriodDay := dateOnly(periodEnd.AddDate(0, 0, 1))
+	lastPrePeriodDay := dateOnly(nextPeriodStart.AddDate(0, 0, -1))
+
+	ovulationOffset := cycleLength - lutealPhaseDays
+	minOffset := periodLength + 1
+	if ovulationOffset < minOffset {
+		ovulationOffset = minOffset
+	}
+	maxOffset := cycleLength - 1
+	if maxOffset < minOffset {
+		return time.Time{}, time.Time{}, time.Time{}
+	}
+	if ovulationOffset > maxOffset {
+		ovulationOffset = maxOffset
+	}
+	ovulationDate := dateOnly(periodStart.AddDate(0, 0, ovulationOffset))
+
+	fertilityStart := dateOnly(ovulationDate.AddDate(0, 0, -5))
+	fertilityEnd := dateOnly(ovulationDate.AddDate(0, 0, 1))
+	if !fertilityStart.After(periodEnd) {
+		fertilityStart = firstNonPeriodDay
+	}
+	if !fertilityEnd.Before(nextPeriodStart) {
+		fertilityEnd = lastPrePeriodDay
+	}
+	if fertilityStart.After(fertilityEnd) {
+		return ovulationDate, time.Time{}, time.Time{}
+	}
+
+	return ovulationDate, fertilityStart, fertilityEnd
 }
 
 func DetectCycleStarts(logs []models.DailyLog) []time.Time {

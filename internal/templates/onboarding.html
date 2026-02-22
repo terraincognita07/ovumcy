@@ -245,6 +245,7 @@
             @input="if (typeof onPeriodLengthChanged === 'function') { onPeriodLengthChanged() }"
             class="w-full range-field">
           <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>
+          <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) < 10">{{t .Messages "onboarding.step2.prediction_warning"}}</p>
         </div>
 
         <div class="space-y-2">

@@ -70,6 +70,32 @@ func TestBuildCycleStats(t *testing.T) {
 	}
 }
 
+func TestBuildCycleStats_ShortCycleLongPeriodDoesNotOverlapPredictions(t *testing.T) {
+	logs := []models.DailyLog{}
+	periodDays := []string{
+		"2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30",
+		"2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04",
+		"2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14",
+		"2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19",
+	}
+	for _, day := range periodDays {
+		logs = append(logs, makeLog(t, day, true))
+	}
+
+	now := mustParseDay(t, "2026-02-12")
+	stats := BuildCycleStats(logs, now, 14)
+
+	if got := stats.OvulationDate.Format("2006-01-02"); got != "2026-02-21" {
+		t.Fatalf("expected ovulation date 2026-02-21, got %s", got)
+	}
+	if got := stats.FertilityWindowStart.Format("2006-01-02"); got != "2026-02-20" {
+		t.Fatalf("expected fertile window start 2026-02-20, got %s", got)
+	}
+	if got := stats.FertilityWindowEnd.Format("2006-01-02"); got != "2026-02-22" {
+		t.Fatalf("expected fertile window end 2026-02-22, got %s", got)
+	}
+}
+
 func makeLog(t *testing.T, date string, isPeriod bool) models.DailyLog {
 	day := mustParseDay(t, date)
 	return models.DailyLog{

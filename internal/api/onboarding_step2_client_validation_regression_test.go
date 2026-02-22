@@ -41,5 +41,7 @@ func TestOnboardingStep2IncludesClientSideCrossValidationHooks(t *testing.T) {
 	if !strings.Contains(rendered, `periodExceedsCycleMessage:`) {
 		t.Fatalf("expected onboarding flow config to provide localized period/cycle validation message")
 	}
+	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 10"`) {
+		t.Fatalf("expected onboarding to show non-blocking warning for low cycle/period gap")
+	}
 }
-

@@ -51,6 +51,9 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	if !strings.Contains(rendered, `<span x-text="periodLength">6</span>`) {
 		t.Fatalf("expected period label fallback text to include persisted value")
 	}
+	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 10"`) {
+		t.Fatalf("expected settings cycle form to include non-blocking low-gap prediction warning")
+	}
 
 	cycleInputPattern := regexp.MustCompile(`(?s)name="cycle_length".*?value="29"`)
 	if !cycleInputPattern.MatchString(rendered) {

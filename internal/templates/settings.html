@@ -87,6 +87,7 @@
           x-model.number="periodLength"
           class="w-full range-field">
         <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "settings.cycle.period_warning"}}</p>
+        <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) < 10">{{t .Messages "settings.cycle.prediction_warning"}}</p>
       </div>
 
       <div class="space-y-2">
