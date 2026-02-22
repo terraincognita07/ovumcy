@@ -36,6 +36,12 @@ func TestOnboardingPageUsesFailOpenFlowFallback(t *testing.T) {
 	if !strings.Contains(rendered, `x-data='typeof onboardingFlow === "function" ? onboardingFlow(`) {
 		t.Fatalf("expected fail-open onboarding flow fallback in x-data")
 	}
+	if !strings.Contains(rendered, `clearStepStatuses: function ()`) {
+		t.Fatalf("expected onboarding flow to include status cleanup helper")
+	}
+	if !strings.Contains(rendered, `this.clearStepStatuses()`) {
+		t.Fatalf("expected onboarding step navigation to clear stale status messages")
+	}
 
 	rootSectionPattern := regexp.MustCompile(`(?s)<section\s+class="mx-auto max-w-4xl"[^>]*>`)
 	rootSection := rootSectionPattern.FindString(rendered)

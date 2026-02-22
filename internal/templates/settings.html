@@ -9,8 +9,11 @@
   <div class="status-ok flex items-center gap-2"><span aria-hidden="true">✅</span><span>{{t .Messages .SuccessKey}}</span></div>
   {{end}}
 
-  {{if .ErrorKey}}
-  <div class="status-error flex items-center gap-2"><span aria-hidden="true">⚠️</span><span>{{t .Messages .ErrorKey}}</span></div>
+  {{if or .ErrorKey .ChangePasswordErrorKey}}
+  <div class="status-error flex items-center gap-2">
+    <span aria-hidden="true">⚠️</span>
+    <span>{{if .ErrorKey}}{{t .Messages .ErrorKey}}{{else}}{{t .Messages .ChangePasswordErrorKey}}{{end}}</span>
+  </div>
   {{end}}
 
   <section class="journal-card p-5 sm:p-6">
@@ -115,9 +118,6 @@
       class="mt-5 space-y-4"
       data-save-feedback>
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-      {{if .ChangePasswordErrorKey}}
-      <div class="status-error flex items-center gap-2" aria-live="polite"><span aria-hidden="true">⚠️</span><span>{{t .Messages .ChangePasswordErrorKey}}</span></div>
-      {{end}}
 
       {{template "password_toggle_field" (dict
         "Messages" .Messages
@@ -310,6 +310,6 @@
   </section>
 </section>
 {{if eq .CurrentUser.Role "owner"}}
-<script src="/static/js/settings-export.js?v=20260221-2"></script>
+<script src="/static/js/settings-export.js?v=20260222-1"></script>
 {{end}}
 {{end}}

@@ -47,7 +47,7 @@ func TestLanguageSwitchSetsEnglishCookieAndRendersEnglishLogin(t *testing.T) {
 	if !strings.Contains(renderedEnglish, `<html lang="en"`) {
 		t.Fatalf("expected login page html lang to be en")
 	}
-	if !strings.Contains(renderedEnglish, `<script defer src="/static/js/app.js?v=20260221-2"></script>`) {
+	if !strings.Contains(renderedEnglish, `<script defer src="/static/js/app.js?v=`) {
 		t.Fatalf("expected shared app script in base template")
 	}
 	if !strings.Contains(renderedEnglish, `data-required-message="Please fill out this field."`) {

@@ -41,7 +41,7 @@ func TestCalendarPageKeepsSelectedDayFromQueryAndBootstrapsEditor(t *testing.T) 
 	if !strings.Contains(rendered, `next=%2Fcalendar%3Fmonth%3D2026-02%26day%3D2026-02-17`) {
 		t.Fatalf("expected language switch links to preserve selected day in next param")
 	}
-	if !strings.Contains(rendered, `<script defer src="/static/js/app.js?v=20260221-2"></script>`) {
+	if !strings.Contains(rendered, `<script defer src="/static/js/app.js?v=`) {
 		t.Fatalf("expected shared app script to keep language links in sync")
 	}
 }

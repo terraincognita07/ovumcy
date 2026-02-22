@@ -23,11 +23,21 @@
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     dayOptions: [],
     endDayOptions: [],
+    clearStepStatuses: function () {
+      var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"]
+      for (var index = 0; index < statusIDs.length; index++) {
+        var node = document.getElementById(statusIDs[index])
+        if (node) {
+          node.textContent = ""
+        }
+      }
+    },
     begin: function () {
       this.step = 1
     },
     goToStep: function (value) {
       var nextStep = Number(value)
+      this.clearStepStatuses()
       this.step = Number.isFinite(nextStep) ? nextStep : 0
     },
     onStepOneSaved: function (event) {

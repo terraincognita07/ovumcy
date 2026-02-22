@@ -31,7 +31,7 @@ func TestAuthPagesIncludeSwitchTransitionHooks(t *testing.T) {
 	if !strings.Contains(loginRendered, `data-auth-switch`) {
 		t.Fatalf("expected auth switch transition hook on login page")
 	}
-	if !strings.Contains(loginRendered, `<script defer src="/static/js/app.js?v=20260221-2"></script>`) {
+	if !strings.Contains(loginRendered, `<script defer src="/static/js/app.js?v=`) {
 		t.Fatalf("expected shared app script for auth panel transitions")
 	}
 

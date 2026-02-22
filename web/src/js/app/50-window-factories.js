@@ -95,6 +95,15 @@
       autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],
       endDayOptions: [],
+      clearStepStatuses: function () {
+        var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"];
+        for (var index = 0; index < statusIDs.length; index++) {
+          var node = document.getElementById(statusIDs[index]);
+          if (node) {
+            node.textContent = "";
+          }
+        }
+      },
       init: function () {
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
         this.onStartDateChanged();
@@ -104,6 +113,7 @@
         if (!Number.isFinite(nextStep)) {
           return;
         }
+        this.clearStepStatuses();
         this.step = nextStep;
       },
       begin: function () {

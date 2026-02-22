@@ -443,11 +443,18 @@
     var lastSummaryEndpoint = "";
     var summaryAbortController = null;
 
-    function updateSummaryText(totalEntries, hasData, dateFrom, dateTo) {
+    function updateSummaryText(totalEntries, hasData, dateFrom, dateTo, selectedFrom, selectedTo) {
       if (context.summaryTotalNode) {
         context.summaryTotalNode.textContent = formatTemplate(context.summaryTotalTemplate, [Number(totalEntries) || 0]);
       }
       if (!context.summaryRangeNode) {
+        return;
+      }
+
+      var selectedRangeFrom = String(selectedFrom || "").trim();
+      var selectedRangeTo = String(selectedTo || "").trim();
+      if (selectedRangeFrom && selectedRangeTo) {
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [selectedRangeFrom, selectedRangeTo]);
         return;
       }
 
@@ -497,7 +504,14 @@
         if (requestID !== summaryRequestID) {
           return;
         }
-        updateSummaryText(payload.total_entries, payload.has_data, payload.date_from, payload.date_to);
+        updateSummaryText(
+          payload.total_entries,
+          payload.has_data,
+          payload.date_from,
+          payload.date_to,
+          context.fromInput ? context.fromInput.value : "",
+          context.toInput ? context.toInput.value : ""
+        );
       } catch (error) {
         if (error && error.name === "AbortError") {
           return;
