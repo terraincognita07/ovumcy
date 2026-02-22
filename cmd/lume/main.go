@@ -286,10 +286,6 @@ func csrfMiddlewareConfig(cookieSecure bool) csrf.Config {
 		CookieHTTPOnly: true,
 		CookieSecure:   cookieSecure,
 		ContextKey:     "csrf",
-		Next: func(c *fiber.Ctx) bool {
-			// Allow logout from stale pages that still POST without a valid CSRF pair.
-			return c.Path() == "/api/auth/logout"
-		},
 	}
 }
 

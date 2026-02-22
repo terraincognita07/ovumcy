@@ -40,7 +40,6 @@ func registerAPIRoutes(app *fiber.App, handler *Handler) {
 	auth.Post("/login", handler.Login)
 	auth.Post("/forgot-password", handler.ForgotPassword)
 	auth.Post("/reset-password", handler.ResetPassword)
-	auth.Post("/logout", handler.AuthRequired, handler.Logout)
 
 	days := api.Group("/days", handler.AuthRequired)
 	days.Get("", handler.GetDays)
