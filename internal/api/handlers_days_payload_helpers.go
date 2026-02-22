@@ -9,16 +9,12 @@ import (
 const maxDayNotesLength = 2000
 
 var (
-	errInvalidFlowValue   = errors.New("invalid flow value")
-	errPeriodFlowRequired = errors.New("period flow is required")
+	errInvalidFlowValue = errors.New("invalid flow value")
 )
 
 func normalizeDayPayload(payload dayPayload) (dayPayload, error) {
 	if !isValidFlow(payload.Flow) {
 		return payload, errInvalidFlowValue
-	}
-	if payload.IsPeriod && payload.Flow == models.FlowNone {
-		return payload, errPeriodFlowRequired
 	}
 	if !payload.IsPeriod {
 		payload.Flow = models.FlowNone

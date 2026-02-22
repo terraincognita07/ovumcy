@@ -26,9 +26,6 @@ func (handler *Handler) UpsertDay(c *fiber.Ctx) error {
 		if errors.Is(err, errInvalidFlowValue) {
 			return apiError(c, fiber.StatusBadRequest, "invalid flow value")
 		}
-		if errors.Is(err, errPeriodFlowRequired) {
-			return apiError(c, fiber.StatusBadRequest, "period flow is required")
-		}
 		return apiError(c, fiber.StatusBadRequest, "invalid payload")
 	}
 

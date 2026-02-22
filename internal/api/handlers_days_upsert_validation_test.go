@@ -57,7 +57,7 @@ func TestUpsertDayNormalizesFlowWhenNotPeriod(t *testing.T) {
 	}
 }
 
-func TestUpsertDayRejectsPeriodWithoutFlow(t *testing.T) {
+func TestUpsertDayAllowsPeriodWithoutExplicitFlow(t *testing.T) {
 	t.Parallel()
 
 	app, database := newOnboardingTestApp(t)
@@ -77,7 +77,6 @@ func TestUpsertDayRejectsPeriodWithoutFlow(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodPost, "/api/days/2026-02-19", bytes.NewReader(body))
 	request.Header.Set("Content-Type", fiber.MIMEApplicationJSON)
-	request.Header.Set("Accept", fiber.MIMEApplicationJSON)
 	request.Header.Set("Cookie", authCookie)
 
 	response, err := app.Test(request, -1)
@@ -86,12 +85,22 @@ func TestUpsertDayRejectsPeriodWithoutFlow(t *testing.T) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected status 400, got %d", response.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.StatusCode)
 	}
 
-	errorValue := readAPIError(t, response.Body)
-	if errorValue != "period flow is required" {
-		t.Fatalf("expected period flow validation error, got %q", errorValue)
+	day, err := parseDayParam("2026-02-19", time.UTC)
+	if err != nil {
+		t.Fatalf("parse day for assertion: %v", err)
+	}
+	entry, err := (&Handler{db: database, location: time.UTC}).fetchLogByDate(user.ID, day)
+	if err != nil {
+		t.Fatalf("load stored log: %v", err)
+	}
+	if !entry.IsPeriod {
+		t.Fatal("expected period day to persist when flow is none")
+	}
+	if entry.Flow != models.FlowNone {
+		t.Fatalf("expected stored flow %q, got %q", models.FlowNone, entry.Flow)
 	}
 }

@@ -20,15 +20,18 @@ func TestNormalizeDayPayloadRejectsInvalidFlow(t *testing.T) {
 	}
 }
 
-func TestNormalizeDayPayloadRequiresFlowForPeriodDay(t *testing.T) {
+func TestNormalizeDayPayloadAllowsNoneFlowForPeriodDay(t *testing.T) {
 	t.Parallel()
 
-	_, err := normalizeDayPayload(dayPayload{
+	normalized, err := normalizeDayPayload(dayPayload{
 		IsPeriod: true,
 		Flow:     models.FlowNone,
 	})
-	if !errors.Is(err, errPeriodFlowRequired) {
-		t.Fatalf("expected errPeriodFlowRequired, got %v", err)
+	if err != nil {
+		t.Fatalf("expected no validation error for period day with none flow, got %v", err)
+	}
+	if normalized.Flow != models.FlowNone {
+		t.Fatalf("expected flow to stay %q, got %q", models.FlowNone, normalized.Flow)
 	}
 }
 

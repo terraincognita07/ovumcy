@@ -16,6 +16,7 @@
     hx-swap="innerHTML"
     class="space-y-4"
     data-save-feedback
+    data-day-editor-autosave="true"
     x-data='dayEditorForm({ isPeriod: {{if .Log.IsPeriod}}true{{else}}false{{end}} })'>
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
@@ -40,6 +41,7 @@
     <div class="space-y-2">
       <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "dashboard.save_day"}}</button>
       <div id="calendar-save-status" class="save-status text-sm"></div>
+      <p class="journal-muted text-xs">{{t .Messages "calendar.autosave_hint"}}</p>
     </div>
   </form>
 

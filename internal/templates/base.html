@@ -11,7 +11,7 @@
   <script defer src="/static/js/alpine.min.js?v=20260221-2"></script>
   <script defer src="/static/js/htmx.min.js?v=20260221-2"></script>
   <script defer src="/static/js/chart-lite.js?v=20260221-2"></script>
-  <script defer src="/static/js/app.js?v=20260222-1"></script>
+  <script defer src="/static/js/app.js?v=20260222-2"></script>
 </head>
 <body
   data-confirm-cancel="{{t .Messages "confirm.no"}}"
@@ -46,24 +46,22 @@
             class="role-chip role-chip-identity"
             aria-label="{{t .Messages "nav.current_user"}}"
             title="{{userIdentity .CurrentUser}}">{{userIdentity .CurrentUser}}</span>
-          <span class="role-chip" aria-label="{{t .Messages "nav.current_role"}}">⚙ {{roleLabel .Messages .CurrentUser.Role}}</span>
 
           <form action="/api/auth/logout" method="post" class="ml-1" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <button type="submit" class="btn-soft">{{t .Messages "nav.logout"}}</button>
+            <button type="submit" class="nav-link">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
 
         <nav x-show="mobileMenu" x-transition class="mt-2 space-y-2 sm:hidden">
           <p class="journal-muted px-3 pt-1 text-xs">{{t .Messages "nav.current_user"}}: {{userIdentity .CurrentUser}}</p>
-          <p class="journal-muted px-3 text-xs">{{t .Messages "nav.current_role"}}: {{roleLabel .Messages .CurrentUser.Role}}</p>
           <a href="/dashboard" class="nav-link block {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link block {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
           <form action="/api/auth/logout" method="post" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <button type="submit" class="btn-soft w-full">{{t .Messages "nav.logout"}}</button>
+            <button type="submit" class="nav-link w-full text-left">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
       </div>

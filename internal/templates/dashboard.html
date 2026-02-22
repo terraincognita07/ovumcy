@@ -9,21 +9,30 @@
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.cycle_day"}}</p>
       <p class="stat-value mt-3">{{if gt .Stats.CurrentCycleDay 0}}{{.Stats.CurrentCycleDay}}{{else}}{{.NoDataLabel}}{{end}}</p>
+      {{if .CycleDayWarning}}
+      <p class="warning-amber mt-2 text-xs">{{printf (t .Messages "dashboard.cycle_day_long_hint") .CycleDayReference}}</p>
+      {{end}}
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.next_period"}}</p>
       <p class="stat-value mt-3">{{if .Stats.NextPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.NextPeriodStart "02.01.2006"}}{{end}}</p>
+      {{if .NextPeriodInPast}}
+      <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.prediction_in_past"}}</p>
+      {{end}}
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.ovulation"}}</p>
       <p class="stat-value mt-3">{{if .Stats.OvulationDate.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.OvulationDate "02.01.2006"}}{{end}}</p>
+      {{if .OvulationInPast}}
+      <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.prediction_in_past"}}</p>
+      {{end}}
     </article>
   </div>
 
   <div
-    class="grid gap-6 lg:grid-cols-[1.55fr_1fr]"
+    class="grid gap-6"
     x-data='dashboardTodayEditor({
       isPeriod: {{if .TodayLog.IsPeriod}}true{{else}}false{{end}}
     })'>
@@ -80,10 +89,10 @@
     </section>
 
     <section class="journal-card p-5 sm:p-6">
-      <h2 class="journal-subtitle" x-cloak x-show="isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.cycle_snapshot"}}</h2>
-      <h2 class="journal-subtitle" x-cloak x-show="!isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.symptoms_notes"}}</h2>
+      <h2 class="journal-subtitle" x-show="isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.cycle_snapshot"}}</h2>
+      <h2 class="journal-subtitle" x-show="!isPeriod" x-transition.opacity.duration.220ms>{{t .Messages "dashboard.symptoms_notes"}}</h2>
 
-      <dl class="mt-4 space-y-3 text-sm" x-cloak x-show="isPeriod" x-transition.opacity.duration.220ms>
+      <dl class="mt-4 space-y-3 text-sm" x-show="isPeriod" x-transition.opacity.duration.220ms>
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_cycle"}}</dt><dd>{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.median_cycle"}}</dt><dd>{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_period"}}</dt><dd>{{if gt .Stats.AveragePeriodLength 0.0}}{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
@@ -91,7 +100,7 @@
         <div class="stat-row"><dt>{{t .Messages "dashboard.fertile_window"}}</dt><dd>{{if .Stats.FertilityWindowStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.FertilityWindowStart "02.01"}} - {{formatDate .Stats.FertilityWindowEnd "02.01"}}{{end}}</dd></div>
       </dl>
 
-      <div class="mt-4 space-y-4 text-sm" x-cloak x-show="!isPeriod" x-transition.opacity.duration.220ms>
+      <div class="mt-4 space-y-4 text-sm" x-show="!isPeriod" x-transition.opacity.duration.220ms>
         <div>
           <p class="journal-muted">{{t .Messages "dashboard.symptoms"}}</p>
           <ul class="mt-2 space-y-1" x-show="hasActiveSymptoms()">

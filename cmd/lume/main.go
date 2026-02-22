@@ -414,6 +414,10 @@ func redirectWithErrorCode(c *fiber.Ctx, path string, errorCode string, cookieSe
 	if strings.TrimSpace(path) == "" {
 		path = "/login"
 	}
-	api.SetFlashCookieWithSecure(c, api.FlashPayload{AuthError: errorCode}, cookieSecure)
+	flash := api.FlashPayload{AuthError: errorCode}
+	if path == "/login" {
+		flash.LoginEmail = strings.TrimSpace(c.FormValue("email"))
+	}
+	api.SetFlashCookieWithSecure(c, flash, cookieSecure)
 	return c.Redirect(path, fiber.StatusSeeOther)
 }

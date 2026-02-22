@@ -32,6 +32,12 @@
         }
       }
     },
+    clearStepStatus: function (statusID) {
+      var node = document.getElementById(statusID)
+      if (node) {
+        node.textContent = ""
+      }
+    },
     begin: function () {
       this.step = 1
     },
@@ -52,17 +58,21 @@
     },
     setStartDate: function (value) {
       this.selectedDate = value || ""
+      this.clearStepStatus("onboarding-step1-status")
     },
     setPeriodEndDate: function (value) {
       this.periodEndDate = value || ""
+      this.clearStepStatus("onboarding-step1-status")
     },
     setPeriodStatus: function (value) {
       this.periodStatus = value || ""
       if (this.periodStatus !== "finished") {
         this.periodEndDate = ""
       }
+      this.clearStepStatus("onboarding-step1-status")
     },
     onStartDateChanged: function () {
+      this.clearStepStatus("onboarding-step1-status")
       if (!this.selectedDate) {
         this.periodStatus = ""
         this.periodEndDate = ""

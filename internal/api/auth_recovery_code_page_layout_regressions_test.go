@@ -42,4 +42,10 @@ func TestRecoveryCodePageUsesStandardCheckboxLayout(t *testing.T) {
 	if strings.Contains(rendered, `class="choice-input"`) {
 		t.Fatalf("did not expect recovery page checkbox to use chip toggle markup")
 	}
+	if !strings.Contains(rendered, `data-copy-success-message="Recovery code copied."`) {
+		t.Fatalf("expected recovery page copy success feedback message attribute")
+	}
+	if !strings.Contains(rendered, `x-show="copyFailed"`) {
+		t.Fatalf("expected recovery page to render explicit copy failure feedback state")
+	}
 }

@@ -462,6 +462,8 @@
     return stack;
   }
 
+  var dayEditorAutoSaveTimers = new WeakMap();
+
   function initToastAPI() {
     var stack = null;
 
@@ -546,6 +548,58 @@
     }
   }
 
+  function dayEditorAutosaveFieldName(target) {
+    if (!target || typeof target.getAttribute !== "function") {
+      return "";
+    }
+    var name = String(target.getAttribute("name") || "").trim();
+    if (name === "is_period" || name === "flow" || name === "symptom_ids") {
+      return name;
+    }
+    return "";
+  }
+
+  function submitDayEditorForm(form) {
+    if (!form || !document.body.contains(form)) {
+      return;
+    }
+    if (window.htmx && typeof window.htmx.trigger === "function") {
+      window.htmx.trigger(form, "submit");
+      return;
+    }
+    if (typeof form.requestSubmit === "function") {
+      form.requestSubmit();
+      return;
+    }
+    form.submit();
+  }
+
+  function queueDayEditorAutosave(form, delayMs) {
+    if (!form) {
+      return;
+    }
+
+    var wait = Number(delayMs);
+    if (!Number.isFinite(wait) || wait < 0) {
+      wait = 0;
+    }
+
+    var existingTimer = dayEditorAutoSaveTimers.get(form);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
+    var timer = window.setTimeout(function () {
+      dayEditorAutoSaveTimers.delete(form);
+      if (form.classList.contains("htmx-request")) {
+        queueDayEditorAutosave(form, 120);
+        return;
+      }
+      submitDayEditorForm(form);
+    }, wait);
+    dayEditorAutoSaveTimers.set(form, timer);
+  }
+
   function initHTMXHooks() {
     document.body.addEventListener("htmx:configRequest", function (event) {
       var tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -585,6 +639,22 @@
 
       maybeRefreshDayEditor(target);
       scheduleClearSuccessStatus(target);
+    });
+
+    document.body.addEventListener("change", function (event) {
+      var target = getEventTarget(event);
+      if (!target || !target.closest) {
+        return;
+      }
+      var fieldName = dayEditorAutosaveFieldName(target);
+      if (!fieldName) {
+        return;
+      }
+      var form = target.closest("form[data-day-editor-autosave]");
+      if (!form) {
+        return;
+      }
+      queueDayEditorAutosave(form, fieldName === "symptom_ids" ? 120 : 0);
     });
 
     document.body.addEventListener("htmx:responseError", function (event) {
@@ -822,6 +892,13 @@
           }
         }
       },
+      clearStepStatus: function (statusID) {
+        var node = document.getElementById(statusID);
+        if (!node) {
+          return;
+        }
+        node.textContent = "";
+      },
       init: function () {
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
         this.onStartDateChanged();
@@ -852,9 +929,11 @@
       setStartDate: function (value) {
         this.selectedDate = value || "";
         this.onStartDateChanged();
+        this.clearStepStatus("onboarding-step1-status");
       },
       setPeriodEndDate: function (value) {
         this.periodEndDate = value || "";
+        this.clearStepStatus("onboarding-step1-status");
       },
       setPeriodStatus: function (value) {
         this.periodStatus = value || "";
@@ -862,8 +941,10 @@
           this.periodEndDate = "";
         }
         this.refreshEndDayOptions();
+        this.clearStepStatus("onboarding-step1-status");
       },
       onStartDateChanged: function () {
+        this.clearStepStatus("onboarding-step1-status");
         if (!this.selectedDate) {
           this.periodStatus = "";
           this.periodEndDate = "";
@@ -889,8 +970,23 @@
   window.recoveryCodeTools = function () {
     return {
       copied: false,
+      copyFailed: false,
       downloaded: false,
       downloadFailed: false,
+      recoveryMessage: function (key, fallback) {
+        var root = this.$root;
+        if (root && root.dataset && root.dataset[key]) {
+          return String(root.dataset[key] || "");
+        }
+        return String(fallback || "");
+      },
+      notify: function (key, fallback, kind) {
+        var message = this.recoveryMessage(key, fallback);
+        if (!message || typeof window.showToast !== "function") {
+          return;
+        }
+        window.showToast(message, kind);
+      },
       copyCode: function () {
         var code = getRecoveryCodeText(this.$refs);
         if (!code) {
@@ -900,11 +996,18 @@
         var self = this;
         writeTextToClipboard(code).then(function () {
           self.copied = true;
+          self.copyFailed = false;
           self.downloaded = false;
           self.downloadFailed = false;
+          self.notify("copySuccessMessage", "Recovery code copied.", "ok");
           setTimedFlag(self, "copied", STATUS_CLEAR_MS);
         }).catch(function () {
-          setTimedFlag(self, "downloadFailed", STATUS_CLEAR_MS);
+          self.copied = false;
+          self.copyFailed = true;
+          self.downloaded = false;
+          self.downloadFailed = false;
+          self.notify("copyFailedMessage", "Failed to copy recovery code.", "error");
+          setTimedFlag(self, "copyFailed", STATUS_CLEAR_MS);
         });
       },
       downloadCode: function () {
@@ -915,6 +1018,7 @@
 
         var self = this;
         this.copied = false;
+        this.copyFailed = false;
         this.downloaded = false;
         this.downloadFailed = false;
 
@@ -933,8 +1037,10 @@
             URL.revokeObjectURL(objectURL);
           }, DOWNLOAD_REVOKE_MS);
 
+          self.notify("downloadSuccessMessage", "Recovery code downloaded.", "ok");
           setTimedFlag(self, "downloaded", STATUS_CLEAR_MS);
         } catch {
+          self.notify("downloadFailedMessage", "Failed to download recovery code.", "error");
           setTimedFlag(self, "downloadFailed", STATUS_CLEAR_MS);
         }
       }
