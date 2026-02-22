@@ -17,12 +17,12 @@ var (
 )
 
 func (handler *Handler) upsertDayEntry(userID uint, dayStart time.Time, payload dayPayload, cleanIDs []uint) (models.DailyLog, bool, error) {
-	dayRangeStart, dayRangeEnd := dayRange(dayStart, handler.location)
+	dayKey := dayStorageKey(dayStart, handler.location)
 
 	wasPeriod := false
 	var entry models.DailyLog
 	result := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, dayRangeStart, dayRangeEnd).
+		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
 		Order("date DESC, id DESC").
 		First(&entry)
 	if result.Error == nil {

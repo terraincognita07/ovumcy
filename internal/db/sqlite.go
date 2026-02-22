@@ -41,6 +41,9 @@ func OpenSQLite(dbPath string) (*gorm.DB, error) {
 	); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
+	if err := database.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_normalized ON users(lower(trim(email)))`).Error; err != nil {
+		return nil, fmt.Errorf("create normalized email index: %w", err)
+	}
 
 	return database, nil
 }

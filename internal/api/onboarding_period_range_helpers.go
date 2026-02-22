@@ -24,11 +24,11 @@ func (handler *Handler) upsertOnboardingPeriodRange(tx *gorm.DB, userID uint, st
 }
 
 func (handler *Handler) upsertOnboardingPeriodDay(tx *gorm.DB, userID uint, day time.Time) error {
-	dayStart, dayEnd := dayRange(day, handler.location)
+	dayKey := dayStorageKey(day, handler.location)
 
 	var entry models.DailyLog
 	result := tx.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
+		Where("user_id = ? AND substr(date, 1, 10) = ?", userID, dayKey).
 		Order("date DESC, id DESC").
 		First(&entry)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {

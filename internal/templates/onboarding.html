@@ -10,6 +10,7 @@
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
+    periodExceedsCycleMessage: "{{t .Messages "onboarding.error.period_length_exceeds_cycle"}}",
     lang: "{{.Lang}}"
   }) : {
     step: 0,
@@ -204,6 +205,7 @@
         hx-post="/onboarding/step2"
         hx-target="#onboarding-step2-status"
         hx-swap="innerHTML"
+        x-on:submit="if (typeof validateStepTwoBeforeSubmit === 'function' && !validateStepTwoBeforeSubmit($event)) { $event.preventDefault() }"
         x-on:htmx:after-request="onStepTwoSaved($event)"
         class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -221,6 +223,7 @@
             name="cycle_length"
             value="{{.CycleLength}}"
             x-model.number="cycleLength"
+            @input="if (typeof onCycleLengthChanged === 'function') { onCycleLengthChanged() }"
             class="w-full range-field">
           <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
           <p class="journal-muted text-sm" x-cloak x-show="cycleLength === 28">{{t .Messages "onboarding.step2.hint"}}</p>
@@ -235,10 +238,11 @@
             id="period-length"
             type="range"
             min="1"
-            max="10"
+            :max="Math.min(10, Math.max(1, cycleLength))"
             name="period_length"
             value="{{.PeriodLength}}"
             x-model.number="periodLength"
+            @input="if (typeof onPeriodLengthChanged === 'function') { onPeriodLengthChanged() }"
             class="w-full range-field">
           <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>
         </div>

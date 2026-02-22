@@ -82,6 +82,9 @@
   window.onboardingFlow = function (config) {
     var safeConfig = config || {};
     var lang = safeConfig.lang || "en";
+    var periodExceedsCycleMessage = String(
+      safeConfig.periodExceedsCycleMessage || "Period length must not exceed cycle length."
+    );
 
     return {
       step: 0,
@@ -95,6 +98,7 @@
       autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],
       endDayOptions: [],
+      periodExceedsCycleMessage: periodExceedsCycleMessage,
       clearStepStatuses: function () {
         var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"];
         for (var index = 0; index < statusIDs.length; index++) {
@@ -110,6 +114,56 @@
           return;
         }
         node.textContent = "";
+      },
+      renderStepStatus: function (statusID, kind, message) {
+        var node = document.getElementById(statusID);
+        if (!node) {
+          return;
+        }
+        node.textContent = "";
+        if (!message) {
+          return;
+        }
+
+        var status = document.createElement("div");
+        status.className = kind;
+        status.textContent = String(message);
+        node.appendChild(status);
+      },
+      normalizeStepTwoValues: function () {
+        var cycle = Number(this.cycleLength);
+        if (!Number.isFinite(cycle)) {
+          cycle = 28;
+        }
+        cycle = Math.max(15, Math.min(90, Math.round(cycle)));
+        this.cycleLength = cycle;
+
+        var period = Number(this.periodLength);
+        if (!Number.isFinite(period)) {
+          period = 5;
+        }
+        period = Math.max(1, Math.min(10, Math.round(period)));
+        this.periodLength = period;
+      },
+      onCycleLengthChanged: function () {
+        this.normalizeStepTwoValues();
+        this.clearStepStatus("onboarding-step2-status");
+      },
+      onPeriodLengthChanged: function () {
+        this.normalizeStepTwoValues();
+        this.clearStepStatus("onboarding-step2-status");
+      },
+      validateStepTwoBeforeSubmit: function (event) {
+        this.normalizeStepTwoValues();
+        if (this.periodLength > this.cycleLength) {
+          if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+          }
+          this.renderStepStatus("onboarding-step2-status", "status-error", this.periodExceedsCycleMessage);
+          return false;
+        }
+        this.clearStepStatus("onboarding-step2-status");
+        return true;
       },
       init: function () {
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
