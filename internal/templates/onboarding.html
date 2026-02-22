@@ -10,7 +10,7 @@
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
-    periodExceedsCycleMessage: "{{t .Messages "onboarding.error.period_length_exceeds_cycle"}}",
+    periodExceedsCycleMessage: "{{t .Messages "onboarding.step2.error_incompatible"}}",
     lang: "{{.Lang}}"
   }) : {
     step: 0,
@@ -225,8 +225,6 @@
             x-model.number="cycleLength"
             @input="if (typeof onCycleLengthChanged === 'function') { onCycleLengthChanged() }"
             class="w-full range-field">
-          <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "onboarding.step2.cycle_warning"}}</p>
-          <p class="journal-muted text-sm" x-cloak x-show="cycleLength === 28">{{t .Messages "onboarding.step2.hint"}}</p>
         </div>
 
         <div class="space-y-2">
@@ -238,14 +236,19 @@
             id="period-length"
             type="range"
             min="1"
-            :max="Math.min(10, Math.max(1, cycleLength))"
+            max="14"
             name="period_length"
             value="{{.PeriodLength}}"
             x-model.number="periodLength"
             @input="if (typeof onPeriodLengthChanged === 'function') { onPeriodLengthChanged() }"
             class="w-full range-field">
-          <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "onboarding.step2.period_warning"}}</p>
-          <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) < 10">{{t .Messages "onboarding.step2.prediction_warning"}}</p>
+        </div>
+
+        <div class="space-y-1">
+          <p class="status-error text-sm" x-cloak x-show="(cycleLength - periodLength) < 8">{{t .Messages "onboarding.step2.error_incompatible"}}</p>
+          <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) >= 8 && (cycleLength - periodLength) < 15">{{t .Messages "onboarding.step2.warning_approximate"}}</p>
+          <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength > 8">{{t .Messages "onboarding.step2.info_period_long"}}</p>
+          <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength <= 8 && cycleLength < 24">{{t .Messages "onboarding.step2.info_cycle_short"}}</p>
         </div>
 
         <div class="space-y-2">
@@ -258,7 +261,11 @@
 
         <div class="flex flex-wrap items-center gap-3">
           <button type="button" class="btn-secondary" @click="goToStep(1)">{{t .Messages "onboarding.button.back"}}</button>
-          <button type="submit" class="btn-primary">{{t .Messages "onboarding.button.next"}}</button>
+          <button
+            type="submit"
+            class="btn-primary"
+            :class="{ 'btn--disabled': (cycleLength - periodLength) < 8 }"
+            :disabled="(cycleLength - periodLength) < 8">{{t .Messages "onboarding.button.next"}}</button>
         </div>
         <div id="onboarding-step2-status" class="save-status text-sm"></div>
       </form>

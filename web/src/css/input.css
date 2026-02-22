@@ -462,6 +462,19 @@
     box-shadow: 0 12px 20px rgba(212, 165, 116, 0.35);
   }
 
+  .btn--disabled,
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-soft:disabled,
+  .btn-warning:disabled,
+  .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
   .btn-loading {
     opacity: 0.75;
     pointer-events: none;

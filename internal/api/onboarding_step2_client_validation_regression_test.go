@@ -35,13 +35,16 @@ func TestOnboardingStep2IncludesClientSideCrossValidationHooks(t *testing.T) {
 	if !strings.Contains(rendered, `validateStepTwoBeforeSubmit($event)`) {
 		t.Fatalf("expected onboarding step2 form to call client cross-validation before submit")
 	}
-	if !strings.Contains(rendered, `:max="Math.min(10, Math.max(1, cycleLength))"`) {
-		t.Fatalf("expected onboarding period slider max to depend on cycle length")
+	if !strings.Contains(rendered, `max="14"`) {
+		t.Fatalf("expected onboarding period slider max=14")
 	}
 	if !strings.Contains(rendered, `periodExceedsCycleMessage:`) {
 		t.Fatalf("expected onboarding flow config to provide localized period/cycle validation message")
 	}
-	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 10"`) {
-		t.Fatalf("expected onboarding to show non-blocking warning for low cycle/period gap")
+	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 8"`) {
+		t.Fatalf("expected onboarding to include hard-validation state for incompatible cycle values")
+	}
+	if !strings.Contains(rendered, `'btn--disabled': (cycleLength - periodLength) < 8`) {
+		t.Fatalf("expected onboarding next button to include disabled visual state class binding")
 	}
 }

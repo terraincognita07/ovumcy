@@ -33,7 +33,7 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 
 	invalidPeriodForm := url.Values{
 		"cycle_length":  {"29"},
-		"period_length": {"11"},
+		"period_length": {"15"},
 	}
 	invalidPeriodRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(invalidPeriodForm.Encode()))
 	invalidPeriodRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -47,5 +47,23 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 	defer invalidPeriodResponse.Body.Close()
 	if invalidPeriodResponse.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected invalid period status 400, got %d", invalidPeriodResponse.StatusCode)
+	}
+
+	incompatibleForm := url.Values{
+		"cycle_length":  {"21"},
+		"period_length": {"14"},
+	}
+	incompatibleRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(incompatibleForm.Encode()))
+	incompatibleRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	incompatibleRequest.Header.Set("HX-Request", "true")
+	incompatibleRequest.Header.Set("Cookie", authCookie)
+
+	incompatibleResponse, err := app.Test(incompatibleRequest, -1)
+	if err != nil {
+		t.Fatalf("incompatible request failed: %v", err)
+	}
+	defer incompatibleResponse.Body.Close()
+	if incompatibleResponse.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected incompatible values status 400, got %d", incompatibleResponse.StatusCode)
 	}
 }

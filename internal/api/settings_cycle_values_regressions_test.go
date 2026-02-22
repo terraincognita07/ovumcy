@@ -51,8 +51,11 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	if !strings.Contains(rendered, `<span x-text="periodLength">6</span>`) {
 		t.Fatalf("expected period label fallback text to include persisted value")
 	}
-	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 10"`) {
-		t.Fatalf("expected settings cycle form to include non-blocking low-gap prediction warning")
+	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 8"`) {
+		t.Fatalf("expected settings cycle form to include hard-validation state for incompatible cycle values")
+	}
+	if !strings.Contains(rendered, `'btn--disabled': (cycleLength - periodLength) < 8`) {
+		t.Fatalf("expected settings save button to include disabled visual state class binding")
 	}
 
 	cycleInputPattern := regexp.MustCompile(`(?s)name="cycle_length".*?value="29"`)
@@ -62,5 +65,8 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	periodInputPattern := regexp.MustCompile(`(?s)name="period_length".*?value="6"`)
 	if !periodInputPattern.MatchString(rendered) {
 		t.Fatalf("expected period slider value attribute to be rendered from DB")
+	}
+	if !strings.Contains(rendered, `id="settings-period-length"`) || !strings.Contains(rendered, `max="14"`) {
+		t.Fatalf("expected settings period slider max=14")
 	}
 }

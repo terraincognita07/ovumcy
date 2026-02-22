@@ -56,4 +56,7 @@ func TestOnboardingPageRendersPersistedStep2Values(t *testing.T) {
 	if !periodInputPattern.MatchString(rendered) {
 		t.Fatalf("expected period slider value attribute to be rendered from DB")
 	}
+	if !strings.Contains(rendered, `id="period-length"`) || !strings.Contains(rendered, `max="14"`) {
+		t.Fatalf("expected onboarding period slider max=14")
+	}
 }

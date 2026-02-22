@@ -16,6 +16,8 @@ type CycleStats struct {
 	LastPeriodStart      time.Time `json:"last_period_start"`
 	NextPeriodStart      time.Time `json:"next_period_start"`
 	OvulationDate        time.Time `json:"ovulation_date"`
+	OvulationExact       bool      `json:"ovulation_exact"`
+	OvulationImpossible  bool      `json:"ovulation_impossible"`
 	FertilityWindowStart time.Time `json:"fertility_window_start"`
 	FertilityWindowEnd   time.Time `json:"fertility_window_end"`
 }
@@ -78,12 +80,25 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 	}
 
 	stats.NextPeriodStart = dateOnly(stats.LastPeriodStart.AddDate(0, 0, predictionCycleLength))
-	stats.OvulationDate, stats.FertilityWindowStart, stats.FertilityWindowEnd = PredictCycleWindow(
+	ovulationDate, fertilityWindowStart, fertilityWindowEnd, ovulationExact, ovulationCalculable := PredictCycleWindow(
 		stats.LastPeriodStart,
 		predictionCycleLength,
 		predictedPeriodLength,
 		lutealPhaseDays,
 	)
+	if ovulationCalculable {
+		stats.OvulationDate = ovulationDate
+		stats.OvulationExact = ovulationExact
+		stats.OvulationImpossible = false
+		stats.FertilityWindowStart = fertilityWindowStart
+		stats.FertilityWindowEnd = fertilityWindowEnd
+	} else {
+		stats.OvulationDate = time.Time{}
+		stats.OvulationExact = false
+		stats.OvulationImpossible = true
+		stats.FertilityWindowStart = time.Time{}
+		stats.FertilityWindowEnd = time.Time{}
+	}
 
 	today := dateOnly(now)
 	if !today.Before(stats.LastPeriodStart) {
@@ -99,7 +114,7 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 
 	if periodByDate[today.Format("2006-01-02")] {
 		stats.CurrentPhase = "menstrual"
-	} else if stats.OvulationDate.IsZero() {
+	} else if stats.OvulationImpossible || stats.OvulationDate.IsZero() {
 		stats.CurrentPhase = "unknown"
 	} else if betweenInclusive(today, stats.FertilityWindowStart, stats.FertilityWindowEnd) {
 		if sameDay(today, stats.OvulationDate) {
@@ -122,15 +137,48 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 // - ovulation is strictly after period end and before next period start
 // - fertility window never overlaps period days
 // - if the clamped fertility range becomes empty, it is suppressed
-func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int, lutealPhaseDays int) (time.Time, time.Time, time.Time) {
+func CalcOvulationDay(cycleLen, periodLen int) (int, bool) {
+	remaining := cycleLen - periodLen
+	if remaining < 8 {
+		return 0, false
+	}
+	if remaining < 15 {
+		return periodLen + 1, false
+	}
+
+	ovDay := cycleLen - 14
+	if ovDay <= periodLen {
+		ovDay = periodLen + 1
+	}
+	if ovDay >= cycleLen {
+		ovDay = cycleLen - 1
+	}
+	return ovDay, true
+}
+
+func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int, lutealPhaseDays int) (time.Time, time.Time, time.Time, bool, bool) {
 	if periodStart.IsZero() || cycleLength <= 0 {
-		return time.Time{}, time.Time{}, time.Time{}
+		return time.Time{}, time.Time{}, time.Time{}, false, false
 	}
 	if periodLength <= 0 {
 		periodLength = models.DefaultPeriodLength
 	}
-	if lutealPhaseDays <= 0 {
-		lutealPhaseDays = 14
+	ovulationOffset, ovulationExact := CalcOvulationDay(cycleLength, periodLength)
+	if ovulationOffset <= 0 {
+		return time.Time{}, time.Time{}, time.Time{}, false, false
+	}
+	if ovulationExact {
+		lutealPhase := lutealPhaseDays
+		if lutealPhase <= 0 {
+			lutealPhase = 14
+		}
+		ovulationOffset = cycleLength - lutealPhase
+		if ovulationOffset <= periodLength {
+			ovulationOffset = periodLength + 1
+		}
+		if ovulationOffset >= cycleLength {
+			ovulationOffset = cycleLength - 1
+		}
 	}
 
 	nextPeriodStart := dateOnly(periodStart.AddDate(0, 0, cycleLength))
@@ -138,19 +186,13 @@ func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int
 	firstNonPeriodDay := dateOnly(periodEnd.AddDate(0, 0, 1))
 	lastPrePeriodDay := dateOnly(nextPeriodStart.AddDate(0, 0, -1))
 
-	ovulationOffset := cycleLength - lutealPhaseDays
-	minOffset := periodLength + 1
-	if ovulationOffset < minOffset {
-		ovulationOffset = minOffset
-	}
-	maxOffset := cycleLength - 1
-	if maxOffset < minOffset {
-		return time.Time{}, time.Time{}, time.Time{}
-	}
-	if ovulationOffset > maxOffset {
-		ovulationOffset = maxOffset
-	}
 	ovulationDate := dateOnly(periodStart.AddDate(0, 0, ovulationOffset))
+	if !ovulationDate.Before(nextPeriodStart) {
+		ovulationDate = lastPrePeriodDay
+	}
+	if !ovulationDate.After(periodEnd) {
+		return time.Time{}, time.Time{}, time.Time{}, false, false
+	}
 
 	fertilityStart := dateOnly(ovulationDate.AddDate(0, 0, -5))
 	fertilityEnd := dateOnly(ovulationDate.AddDate(0, 0, 1))
@@ -161,10 +203,10 @@ func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int
 		fertilityEnd = lastPrePeriodDay
 	}
 	if fertilityStart.After(fertilityEnd) {
-		return ovulationDate, time.Time{}, time.Time{}
+		return ovulationDate, time.Time{}, time.Time{}, ovulationExact, true
 	}
 
-	return ovulationDate, fertilityStart, fertilityEnd
+	return ovulationDate, fertilityStart, fertilityEnd, ovulationExact, true
 }
 
 func DetectCycleStarts(logs []models.DailyLog) []time.Time {

@@ -936,7 +936,7 @@
         if (!Number.isFinite(period)) {
           period = 5;
         }
-        period = Math.max(1, Math.min(10, Math.round(period)));
+        period = Math.max(1, Math.min(14, Math.round(period)));
         this.periodLength = period;
       },
       onCycleLengthChanged: function () {
@@ -949,7 +949,7 @@
       },
       validateStepTwoBeforeSubmit: function (event) {
         this.normalizeStepTwoValues();
-        if (this.periodLength > this.cycleLength) {
+        if ((this.cycleLength - this.periodLength) < 8) {
           if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
           }

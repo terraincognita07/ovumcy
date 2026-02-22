@@ -29,6 +29,10 @@ func (handler *Handler) detectCurrentPhase(stats services.CycleStats, logs []mod
 		}
 	}
 
+	if stats.OvulationImpossible {
+		return "unknown"
+	}
+
 	if !stats.OvulationDate.IsZero() {
 		switch {
 		case sameCalendarDay(today, stats.OvulationDate):

@@ -54,7 +54,7 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 	}
 }
 
-func TestApplyUserCycleBaseline_ClampsOvulationAfterPeriodForShortCycles(t *testing.T) {
+func TestApplyUserCycleBaseline_MarksIncompatibleCycleAsUncalculable(t *testing.T) {
 	handler := &Handler{
 		location:        time.UTC,
 		lutealPhaseDays: 14,
@@ -76,13 +76,16 @@ func TestApplyUserCycleBaseline_ClampsOvulationAfterPeriodForShortCycles(t *test
 	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
-	if got := stats.OvulationDate.Format("2006-01-02"); got != "2026-02-21" {
-		t.Fatalf("expected clamped ovulation date 2026-02-21, got %s", got)
+	if !stats.OvulationDate.IsZero() {
+		t.Fatalf("expected empty ovulation date for incompatible values, got %s", stats.OvulationDate.Format("2006-01-02"))
 	}
-	if got := stats.FertilityWindowStart.Format("2006-01-02"); got != "2026-02-20" {
-		t.Fatalf("expected clamped fertility start 2026-02-20, got %s", got)
+	if !stats.FertilityWindowStart.IsZero() || !stats.FertilityWindowEnd.IsZero() {
+		t.Fatalf("expected empty fertility window for incompatible values")
 	}
-	if got := stats.FertilityWindowEnd.Format("2006-01-02"); got != "2026-02-22" {
-		t.Fatalf("expected clamped fertility end 2026-02-22, got %s", got)
+	if stats.OvulationExact {
+		t.Fatalf("expected exact=false for incompatible values")
+	}
+	if !stats.OvulationImpossible {
+		t.Fatalf("expected impossible=true for incompatible values")
 	}
 }

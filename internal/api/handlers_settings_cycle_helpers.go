@@ -36,10 +36,10 @@ func parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInput, string) {
 		return cycleSettingsInput{}, "cycle length must be between 15 and 90"
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return cycleSettingsInput{}, "period length must be between 1 and 10"
+		return cycleSettingsInput{}, "period length must be between 1 and 14"
 	}
-	if input.PeriodLength > input.CycleLength {
-		return cycleSettingsInput{}, "period length must not exceed cycle length"
+	if !canEstimateOvulation(input.CycleLength, input.PeriodLength) {
+		return cycleSettingsInput{}, "period length is incompatible with cycle length"
 	}
 	return input, ""
 }

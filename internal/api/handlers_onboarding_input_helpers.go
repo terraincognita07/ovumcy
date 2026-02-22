@@ -88,10 +88,10 @@ func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 		return onboardingStep2Input{}, "cycle length must be between 15 and 90"
 	}
 	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return onboardingStep2Input{}, "period length must be between 1 and 10"
+		return onboardingStep2Input{}, "period length must be between 1 and 14"
 	}
-	if input.PeriodLength > input.CycleLength {
-		return onboardingStep2Input{}, "period length must not exceed cycle length"
+	if !canEstimateOvulation(input.CycleLength, input.PeriodLength) {
+		return onboardingStep2Input{}, "period length is incompatible with cycle length"
 	}
 	return input, ""
 }

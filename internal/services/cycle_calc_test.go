@@ -5,31 +5,94 @@ import (
 	"time"
 )
 
-func TestPredictCycleWindow_ShortCycleLongPeriod(t *testing.T) {
+func TestCalcOvulationDay(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		cycleLength  int
+		periodLength int
+		wantDay      int
+		wantExact    bool
+	}{
+		{name: "regular cycle", cycleLength: 28, periodLength: 5, wantDay: 14, wantExact: true},
+		{name: "short cycle approximate", cycleLength: 15, periodLength: 7, wantDay: 8, wantExact: false},
+		{name: "incompatible short cycle", cycleLength: 15, periodLength: 8, wantDay: 0, wantExact: false},
+		{name: "incompatible long period", cycleLength: 21, periodLength: 14, wantDay: 0, wantExact: false},
+		{name: "long cycle long period", cycleLength: 35, periodLength: 14, wantDay: 21, wantExact: true},
+	}
+
+	for _, testCase := range cases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			gotDay, gotExact := CalcOvulationDay(testCase.cycleLength, testCase.periodLength)
+			if gotDay != testCase.wantDay {
+				t.Fatalf("expected ovulation day %d, got %d", testCase.wantDay, gotDay)
+			}
+			if gotExact != testCase.wantExact {
+				t.Fatalf("expected exact=%v, got %v", testCase.wantExact, gotExact)
+			}
+		})
+	}
+}
+
+func TestPredictCycleWindow_IncompatibleValues(t *testing.T) {
 	t.Parallel()
 
 	periodStart := mustParseDay(t, "2026-02-10")
-	ovulationDate, fertilityStart, fertilityEnd := PredictCycleWindow(periodStart, 15, 10, 14)
+	ovulationDate, fertilityStart, fertilityEnd, exact, calculable := PredictCycleWindow(periodStart, 15, 10, 14)
 
-	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-21" {
-		t.Fatalf("expected ovulation date 2026-02-21, got %s", got)
+	if calculable {
+		t.Fatalf("expected incompatible values to be non-calculable")
 	}
-	if got := fertilityStart.Format("2006-01-02"); got != "2026-02-20" {
-		t.Fatalf("expected fertility start 2026-02-20, got %s", got)
+	if exact {
+		t.Fatalf("expected exact=false for non-calculable prediction")
 	}
-	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-22" {
-		t.Fatalf("expected fertility end 2026-02-22, got %s", got)
+	if !ovulationDate.IsZero() || !fertilityStart.IsZero() || !fertilityEnd.IsZero() {
+		t.Fatalf("expected zero dates for incompatible values, got ov=%s fs=%s fe=%s",
+			ovulationDate.Format("2006-01-02"),
+			fertilityStart.Format("2006-01-02"),
+			fertilityEnd.Format("2006-01-02"))
+	}
+}
+
+func TestPredictCycleWindow_ApproximateForShortRemaining(t *testing.T) {
+	t.Parallel()
+
+	periodStart := mustParseDay(t, "2026-02-10")
+	ovulationDate, fertilityStart, fertilityEnd, exact, calculable := PredictCycleWindow(periodStart, 15, 7, 14)
+
+	if !calculable {
+		t.Fatalf("expected calculable prediction for remaining=8")
+	}
+	if exact {
+		t.Fatalf("expected exact=false for approximate prediction")
+	}
+	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-18" {
+		t.Fatalf("expected ovulation date 2026-02-18, got %s", got)
+	}
+	if got := fertilityStart.Format("2006-01-02"); got != "2026-02-17" {
+		t.Fatalf("expected fertility start 2026-02-17, got %s", got)
+	}
+	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-19" {
+		t.Fatalf("expected fertility end 2026-02-19, got %s", got)
 	}
 
-	assertCyclePredictionInvariants(t, periodStart, 15, 10, ovulationDate, fertilityStart, fertilityEnd)
+	assertCyclePredictionInvariants(t, periodStart, 15, 7, ovulationDate, fertilityStart, fertilityEnd)
 }
 
 func TestPredictCycleWindow_NormalCycle(t *testing.T) {
 	t.Parallel()
 
 	periodStart := mustParseDay(t, "2026-02-10")
-	ovulationDate, fertilityStart, fertilityEnd := PredictCycleWindow(periodStart, 28, 5, 14)
+	ovulationDate, fertilityStart, fertilityEnd, exact, calculable := PredictCycleWindow(periodStart, 28, 5, 14)
 
+	if !calculable {
+		t.Fatalf("expected calculable prediction for regular cycle")
+	}
+	if !exact {
+		t.Fatalf("expected exact prediction for regular cycle")
+	}
 	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-24" {
 		t.Fatalf("expected ovulation date 2026-02-24, got %s", got)
 	}
@@ -47,27 +110,37 @@ func TestPredictCycleWindow_InvariantsAcrossRanges(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name         string
-		cycleLength  int
-		periodLength int
+		name           string
+		cycleLength    int
+		periodLength   int
+		wantCalculable bool
 	}{
-		{name: "short cycle long period", cycleLength: 15, periodLength: 10},
-		{name: "short cycle medium period", cycleLength: 20, periodLength: 8},
-		{name: "regular cycle", cycleLength: 28, periodLength: 5},
-		{name: "long cycle", cycleLength: 35, periodLength: 6},
-		{name: "max cycle", cycleLength: 90, periodLength: 1},
+		{name: "incompatible", cycleLength: 15, periodLength: 10, wantCalculable: false},
+		{name: "approximate", cycleLength: 15, periodLength: 7, wantCalculable: true},
+		{name: "regular", cycleLength: 28, periodLength: 5, wantCalculable: true},
+		{name: "long period", cycleLength: 35, periodLength: 14, wantCalculable: true},
+		{name: "max cycle", cycleLength: 90, periodLength: 14, wantCalculable: true},
 	}
 
 	periodStart := mustParseDay(t, "2026-02-10")
 	for _, testCase := range cases {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
-			ovulationDate, fertilityStart, fertilityEnd := PredictCycleWindow(
+			ovulationDate, fertilityStart, fertilityEnd, _, calculable := PredictCycleWindow(
 				periodStart,
 				testCase.cycleLength,
 				testCase.periodLength,
 				14,
 			)
+			if calculable != testCase.wantCalculable {
+				t.Fatalf("expected calculable=%v, got %v", testCase.wantCalculable, calculable)
+			}
+			if !calculable {
+				if !ovulationDate.IsZero() || !fertilityStart.IsZero() || !fertilityEnd.IsZero() {
+					t.Fatalf("expected zero dates for non-calculable prediction")
+				}
+				return
+			}
 			assertCyclePredictionInvariants(
 				t,
 				periodStart,

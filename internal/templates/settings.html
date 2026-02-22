@@ -51,6 +51,7 @@
       hx-post="/settings/cycle"
       hx-target="#settings-cycle-status"
       hx-swap="innerHTML"
+      x-on:submit="if ((cycleLength - periodLength) < 8) { $event.preventDefault() }"
       class="mt-5 space-y-6"
       data-save-feedback>
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -69,7 +70,6 @@
           value="{{.CycleLength}}"
           x-model.number="cycleLength"
           class="w-full range-field">
-        <p class="warning-amber text-sm" x-cloak x-show="cycleLength > 45">{{t .Messages "settings.cycle.cycle_warning"}}</p>
       </div>
 
       <div class="space-y-2">
@@ -81,13 +81,18 @@
           id="settings-period-length"
           type="range"
           min="1"
-          max="10"
+          max="14"
           name="period_length"
           value="{{.PeriodLength}}"
           x-model.number="periodLength"
           class="w-full range-field">
-        <p class="journal-muted text-sm" x-cloak x-show="periodLength > 8">{{t .Messages "settings.cycle.period_warning"}}</p>
-        <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) < 10">{{t .Messages "settings.cycle.prediction_warning"}}</p>
+      </div>
+
+      <div class="space-y-1">
+        <p class="status-error text-sm" x-cloak x-show="(cycleLength - periodLength) < 8">{{t .Messages "settings.cycle.error_incompatible"}}</p>
+        <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) >= 8 && (cycleLength - periodLength) < 15">{{t .Messages "settings.cycle.warning_approximate"}}</p>
+        <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength > 8">{{t .Messages "settings.cycle.info_period_long"}}</p>
+        <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength <= 8 && cycleLength < 24">{{t .Messages "settings.cycle.info_cycle_short"}}</p>
       </div>
 
       <div class="space-y-2">
@@ -99,7 +104,13 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
-        <button type="submit" class="btn-primary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "settings.cycle.save"}}</button>
+        <button
+          type="submit"
+          class="btn-primary"
+          :class="{ 'btn--disabled': (cycleLength - periodLength) < 8 }"
+          :disabled="(cycleLength - periodLength) < 8"
+          data-save-button
+          data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "settings.cycle.save"}}</button>
       </div>
       <div id="settings-cycle-status" class="save-status text-sm"></div>
     </form>
