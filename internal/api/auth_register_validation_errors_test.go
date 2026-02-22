@@ -195,3 +195,59 @@ func TestRegisterRejectsExactDuplicateEmail(t *testing.T) {
 		t.Fatalf("expected exactly one exact email record, found %d", usersCount)
 	}
 }
+
+func TestRegisterRejectsExactDuplicateEmailHTMLFlow(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	existingEmail := "qatest2@lume.local"
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("StrongPass1"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("hash password: %v", err)
+	}
+	existingUser := models.User{
+		Email:               existingEmail,
+		PasswordHash:        string(passwordHash),
+		Role:                models.RoleOwner,
+		OnboardingCompleted: true,
+		CycleLength:         models.DefaultCycleLength,
+		PeriodLength:        models.DefaultPeriodLength,
+		AutoPeriodFill:      true,
+		CreatedAt:           time.Now().UTC(),
+	}
+	if err := database.Create(&existingUser).Error; err != nil {
+		t.Fatalf("create existing user: %v", err)
+	}
+
+	form := url.Values{
+		"email":            {existingEmail},
+		"password":         {"StrongPass1"},
+		"confirm_password": {"StrongPass1"},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("register exact duplicate html request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", response.StatusCode)
+	}
+	location := response.Header.Get("Location")
+	if !strings.HasPrefix(location, "/register?") {
+		t.Fatalf("expected redirect to /register, got %q", location)
+	}
+	if !strings.Contains(location, "error=email+already+exists") {
+		t.Fatalf("expected duplicate-email error in redirect query, got %q", location)
+	}
+
+	var usersCount int64
+	if err := database.Model(&models.User{}).Where("lower(trim(email)) = ?", existingEmail).Count(&usersCount).Error; err != nil {
+		t.Fatalf("count exact users: %v", err)
+	}
+	if usersCount != 1 {
+		t.Fatalf("expected exactly one normalized email record, found %d", usersCount)
+	}
+}

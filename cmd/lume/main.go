@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -140,8 +141,9 @@ func main() {
 	}()
 
 	log.Printf(
-		"Lume listening on http://0.0.0.0:%s (tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
+		"Lume listening on http://0.0.0.0:%s (rev: %s, tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
 		port,
+		buildRevision(),
 		location.String(),
 		loginLimitMax,
 		loginLimitWindow,
@@ -157,6 +159,31 @@ func main() {
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("server exited: %v", err)
 	}
+}
+
+func buildRevision() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info == nil {
+		return "unknown"
+	}
+
+	revision := "unknown"
+	modified := "false"
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			if strings.TrimSpace(setting.Value) != "" {
+				revision = setting.Value
+			}
+		case "vcs.modified":
+			modified = strings.TrimSpace(setting.Value)
+		}
+	}
+
+	if modified == "true" {
+		return revision + "-dirty"
+	}
+	return revision
 }
 
 func tryRunCLICommand() (bool, error) {
