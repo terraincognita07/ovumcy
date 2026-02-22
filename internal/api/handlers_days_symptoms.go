@@ -38,7 +38,6 @@ func (handler *Handler) CreateSymptom(c *fiber.Ctx) error {
 	payload.Name = strings.TrimSpace(payload.Name)
 	payload.Icon = strings.TrimSpace(payload.Icon)
 	payload.Color = strings.TrimSpace(payload.Color)
-	payload.Name = normalizeLegacySymptomName(payload.Name)
 
 	if payload.Name == "" || len(payload.Name) > 80 {
 		return apiError(c, fiber.StatusBadRequest, "invalid symptom name")

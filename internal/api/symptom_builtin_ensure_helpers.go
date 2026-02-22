@@ -7,13 +7,6 @@ import (
 )
 
 func (handler *Handler) ensureBuiltinSymptoms(userID uint) error {
-	if err := handler.db.
-		Model(&models.SymptomType{}).
-		Where("user_id = ? AND lower(trim(name)) = ?", userID, "fatique").
-		Update("name", "Fatigue").Error; err != nil {
-		return err
-	}
-
 	existing := make([]models.SymptomType, 0)
 	if err := handler.db.Where("user_id = ?", userID).Find(&existing).Error; err != nil {
 		return err

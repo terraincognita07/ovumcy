@@ -16,9 +16,6 @@ func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error)
 	if err := handler.db.Where("user_id = ?", userID).Find(&symptoms).Error; err != nil {
 		return nil, err
 	}
-	for index := range symptoms {
-		symptoms[index].Name = normalizeLegacySymptomName(symptoms[index].Name)
-	}
 
 	sortSymptomsByBuiltinAndName(symptoms)
 	return symptoms, nil

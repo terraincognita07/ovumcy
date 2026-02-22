@@ -37,7 +37,7 @@ func TestPrivacyRouteRendersPublicPage(t *testing.T) {
 		t.Fatalf("expected rendered page to contain privacy section, got body: %s", rendered)
 	}
 	if strings.Contains(rendered, "Lume is built for private, self-hosted tracking.") {
-		t.Fatalf("did not expect legacy privacy subtitle to be rendered")
+		t.Fatalf("did not expect deprecated privacy subtitle to be rendered")
 	}
 	if !strings.Contains(rendered, `href="/login"`) {
 		t.Fatalf("expected back link to point to /login for guest users")

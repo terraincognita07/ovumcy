@@ -10,7 +10,6 @@ var builtinSymptomKeys = map[string]string{
 	"constipation":      "symptom.constipation",
 	"cramps":            "symptoms.cramps",
 	"diarrhea":          "symptom.diarrhea",
-	"fatique":           "symptoms.fatigue",
 	"fatigue":           "symptoms.fatigue",
 	"food cravings":     "symptom.food_cravings",
 	"headache":          "symptoms.headache",

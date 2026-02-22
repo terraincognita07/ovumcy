@@ -52,9 +52,6 @@ func TestSanitizeLogForPartner(t *testing.T) {
 func TestExportSymptomHelpers(t *testing.T) {
 	t.Parallel()
 
-	if got := normalizeLegacySymptomName("fatique"); got != "Fatigue" {
-		t.Fatalf("expected Fatigue, got %q", got)
-	}
 	if got := exportSymptomColumn("Mood swings"); got != "mood" {
 		t.Fatalf("expected mood, got %q", got)
 	}

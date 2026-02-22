@@ -10,7 +10,6 @@ var exportSymptomColumnsByName = map[string]string{
 	"mood swings":       "mood",
 	"bloating":          "bloating",
 	"fatigue":           "fatigue",
-	"fatique":           "fatigue",
 	"breast tenderness": "breast_tenderness",
 	"back pain":         "back_pain",
 	"nausea":            "nausea",
