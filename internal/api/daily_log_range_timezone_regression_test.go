@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestFetchLogsForUserIncludesUTCShiftedRowForLocalDayRange(t *testing.T) {
+func TestFetchLogsForUserExcludesUTCShiftedRowForLocalDayRange(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("resolve current test file path")
@@ -89,13 +89,7 @@ func TestFetchLogsForUserIncludesUTCShiftedRowForLocalDayRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetchLogsForUser: %v", err)
 	}
-	if len(logs) != 1 {
-		t.Fatalf("expected exactly one row in local-day range, got %d", len(logs))
-	}
-	if !logs[0].IsPeriod {
-		t.Fatalf("expected is_period=true for shifted row")
-	}
-	if logs[0].Flow != models.FlowHeavy {
-		t.Fatalf("expected flow %q, got %q", models.FlowHeavy, logs[0].Flow)
+	if len(logs) != 0 {
+		t.Fatalf("expected no rows in strict local-day range, got %d", len(logs))
 	}
 }

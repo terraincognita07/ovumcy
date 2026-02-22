@@ -97,7 +97,7 @@ func TestFetchLogByDateFindsZuluStoredRowForLocalCalendarDay(t *testing.T) {
 	}
 }
 
-func TestFetchLogByDateFindsUTCShiftedRowForLocalCalendarDay(t *testing.T) {
+func TestFetchLogByDateIgnoresUTCShiftedRowForLocalCalendarDay(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("resolve current test file path")
@@ -174,10 +174,10 @@ func TestFetchLogByDateFindsUTCShiftedRowForLocalCalendarDay(t *testing.T) {
 		t.Fatalf("fetchLogByDate: %v", err)
 	}
 
-	if !entry.IsPeriod {
-		t.Fatalf("expected is_period=true for local day 2026-02-22")
+	if entry.IsPeriod {
+		t.Fatalf("expected no period row for local day 2026-02-22")
 	}
-	if entry.Flow != models.FlowMedium {
-		t.Fatalf("expected flow %q, got %q", models.FlowMedium, entry.Flow)
+	if entry.Flow != models.FlowNone {
+		t.Fatalf("expected default flow %q, got %q", models.FlowNone, entry.Flow)
 	}
 }

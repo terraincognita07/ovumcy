@@ -24,30 +24,14 @@ func (handler *Handler) upsertOnboardingPeriodRange(tx *gorm.DB, userID uint, st
 }
 
 func (handler *Handler) upsertOnboardingPeriodDay(tx *gorm.DB, userID uint, day time.Time) error {
-	dayStart := dateAtLocation(day, handler.location)
-	dayKeys := dayLookupKeys(dayStart, handler.location)
+	dayStart, dayEnd := dayRange(day, handler.location)
 
-	candidates := make([]models.DailyLog, 0)
-	if err := tx.
-		Where("user_id = ? AND substr(date, 1, 10) IN ?", userID, dayKeys).
+	var entry models.DailyLog
+	result := tx.
+		Where("user_id = ? AND date >= ? AND date < ?", userID, dayStart, dayEnd).
 		Order("date DESC, id DESC").
-		Find(&candidates).Error; err != nil {
-		return err
-	}
-
-	var (
-		entry models.DailyLog
-		found bool
-	)
-	for _, candidate := range candidates {
-		if sameCalendarDayAtLocation(candidate.Date, dayStart, handler.location) {
-			entry = candidate
-			found = true
-			break
-		}
-	}
-
-	if !found {
+		First(&entry)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		entry = models.DailyLog{
 			UserID:     userID,
 			Date:       dayStart,
@@ -56,6 +40,9 @@ func (handler *Handler) upsertOnboardingPeriodDay(tx *gorm.DB, userID uint, day 
 			SymptomIDs: []uint{},
 		}
 		return tx.Create(&entry).Error
+	}
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return tx.Model(&entry).Updates(map[string]any{
