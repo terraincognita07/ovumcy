@@ -75,7 +75,7 @@ func TestOnboardingStep2SanitizesOutOfRangeAndIncompatibleValues(t *testing.T) {
 
 func TestOnboardingStep2IgnoresUnexpectedPeriodEndInput(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	user := createOnboardingTestUser(t, database, "step2-legacy-end-override@example.com", "StrongPass1", false)
+	user := createOnboardingTestUser(t, database, "step2-extra-period-end@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	form := url.Values{
@@ -91,7 +91,7 @@ func TestOnboardingStep2IgnoresUnexpectedPeriodEndInput(t *testing.T) {
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("legacy end override request failed: %v", err)
+		t.Fatalf("unexpected period-end request failed: %v", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusNoContent {
@@ -138,7 +138,7 @@ func TestOnboardingStep2SanitizesSliderValuesEvenWhenUnexpectedPeriodEndIsPresen
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			app, database := newOnboardingTestApp(t)
-			user := createOnboardingTestUser(t, database, "step2-legacy-sanitize-"+strings.ReplaceAll(testCase.name, " ", "-")+"@example.com", "StrongPass1", false)
+			user := createOnboardingTestUser(t, database, "step2-extra-input-sanitize-"+strings.ReplaceAll(testCase.name, " ", "-")+"@example.com", "StrongPass1", false)
 			authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 			form := url.Values{

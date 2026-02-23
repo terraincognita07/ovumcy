@@ -53,7 +53,7 @@ func TestOnboardingStep1RejectsFutureAndTooOldDates(t *testing.T) {
 
 func TestOnboardingStep1IgnoresUnexpectedPeriodEndInput(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	user := createOnboardingTestUser(t, database, "step1-legacy-period-end@example.com", "StrongPass1", false)
+	user := createOnboardingTestUser(t, database, "step1-extra-period-end@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	stepDate := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, -4)
