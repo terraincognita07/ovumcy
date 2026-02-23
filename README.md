@@ -12,15 +12,15 @@ It runs as a single Go service with SQLite and a server-rendered web UI.
 
 ### Registration
 
-![Ovumcy registration screen](docs/screenshots/register.png)
+![Ovumcy registration screen](docs/screenshots/register.jpg)
 
 ### Dashboard
 
-![Ovumcy dashboard screen](docs/screenshots/dashboard.png)
+![Ovumcy dashboard screen](docs/screenshots/dashboard.jpg)
 
 ### Calendar
 
-![Ovumcy calendar screen](docs/screenshots/calendar.png)
+![Ovumcy calendar screen](docs/screenshots/calendar.jpg)
 
 ## Features
 
