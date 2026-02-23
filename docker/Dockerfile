@@ -14,7 +14,7 @@ COPY scripts ./scripts
 RUN npm run build:css
 RUN npm run build:js
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -24,7 +24,7 @@ COPY --from=assets /build/web/static/js/htmx.min.js ./web/static/js/htmx.min.js
 COPY --from=assets /build/web/static/js/alpine.min.js ./web/static/js/alpine.min.js
 COPY --from=assets /build/web/static/js/app.js ./web/static/js/app.js
 COPY --from=assets /build/web/static/js/settings-export.js ./web/static/js/settings-export.js
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+ENV CGO_ENABLED=0 GOOS=linux
 RUN go build -o /out/ovumcy ./cmd/ovumcy
 
 FROM alpine:3.21 AS runtime
@@ -38,4 +38,3 @@ RUN mkdir -p /app/data
 EXPOSE 8080
 ENV DB_PATH=/app/data/ovumcy.db
 CMD ["/app/ovumcy"]
-

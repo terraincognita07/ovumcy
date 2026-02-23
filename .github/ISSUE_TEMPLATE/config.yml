@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: mailto:contact@ovumcy.com
+    about: Report vulnerabilities privately via email.

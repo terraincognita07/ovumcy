@@ -1,6 +1,6 @@
 module github.com/terraincognita07/ovumcy
 
-go 1.26.0
+go 1.24.0
 
 require (
 	github.com/glebarez/sqlite v1.11.0
@@ -35,4 +35,5 @@ require (
 	modernc.org/memory v1.5.0 // indirect
 	modernc.org/sqlite v1.23.1 // indirect
 )
+
 

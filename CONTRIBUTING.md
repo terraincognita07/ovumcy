@@ -25,6 +25,22 @@ npm run build
 go run ./cmd/ovumcy
 ```
 
+## Reporting Bugs
+
+Before opening a bug, check existing issues:
+- https://github.com/terraincognita07/ovumcy/issues
+
+When opening a bug report, include:
+- environment (OS, browser, Go/Node versions),
+- exact steps to reproduce,
+- expected vs actual behavior,
+- relevant logs/screenshots,
+- commit hash or branch if testing unreleased code.
+
+Use the bug report template in `.github/ISSUE_TEMPLATE/bug_report.yml`.
+
+Security issues should not be reported publicly. Use [SECURITY.md](SECURITY.md).
+
 ## Pull Request Rules
 
 - Keep changes scoped and atomic.
