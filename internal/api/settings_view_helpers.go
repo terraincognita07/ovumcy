@@ -82,7 +82,7 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	if persisted.LastPeriodStart != nil {
 		lastPeriodStart = dateAtLocation(*persisted.LastPeriodStart, handler.location).Format("2006-01-02")
 	}
-	today := dateAtLocation(time.Now().In(handler.location), handler.location).Format("2006-01-02")
+	minCycleStart, today := currentYearDateBounds(time.Now().In(handler.location), handler.location)
 
 	data := fiber.Map{
 		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Ovumcy | Settings"),
@@ -94,7 +94,8 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 		"PeriodLength":           periodLength,
 		"AutoPeriodFill":         autoPeriodFill,
 		"LastPeriodStart":        lastPeriodStart,
-		"TodayISO":               today,
+		"TodayISO":               today.Format("2006-01-02"),
+		"CycleStartMinISO":       minCycleStart.Format("2006-01-02"),
 	}
 
 	if user.Role == models.RoleOwner {

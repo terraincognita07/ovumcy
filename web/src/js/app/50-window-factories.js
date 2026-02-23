@@ -196,10 +196,32 @@
         this.clearStepStatus("onboarding-step2-status");
         return true;
       },
+      normalizeStartDateWithinBounds: function () {
+        var selected = parseDateValue(this.selectedDate);
+        if (!selected) {
+          this.selectedDate = "";
+          return;
+        }
+
+        var min = parseDateValue(this.minDate);
+        var max = parseDateValue(this.maxDate);
+
+        if (min && selected < min) {
+          this.selectedDate = formatDateValue(min);
+          return;
+        }
+        if (max && selected > max) {
+          this.selectedDate = formatDateValue(max);
+          return;
+        }
+
+        this.selectedDate = formatDateValue(selected);
+      },
       init: function () {
         this.step = normalizeOnboardingStep(this.step);
         this.syncStepInURL();
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
+        this.normalizeStartDateWithinBounds();
         this.onStartDateChanged();
       },
       goToStep: function (value) {
@@ -229,6 +251,7 @@
         this.clearStepStatus("onboarding-step1-status");
       },
       onStartDateChanged: function () {
+        this.normalizeStartDateWithinBounds();
         this.clearStepStatus("onboarding-step1-status");
       }
     };
@@ -313,4 +336,5 @@
       }
     };
   };
+
 

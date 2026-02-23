@@ -88,11 +88,36 @@
   }
 
   .brand-mark {
-    font-family: "Quicksand", "Trebuchet MS", sans-serif;
-    font-size: 1.4rem;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    color: #4a3d6a;
+  }
+
+  .brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.52rem;
+  }
+
+  .brand-symbol {
+    width: 1.72rem;
+    height: 1.72rem;
+    flex: 0 0 auto;
+  }
+
+  .brand-wordmark {
+    font-family: "Quicksand", "Avenir Next Rounded", "Trebuchet MS", sans-serif;
+    font-size: 1.34rem;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    color: #7d5a3a;
+    letter-spacing: 0.048em;
+    color: #4a3d6a;
+    line-height: 1;
+  }
+
+  .brand-mark:focus-visible {
+    outline: 2px solid rgba(169, 137, 231, 0.45);
+    outline-offset: 3px;
   }
 
   .lang-switch {
@@ -1086,3 +1111,4 @@
     }
   }
 }
+

@@ -96,7 +96,7 @@
           name="last_period_start"
           lang="{{.Lang}}"
           aria-label="{{t .Messages "settings.cycle.last_period_start"}}"
-          min="1970-01-01"
+          min="{{.CycleStartMinISO}}"
           max="{{.TodayISO}}"
           value="{{.LastPeriodStart}}"
           class="input-field">
@@ -340,3 +340,4 @@
 <script src="/static/js/settings-export.js?v=20260222-2"></script>
 {{end}}
 {{end}}
+

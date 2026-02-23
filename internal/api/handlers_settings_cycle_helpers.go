@@ -54,12 +54,8 @@ func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInpu
 		if err != nil {
 			return cycleSettingsInput{}, "invalid cycle start date"
 		}
-		minCycleStart := dateAtLocation(time.Date(1970, time.January, 1, 0, 0, 0, 0, handler.location), handler.location)
-		if parsedDay.Before(minCycleStart) {
-			return cycleSettingsInput{}, "invalid cycle start date"
-		}
-		today := dateAtLocation(time.Now().In(handler.location), handler.location)
-		if parsedDay.After(today) {
+		minCycleStart, today := currentYearDateBounds(time.Now().In(handler.location), handler.location)
+		if parsedDay.Before(minCycleStart) || parsedDay.After(today) {
 			return cycleSettingsInput{}, "invalid cycle start date"
 		}
 		input.LastPeriodStart = parsedDay.Format("2006-01-02")

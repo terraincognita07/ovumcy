@@ -7,7 +7,8 @@
   {{if .MetaDescription}}<meta name="description" content="{{.MetaDescription}}">{{end}}
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260221-1">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260223-1">
   <script defer src="/static/js/htmx.min.js?v=20260221-2"></script>
   <script defer src="/static/js/chart-lite.js?v=20260221-2"></script>
   <script defer src="/static/js/app.js?v=20260222-3"></script>
@@ -20,7 +21,12 @@
   <div class="app-shell" x-data="appShellState()">
     <header class="paper-header">
       <div class="container-main flex items-center justify-between py-4">
-        <a href="{{if .CurrentUser}}{{if .HideNavigation}}/onboarding{{else}}/dashboard{{end}}{{else}}/login{{end}}" class="brand-mark">{{t .Messages "app.name"}}</a>
+        <a href="{{if .CurrentUser}}{{if .HideNavigation}}/onboarding{{else}}/dashboard{{end}}{{else}}/login{{end}}" class="brand-mark" aria-label="{{t .Messages "app.name"}}">
+          <span class="brand-lockup">
+            <img src="/static/brand/ovumcy-icon.svg" width="28" height="28" alt="" class="brand-symbol" aria-hidden="true">
+            <span class="brand-wordmark">{{t .Messages "app.name"}}</span>
+          </span>
+        </a>
 
         <div class="flex items-center gap-3">
           <div class="lang-switch" role="group" aria-label="{{t .Messages "lang.switch"}}">
@@ -168,3 +174,7 @@
   {{end}}
 </div>
 {{end}}
+
+
+
+

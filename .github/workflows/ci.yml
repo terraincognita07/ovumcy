@@ -33,7 +33,7 @@ jobs:
         run: npm run lint:js
 
       - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
 
       - name: Staticcheck
         run: $(go env GOPATH)/bin/staticcheck ./...
@@ -46,3 +46,4 @@ jobs:
 
       - name: Frontend build
         run: npm run build
+

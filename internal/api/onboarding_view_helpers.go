@@ -26,13 +26,15 @@ func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User,
 		periodLength = models.DefaultPeriodLength
 	}
 
+	minDate, maxDate := onboardingDateBounds(now, handler.location)
+
 	return fiber.Map{
 		"Title":           localizedPageTitle(messages, "meta.title.onboarding", "Ovumcy | Onboarding"),
 		"CurrentUser":     user,
 		"HideNavigation":  true,
 		"OnboardingStep":  parseOnboardingStep(c.Query("step")),
-		"MinDate":         now.AddDate(0, 0, -60).Format("2006-01-02"),
-		"MaxDate":         now.Format("2006-01-02"),
+		"MinDate":         minDate.Format("2006-01-02"),
+		"MaxDate":         maxDate.Format("2006-01-02"),
 		"LastPeriodStart": lastPeriodStart,
 		"CycleLength":     cycleLength,
 		"PeriodLength":    periodLength,

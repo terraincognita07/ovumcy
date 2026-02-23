@@ -24,8 +24,8 @@ func (handler *Handler) parseOnboardingStep1Values(c *fiber.Ctx, today time.Time
 		return onboardingStep1Values{}, "invalid last period start"
 	}
 
-	minDate := today.AddDate(0, 0, -60)
-	if parsedDay.After(today) || parsedDay.Before(minDate) {
+	minDate, maxDate := onboardingDateBounds(today, handler.location)
+	if parsedDay.Before(minDate) || parsedDay.After(maxDate) {
 		return onboardingStep1Values{}, "last period start must be within last 60 days"
 	}
 

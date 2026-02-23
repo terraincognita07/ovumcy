@@ -72,7 +72,7 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	if !strings.Contains(rendered, `id="settings-last-period-start"`) {
 		t.Fatalf("expected settings cycle form to include editable last-period-start field")
 	}
-	lastPeriodInputAccessibilityPattern := regexp.MustCompile(`(?s)id="settings-last-period-start".*?lang="en".*?aria-label="Last period start date".*?min="1970-01-01"`)
+	lastPeriodInputAccessibilityPattern := regexp.MustCompile(`(?s)id="settings-last-period-start".*?lang="en".*?aria-label="Last period start date".*?min="\d{4}-01-01"`)
 	if !lastPeriodInputAccessibilityPattern.MatchString(rendered) {
 		t.Fatalf("expected settings last-period-start field to include localized language, aria-label, and min date attributes")
 	}

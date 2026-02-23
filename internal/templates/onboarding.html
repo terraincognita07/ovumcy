@@ -51,12 +51,13 @@
         x-on:htmx:after-request="onStepOneSaved($event)"
         class="space-y-4">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-      <input type="hidden" name="last_period_start" :value="selectedDate">
 
         <label class="field-label" for="last-period-start">{{t .Messages "onboarding.step1.field"}}</label>
         <input
           id="last-period-start"
           type="date"
+          name="last_period_start"
+          required
           class="input-field"
           lang="{{.Lang}}"
           placeholder="{{t .Messages "onboarding.step1.date_placeholder"}}"
@@ -174,3 +175,4 @@
 </section>
 
 {{end}}
+
