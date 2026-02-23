@@ -68,7 +68,10 @@
               {{if and (not .IsPeriod) .IsPredicted}}
               <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.predicted"}}</span>
               {{end}}
-              {{if and (not .IsPeriod) (not .IsPredicted) .IsFertility}}
+              {{if and (not .IsPeriod) (not .IsPredicted) .IsOvulation}}
+              <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.ovulation"}}</span>
+              {{end}}
+              {{if and (not .IsPeriod) (not .IsPredicted) (not .IsOvulation) .IsFertility}}
               <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.fertile"}}</span>
               {{end}}
             </div>

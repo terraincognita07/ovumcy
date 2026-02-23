@@ -89,4 +89,30 @@ func TestSettingsCycleRejectsOutOfRangeAndIncompatibleValues(t *testing.T) {
 	if !strings.Contains(string(futureDateBody), "status-error") {
 		t.Fatalf("expected status-error markup for future last_period_start, got %q", string(futureDateBody))
 	}
+
+	tooOldDateForm := url.Values{
+		"cycle_length":      {"28"},
+		"period_length":     {"6"},
+		"last_period_start": {"1969-12-31"},
+	}
+	tooOldDateRequest := httptest.NewRequest(http.MethodPost, "/settings/cycle", strings.NewReader(tooOldDateForm.Encode()))
+	tooOldDateRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	tooOldDateRequest.Header.Set("HX-Request", "true")
+	tooOldDateRequest.Header.Set("Cookie", authCookie)
+
+	tooOldDateResponse, err := app.Test(tooOldDateRequest, -1)
+	if err != nil {
+		t.Fatalf("too-old-date settings request failed: %v", err)
+	}
+	defer tooOldDateResponse.Body.Close()
+	if tooOldDateResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected HTMX status 200 for too-old last_period_start, got %d", tooOldDateResponse.StatusCode)
+	}
+	tooOldDateBody, err := io.ReadAll(tooOldDateResponse.Body)
+	if err != nil {
+		t.Fatalf("read too-old-date response body: %v", err)
+	}
+	if !strings.Contains(string(tooOldDateBody), "status-error") {
+		t.Fatalf("expected status-error markup for too-old last_period_start, got %q", string(tooOldDateBody))
+	}
 }

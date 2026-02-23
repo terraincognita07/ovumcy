@@ -52,3 +52,35 @@ func TestBuildCalendarDaysUsesLatestLogPerDateDeterministically(t *testing.T) {
 		t.Fatalf("expected 2026-02-18 period=false from highest id tie-breaker, got true")
 	}
 }
+
+func TestBuildCalendarDaysProjectsOvulationIntoFutureCycles(t *testing.T) {
+	handler := &Handler{location: time.UTC}
+	monthStart := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2026, time.February, 23, 0, 0, 0, 0, time.UTC)
+
+	stats := services.CycleStats{
+		MedianCycleLength:    28,
+		AveragePeriodLength:  5,
+		LastPeriodStart:      time.Date(2026, time.February, 10, 0, 0, 0, 0, time.UTC),
+		NextPeriodStart:      time.Date(2026, time.March, 10, 0, 0, 0, 0, time.UTC),
+		OvulationDate:        time.Date(2026, time.February, 23, 0, 0, 0, 0, time.UTC),
+		FertilityWindowStart: time.Date(2026, time.February, 18, 0, 0, 0, 0, time.UTC),
+		FertilityWindowEnd:   time.Date(2026, time.February, 24, 0, 0, 0, 0, time.UTC),
+	}
+
+	days := handler.buildCalendarDays(monthStart, nil, stats, now)
+
+	ovulationDay := findCalendarDayByDateString(t, days, "2026-03-23")
+	if !ovulationDay.IsOvulation {
+		t.Fatalf("expected projected ovulation marker on 2026-03-23")
+	}
+	if ovulationDay.IsFertility {
+		t.Fatalf("expected ovulation day to not be marked as fertile tag state")
+	}
+	if ovulationDay.IsPredicted {
+		t.Fatalf("did not expect ovulation day to be marked as predicted period")
+	}
+	if ovulationDay.BadgeClass != "calendar-tag calendar-tag-ovulation" {
+		t.Fatalf("expected ovulation badge class, got %q", ovulationDay.BadgeClass)
+	}
+}

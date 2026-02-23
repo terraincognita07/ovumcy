@@ -249,6 +249,7 @@
   "calendar.loading_day": "Loading day details...",
   "calendar.tag.period": "Period",
   "calendar.tag.predicted": "Predicted",
+  "calendar.tag.ovulation": "Ovulation",
   "calendar.tag.fertile": "Fertile",
   "calendar.tag.today": "Today",
   "calendar.delete_entry": "Delete entry",

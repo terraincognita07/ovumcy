@@ -877,6 +877,10 @@
     background: var(--accent-primary);
   }
 
+  .calendar-tag-ovulation {
+    background: #d2a74f;
+  }
+
   .calendar-tag-fertile {
     background: #7b9f87;
   }

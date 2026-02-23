@@ -24,26 +24,58 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 	}
 
 	predictedPeriodMap := make(map[string]bool)
-	predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
-	if predictedPeriodLength <= 0 {
-		predictedPeriodLength = 5
-	}
-	if !stats.NextPeriodStart.IsZero() {
-		for offset := 0; offset < predictedPeriodLength; offset++ {
-			day := stats.NextPeriodStart.AddDate(0, 0, offset)
-			predictedPeriodMap[day.Format("2006-01-02")] = true
-		}
-	}
-
 	fertilityMap := make(map[string]bool)
+	ovulationMap := make(map[string]bool)
+
 	if !stats.FertilityWindowStart.IsZero() && !stats.FertilityWindowEnd.IsZero() {
 		for day := stats.FertilityWindowStart; !day.After(stats.FertilityWindowEnd); day = day.AddDate(0, 0, 1) {
 			fertilityMap[day.Format("2006-01-02")] = true
 		}
 	}
+	if !stats.OvulationDate.IsZero() {
+		ovulationMap[stats.OvulationDate.Format("2006-01-02")] = true
+	}
+
+	predictedCycleLength := int(stats.MedianCycleLength)
+	if predictedCycleLength <= 0 {
+		predictedCycleLength = int(stats.AverageCycleLength + 0.5)
+	}
+	if predictedCycleLength <= 0 {
+		predictedCycleLength = models.DefaultCycleLength
+	}
+
+	predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
+	if predictedPeriodLength <= 0 {
+		predictedPeriodLength = models.DefaultPeriodLength
+	}
+
+	if !stats.NextPeriodStart.IsZero() {
+		cycleStart := dateAtLocation(stats.NextPeriodStart, handler.location)
+		for !cycleStart.After(gridEnd) {
+			for offset := 0; offset < predictedPeriodLength; offset++ {
+				day := cycleStart.AddDate(0, 0, offset)
+				predictedPeriodMap[day.Format("2006-01-02")] = true
+			}
+
+			ovulationDate, fertilityStart, fertilityEnd, _, calculable := services.PredictCycleWindow(
+				cycleStart,
+				predictedCycleLength,
+				predictedPeriodLength,
+			)
+			if calculable {
+				ovulationMap[ovulationDate.Format("2006-01-02")] = true
+				if !fertilityStart.IsZero() && !fertilityEnd.IsZero() {
+					for day := fertilityStart; !day.After(fertilityEnd); day = day.AddDate(0, 0, 1) {
+						fertilityMap[day.Format("2006-01-02")] = true
+					}
+				}
+			}
+
+			cycleStart = cycleStart.AddDate(0, 0, predictedCycleLength)
+		}
+	}
 
 	todayKey := dateAtLocation(now, handler.location).Format("2006-01-02")
-	ovulationKey := stats.OvulationDate.Format("2006-01-02")
 
 	days := make([]CalendarDay, 0, 42)
 	for day := gridStart; !day.After(gridEnd); day = day.AddDate(0, 0, 1) {
@@ -54,7 +86,10 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 		isPredicted := predictedPeriodMap[key]
 		isFertility := fertilityMap[key]
 		isToday := key == todayKey
-		isOvulation := key == ovulationKey
+		isOvulation := ovulationMap[key]
+		if isOvulation {
+			isFertility = false
+		}
 		hasData := hasDataMap[key]
 
 		cellClass := "calendar-cell"
@@ -66,6 +101,9 @@ func (handler *Handler) buildCalendarDays(monthStart time.Time, logs []models.Da
 		} else if isPredicted {
 			cellClass += " calendar-cell-predicted"
 			badgeClass += " calendar-tag-predicted"
+		} else if isOvulation {
+			cellClass += " calendar-cell-fertile"
+			badgeClass += " calendar-tag-ovulation"
 		} else if isFertility {
 			cellClass += " calendar-cell-fertile"
 			badgeClass += " calendar-tag-fertile"
