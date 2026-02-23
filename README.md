@@ -10,16 +10,24 @@ It runs as a single Go service with SQLite and a server-rendered web UI.
 
 ## Screenshots
 
-### Login
+### Registration
 
-![Ovumcy login screen](docs/screenshots/login.png)
+![Ovumcy registration screen](docs/screenshots/register.png)
+
+### Dashboard
+
+![Ovumcy dashboard screen](docs/screenshots/dashboard.png)
+
+### Calendar
+
+![Ovumcy calendar screen](docs/screenshots/calendar.png)
 
 ## Features
 
 - Cycle tracking: period days, flow intensity, symptoms, notes.
 - Predictions: next period, ovulation, fertile window.
 - Calendar and statistics views.
-- Optional partner mode with privacy-preserving read-only access.
+- Single-user owner workflow (self-hosted private tracking).
 - Data export in CSV and JSON.
 - Russian and English localization.
 
@@ -30,7 +38,7 @@ It runs as a single Go service with SQLite and a server-rendered web UI.
 - First-party cookies only (auth, CSRF, language).
 - Data is stored locally in SQLite on your infrastructure.
 - Role model: `owner` has full access.
-- Role model: `partner` is read-only and does not receive private notes/symptom details.
+- `partner` role exists in code, but self-service partner onboarding/invites are not public yet.
 
 If you found a security issue, see [SECURITY.md](SECURITY.md).
 
@@ -134,16 +142,26 @@ For bugs and feature requests, open a GitHub issue:
 
 ### In Progress
 
-- Mobile PWA.
+- Mobile PWA: manifest, offline mode, install prompt.
 
-### Planned
+### v0.2 - Self-hosting quality
 
-- Import from other trackers.
-- PDF export for clinical workflows.
+- Custom symptoms: add and hide symptoms beyond built-in defaults.
+- Import from other trackers: Clue, Flo CSV import.
+- Reverse proxy examples: Nginx and Caddy configuration samples.
+- Web Push notifications: period predictions delivered via browser push, no third-party services.
+- Dark mode.
+
+### v0.3 - Depth
+
+- PDF export for clinical use: printable cycle summary for medical appointments.
+- Extended statistics: cycle variability, symptom heatmaps, phase correlations.
+- Partner invite via link: simplified partner onboarding without manual account setup.
 
 ### Considering
 
-- Optional encrypted sync.
+- Managed hosting option.
+- Optional end-to-end encrypted sync (client-side key, self-hosted or managed).
 
 ## License
 
