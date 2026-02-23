@@ -24,7 +24,7 @@ func loginEmailFromFlashOrQuery(c *fiber.Ctx, flashEmail string) string {
 
 func buildLoginPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload, needsSetup bool) fiber.Map {
 	return fiber.Map{
-		"Title":         localizedPageTitle(messages, "meta.title.login", "Lume | Login"),
+		"Title":         localizedPageTitle(messages, "meta.title.login", "Ovumcy | Login"),
 		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 		"Email":         loginEmailFromFlashOrQuery(c, flash.LoginEmail),
 		"IsFirstLaunch": needsSetup,
@@ -33,7 +33,7 @@ func buildLoginPageData(c *fiber.Ctx, messages map[string]string, flash FlashPay
 
 func buildRegisterPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload, needsSetup bool) fiber.Map {
 	return fiber.Map{
-		"Title":         localizedPageTitle(messages, "meta.title.register", "Lume | Sign Up"),
+		"Title":         localizedPageTitle(messages, "meta.title.register", "Ovumcy | Sign Up"),
 		"ErrorKey":      authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 		"Email":         loginEmailFromFlashOrQuery(c, flash.RegisterEmail),
 		"IsFirstLaunch": needsSetup,
@@ -42,7 +42,7 @@ func buildRegisterPageData(c *fiber.Ctx, messages map[string]string, flash Flash
 
 func buildForgotPasswordPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload) fiber.Map {
 	return fiber.Map{
-		"Title":    localizedPageTitle(messages, "meta.title.forgot_password", "Lume | Password Recovery"),
+		"Title":    localizedPageTitle(messages, "meta.title.forgot_password", "Ovumcy | Password Recovery"),
 		"ErrorKey": authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 	}
 }
@@ -55,7 +55,7 @@ func (handler *Handler) buildResetPasswordPageData(c *fiber.Ctx, messages map[st
 	}
 
 	return fiber.Map{
-		"Title":        localizedPageTitle(messages, "meta.title.reset_password", "Lume | Reset Password"),
+		"Title":        localizedPageTitle(messages, "meta.title.reset_password", "Ovumcy | Reset Password"),
 		"Token":        token,
 		"InvalidToken": invalidToken,
 		"ForcedReset":  parseBoolValue(c.Query("forced")),

@@ -4,19 +4,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terraincognita07/lume/internal/security"
+	"github.com/terraincognita07/ovumcy/internal/security"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const recoveryCodePrefix = "OVUM"
 
 func normalizeRecoveryCode(raw string) string {
 	normalized := strings.ToUpper(strings.TrimSpace(raw))
 	normalized = strings.ReplaceAll(normalized, " ", "")
 	normalized = strings.ReplaceAll(normalized, "-", "")
-	normalized = strings.TrimPrefix(normalized, "LUME")
+	normalized = strings.TrimPrefix(normalized, recoveryCodePrefix)
 	if len(normalized) != 12 {
 		return strings.ToUpper(strings.TrimSpace(raw))
 	}
-	return fmt.Sprintf("LUME-%s-%s-%s", normalized[:4], normalized[4:8], normalized[8:12])
+	return fmt.Sprintf("%s-%s-%s-%s", recoveryCodePrefix, normalized[:4], normalized[4:8], normalized[8:12])
 }
 
 func generateRecoveryCodeHash() (string, string, error) {
@@ -38,5 +40,5 @@ func generateRecoveryCode() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("LUME-%s-%s-%s", value[:4], value[4:8], value[8:12]), nil
+	return fmt.Sprintf("%s-%s-%s-%s", recoveryCodePrefix, value[:4], value[4:8], value[8:12]), nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 type authClaims struct {

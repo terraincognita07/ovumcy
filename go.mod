@@ -1,4 +1,4 @@
-module github.com/terraincognita07/lume
+module github.com/terraincognita07/ovumcy
 
 go 1.26.0
 
@@ -35,3 +35,4 @@ require (
 	modernc.org/memory v1.5.0 // indirect
 	modernc.org/sqlite v1.23.1 // indirect
 )
+

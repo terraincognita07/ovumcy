@@ -61,7 +61,7 @@
   }
 
   function initLanguageSwitcher() {
-    applyHTMLLanguage(readCookie("lume_lang") || document.documentElement.getAttribute("lang"));
+    applyHTMLLanguage(readCookie("ovumcy_lang") || document.documentElement.getAttribute("lang"));
 
     var links = document.querySelectorAll("a.lang-link");
     for (var index = 0; index < links.length; index++) {
@@ -130,3 +130,4 @@
       }, 140);
     });
   }
+

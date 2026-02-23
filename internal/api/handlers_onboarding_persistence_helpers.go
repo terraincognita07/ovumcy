@@ -1,6 +1,6 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/models"
+import "github.com/terraincognita07/ovumcy/internal/models"
 
 func (handler *Handler) saveOnboardingStep1(user *models.User, values onboardingStep1Values) error {
 	updates := map[string]any{

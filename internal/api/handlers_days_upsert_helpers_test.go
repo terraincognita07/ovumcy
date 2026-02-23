@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestNormalizeDayPayloadRejectsInvalidFlow(t *testing.T) {

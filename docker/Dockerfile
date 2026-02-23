@@ -25,16 +25,17 @@ COPY --from=assets /build/web/static/js/alpine.min.js ./web/static/js/alpine.min
 COPY --from=assets /build/web/static/js/app.js ./web/static/js/app.js
 COPY --from=assets /build/web/static/js/settings-export.js ./web/static/js/settings-export.js
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN go build -o /out/lume ./cmd/lume
+RUN go build -o /out/ovumcy ./cmd/ovumcy
 
 FROM alpine:3.21 AS runtime
 WORKDIR /app
 RUN apk add --no-cache tzdata ca-certificates
-COPY --from=builder /out/lume /app/lume
+COPY --from=builder /out/ovumcy /app/ovumcy
 COPY --from=builder /src/internal/templates /app/internal/templates
 COPY --from=builder /src/internal/i18n /app/internal/i18n
 COPY --from=builder /src/web/static /app/web/static
 RUN mkdir -p /app/data
 EXPOSE 8080
-ENV DB_PATH=/app/data/lume.db
-CMD ["/app/lume"]
+ENV DB_PATH=/app/data/ovumcy.db
+CMD ["/app/ovumcy"]
+

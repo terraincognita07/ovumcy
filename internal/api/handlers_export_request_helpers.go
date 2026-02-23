@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) parseExportRange(c *fiber.Ctx) (*time.Time, *time.Time, string) {
@@ -53,7 +53,7 @@ func (handler *Handler) exportUserAndRange(c *fiber.Ctx) (*models.User, *time.Ti
 }
 
 func buildExportFilename(now time.Time, extension string) string {
-	return fmt.Sprintf("lume-export-%s.%s", now.Format("2006-01-02"), extension)
+	return fmt.Sprintf("ovumcy-export-%s.%s", now.Format("2006-01-02"), extension)
 }
 
 func setExportAttachmentHeaders(c *fiber.Ctx, contentType string, filename string) {

@@ -2,13 +2,13 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func buildPrivacyMetaDescription(messages map[string]string) string {
 	metaDescription := translateMessage(messages, "meta.description.privacy")
 	if metaDescription == "meta.description.privacy" {
-		metaDescription = "Lume Privacy Policy - Zero data collection, self-hosted period tracker."
+		metaDescription = "Ovumcy Privacy Policy - Zero data collection, self-hosted period tracker."
 	}
 	return metaDescription
 }
@@ -16,7 +16,7 @@ func buildPrivacyMetaDescription(messages map[string]string) string {
 func buildPrivacyPageData(messages map[string]string, backQuery string, user *models.User) fiber.Map {
 	backFallback := "/login"
 	data := fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Lume | Privacy Policy"),
+		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Ovumcy | Privacy Policy"),
 		"MetaDescription": buildPrivacyMetaDescription(messages),
 	}
 

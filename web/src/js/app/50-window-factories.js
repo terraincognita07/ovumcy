@@ -290,12 +290,12 @@
         this.downloadFailed = false;
 
         try {
-          var content = "Lume recovery code\n\n" + code + "\n\nStore this code offline and private.";
+          var content = "Ovumcy recovery code\n\n" + code + "\n\nStore this code offline and private.";
           var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
           var objectURL = URL.createObjectURL(blob);
           var link = document.createElement("a");
           link.href = objectURL;
-          link.download = "lume-recovery-code.txt";
+          link.download = "ovumcy-recovery-code.txt";
           document.body.appendChild(link);
           link.click();
           link.remove();
@@ -313,3 +313,4 @@
       }
     };
   };
+

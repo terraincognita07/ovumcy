@@ -1,6 +1,6 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/models"
+import "github.com/terraincognita07/ovumcy/internal/models"
 
 func (handler *Handler) requiresInitialSetup() (bool, error) {
 	var usersCount int64

@@ -3,14 +3,14 @@ package api
 import (
 	"testing"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestBuildPrivacyMetaDescriptionFallback(t *testing.T) {
 	t.Parallel()
 
 	got := buildPrivacyMetaDescription(map[string]string{})
-	if got != "Lume Privacy Policy - Zero data collection, self-hosted period tracker." {
+	if got != "Ovumcy Privacy Policy - Zero data collection, self-hosted period tracker." {
 		t.Fatalf("unexpected fallback description: %q", got)
 	}
 }

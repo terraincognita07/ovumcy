@@ -3,8 +3,8 @@ package api
 import (
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.DailyLog, stats services.CycleStats, now time.Time) services.CycleStats {

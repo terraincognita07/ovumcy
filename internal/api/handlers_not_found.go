@@ -36,7 +36,7 @@ func (handler *Handler) NotFound(c *fiber.Ctx) error {
 
 	c.Status(fiber.StatusNotFound)
 	return handler.render(c, "not_found", fiber.Map{
-		"Title":           localizedPageTitle(currentMessages(c), "meta.title.not_found", "Lume | Page Not Found"),
+		"Title":           localizedPageTitle(currentMessages(c), "meta.title.not_found", "Ovumcy | Page Not Found"),
 		"CurrentUser":     currentUser,
 		"PrimaryPath":     primaryPath,
 		"PrimaryLabelKey": primaryLabelKey,

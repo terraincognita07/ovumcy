@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
 )
 
 func newTestAppWithPrivacyRoute(t *testing.T) *fiber.App {
@@ -23,7 +23,7 @@ func newTestAppWithPrivacyRoute(t *testing.T) *fiber.App {
 	internalDir := filepath.Dir(apiDir)
 	templatesDir := filepath.Join(internalDir, "templates")
 	localesDir := filepath.Join(internalDir, "i18n", "locales")
-	databasePath := filepath.Join(t.TempDir(), "lume-test.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-test.db")
 
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {

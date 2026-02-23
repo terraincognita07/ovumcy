@@ -1,14 +1,14 @@
 services:
-  lume:
+  ovumcy:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: lume
+    container_name: ovumcy
     environment:
       - TZ=UTC
       - SECRET_KEY=${SECRET_KEY:?set_SECRET_KEY_in_environment}
       - DEFAULT_LANGUAGE=ru
-      - DB_PATH=/app/data/lume.db
+      - DB_PATH=/app/data/ovumcy.db
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - RATE_LIMIT_LOGIN_MAX=${RATE_LIMIT_LOGIN_MAX:-8}
       - RATE_LIMIT_LOGIN_WINDOW=${RATE_LIMIT_LOGIN_WINDOW:-15m}
@@ -32,3 +32,4 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+

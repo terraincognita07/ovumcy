@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/models"
 	"gorm.io/gorm"
 )
 
 func newDataAccessTestHandler(t *testing.T) (*Handler, *gorm.DB) {
 	t.Helper()
 
-	databasePath := filepath.Join(t.TempDir(), "lume-data-access-test.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-data-access-test.db")
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)

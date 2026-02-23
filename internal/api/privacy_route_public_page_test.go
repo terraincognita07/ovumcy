@@ -36,7 +36,7 @@ func TestPrivacyRouteRendersPublicPage(t *testing.T) {
 	if !strings.Contains(rendered, "Zero Data Collection") {
 		t.Fatalf("expected rendered page to contain privacy section, got body: %s", rendered)
 	}
-	if strings.Contains(rendered, "Lume is built for private, self-hosted tracking.") {
+	if strings.Contains(rendered, "Ovumcy is built for private, self-hosted tracking.") {
 		t.Fatalf("did not expect deprecated privacy subtitle to be rendered")
 	}
 	if !strings.Contains(rendered, `href="/login"`) {

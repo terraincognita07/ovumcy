@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 const maxDayNotesLength = 2000

@@ -19,26 +19,26 @@ func TestLanguageSwitchSetsRussianCookieAndRendersRussianLogin(t *testing.T) {
 	}
 	defer englishResponse.Body.Close()
 
-	englishCookie := responseCookieValue(englishResponse.Cookies(), "lume_lang")
+	englishCookie := responseCookieValue(englishResponse.Cookies(), "ovumcy_lang")
 	if englishCookie != "en" {
 		t.Fatalf("expected english cookie value before russian switch, got %q", englishCookie)
 	}
 
 	switchToRussian := httptest.NewRequest(http.MethodGet, "/lang/ru?next=/login", nil)
-	switchToRussian.Header.Set("Cookie", "lume_lang="+englishCookie)
+	switchToRussian.Header.Set("Cookie", "ovumcy_lang="+englishCookie)
 	russianResponse, err := app.Test(switchToRussian, -1)
 	if err != nil {
 		t.Fatalf("switch back language request failed: %v", err)
 	}
 	defer russianResponse.Body.Close()
 
-	russianCookie := responseCookieValue(russianResponse.Cookies(), "lume_lang")
+	russianCookie := responseCookieValue(russianResponse.Cookies(), "ovumcy_lang")
 	if russianCookie != "ru" {
-		t.Fatalf("expected lume_lang cookie value %q, got %q", "ru", russianCookie)
+		t.Fatalf("expected ovumcy_lang cookie value %q, got %q", "ru", russianCookie)
 	}
 
 	russianLoginRequest := httptest.NewRequest(http.MethodGet, "/login", nil)
-	russianLoginRequest.Header.Set("Cookie", "lume_lang="+russianCookie)
+	russianLoginRequest.Header.Set("Cookie", "ovumcy_lang="+russianCookie)
 	russianLoginResponse, err := app.Test(russianLoginRequest, -1)
 	if err != nil {
 		t.Fatalf("russian login request failed: %v", err)

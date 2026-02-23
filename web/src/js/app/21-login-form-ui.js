@@ -110,7 +110,7 @@
     }
 
     var storage = loginPasswordDraftStorage();
-    var storageKey = form.getAttribute("data-password-draft-key") || "lume_login_password_draft";
+    var storageKey = form.getAttribute("data-password-draft-key") || "ovumcy_login_password_draft";
     var hasError = isTruthyDataValue(form.getAttribute("data-login-has-error"));
 
     function persistPasswordDraft() {
@@ -131,3 +131,4 @@
     }
     focusLoginPasswordField(passwordField);
   }
+

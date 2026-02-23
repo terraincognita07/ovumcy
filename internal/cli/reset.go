@@ -6,9 +6,9 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/security"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/security"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

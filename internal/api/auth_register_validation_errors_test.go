@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -88,7 +88,7 @@ func TestRegisterRejectsPasswordMismatch(t *testing.T) {
 
 func TestRegisterRejectsCaseInsensitiveDuplicateEmail(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	existingEmail := "QA-Test2@Lume.Local"
+	existingEmail := "QA-Test2@Ovumcy.Local"
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte("StrongPass1"), bcrypt.DefaultCost)
 	if err != nil {
@@ -109,7 +109,7 @@ func TestRegisterRejectsCaseInsensitiveDuplicateEmail(t *testing.T) {
 	}
 
 	form := url.Values{
-		"email":            {"qa-test2@lume.local"},
+		"email":            {"qa-test2@ovumcy.local"},
 		"password":         {"StrongPass1"},
 		"confirm_password": {"StrongPass1"},
 	}
@@ -133,7 +133,7 @@ func TestRegisterRejectsCaseInsensitiveDuplicateEmail(t *testing.T) {
 	}
 
 	var usersCount int64
-	if err := database.Model(&models.User{}).Where("lower(trim(email)) = ?", "qa-test2@lume.local").Count(&usersCount).Error; err != nil {
+	if err := database.Model(&models.User{}).Where("lower(trim(email)) = ?", "qa-test2@ovumcy.local").Count(&usersCount).Error; err != nil {
 		t.Fatalf("count normalized users: %v", err)
 	}
 	if usersCount != 1 {
@@ -143,7 +143,7 @@ func TestRegisterRejectsCaseInsensitiveDuplicateEmail(t *testing.T) {
 
 func TestRegisterRejectsExactDuplicateEmail(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	existingEmail := "qatest2@lume.local"
+	existingEmail := "qatest2@ovumcy.local"
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte("StrongPass1"), bcrypt.DefaultCost)
 	if err != nil {
@@ -198,7 +198,7 @@ func TestRegisterRejectsExactDuplicateEmail(t *testing.T) {
 
 func TestRegisterRejectsExactDuplicateEmailHTMLFlow(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	existingEmail := "qatest2@lume.local"
+	existingEmail := "qatest2@ovumcy.local"
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte("StrongPass1"), bcrypt.DefaultCost)
 	if err != nil {

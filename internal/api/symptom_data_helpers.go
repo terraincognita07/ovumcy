@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) validateSymptomIDs(userID uint, ids []uint) ([]uint, error) {

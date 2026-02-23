@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) buildDashboardViewData(user *models.User, language string, messages map[string]string, now time.Time) (fiber.Map, string, error) {
@@ -27,7 +27,7 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 	ovulationInPast := !stats.OvulationDate.IsZero() && stats.OvulationDate.Before(today)
 
 	data := fiber.Map{
-		"Title":             localizedPageTitle(messages, "meta.title.dashboard", "Lume | Dashboard"),
+		"Title":             localizedPageTitle(messages, "meta.title.dashboard", "Ovumcy | Dashboard"),
 		"CurrentUser":       user,
 		"Stats":             stats,
 		"CycleDayReference": cycleDayReference,

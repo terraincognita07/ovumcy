@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestExportCSVIncludesKnownAndOtherSymptoms(t *testing.T) {
@@ -54,7 +54,7 @@ func TestExportCSVIncludesKnownAndOtherSymptoms(t *testing.T) {
 	if got := response.Header.Get("Content-Type"); !strings.Contains(got, "text/csv") {
 		t.Fatalf("expected text/csv content type, got %q", got)
 	}
-	if got := response.Header.Get("Content-Disposition"); !strings.Contains(got, "attachment; filename=lume-export-") {
+	if got := response.Header.Get("Content-Disposition"); !strings.Contains(got, "attachment; filename=ovumcy-export-") {
 		t.Fatalf("expected attachment filename header, got %q", got)
 	}
 

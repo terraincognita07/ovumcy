@@ -15,13 +15,18 @@ func TestNormalizeRecoveryCode(t *testing.T) {
 	}{
 		{
 			name: "normalizes with spaces and dashes",
-			raw:  "  lume-abcd-2345-efgh  ",
-			want: "LUME-ABCD-2345-EFGH",
+			raw:  "  ovum-abcd-2345-efgh  ",
+			want: "OVUM-ABCD-2345-EFGH",
+		},
+		{
+			name: "normalizes existing ovum prefix",
+			raw:  " ovum-abcd-2345-efgh ",
+			want: "OVUM-ABCD-2345-EFGH",
 		},
 		{
 			name: "normalizes raw 12 chars",
 			raw:  "abcd2345efgh",
-			want: "LUME-ABCD-2345-EFGH",
+			want: "OVUM-ABCD-2345-EFGH",
 		},
 		{
 			name: "invalid length falls back to upper trimmed input",
@@ -55,7 +60,8 @@ func TestGenerateRecoveryCodeFormat(t *testing.T) {
 		t.Fatalf("generated code %q does not match required format", code)
 	}
 
-	if strings.ContainsAny(code, "IO10") {
+	randomPart := strings.TrimPrefix(strings.ReplaceAll(code, "-", ""), recoveryCodePrefix)
+	if strings.ContainsAny(randomPart, "IO10") {
 		t.Fatalf("generated code %q contains ambiguous characters", code)
 	}
 }

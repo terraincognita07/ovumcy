@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func ownerBaselineCycleLength(user *models.User) int {

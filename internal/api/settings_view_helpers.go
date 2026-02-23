@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func isChangePasswordErrorMessage(message string) bool {
@@ -85,7 +85,7 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	today := dateAtLocation(time.Now().In(handler.location), handler.location).Format("2006-01-02")
 
 	data := fiber.Map{
-		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
+		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Ovumcy | Settings"),
 		"CurrentUser":            user,
 		"ErrorKey":               errorKey,
 		"ChangePasswordErrorKey": changePasswordErrorKey,

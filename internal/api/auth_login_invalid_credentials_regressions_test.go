@@ -80,7 +80,7 @@ func TestLoginInvalidCredentialsRedirectPreservesEmail(t *testing.T) {
 	if !strings.Contains(rendered, `data-login-has-error="true"`) {
 		t.Fatalf("expected login form to mark error state for password draft restore")
 	}
-	if !strings.Contains(rendered, `data-password-draft-key="lume_login_password_draft"`) {
+	if !strings.Contains(rendered, `data-password-draft-key="ovumcy_login_password_draft"`) {
 		t.Fatalf("expected login form to include password draft storage key")
 	}
 

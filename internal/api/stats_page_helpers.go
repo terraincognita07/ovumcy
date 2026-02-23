@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 const maxStatsTrendPoints = 12
@@ -88,7 +88,7 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 	}
 
 	data := fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.stats", "Lume | Stats"),
+		"Title":           localizedPageTitle(messages, "meta.title.stats", "Ovumcy | Stats"),
 		"CurrentUser":     user,
 		"Stats":           stats,
 		"ChartData":       chartPayload,

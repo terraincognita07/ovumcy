@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestFetchSymptomsBackfillsMissingBuiltinSymptoms(t *testing.T) {
-	databasePath := filepath.Join(t.TempDir(), "lume-symptom-backfill.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-symptom-backfill.db")
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)

@@ -31,7 +31,7 @@ func loginAndExtractAuthCookie(t *testing.T, app *fiber.App, email string, passw
 	}
 
 	for _, cookie := range response.Cookies() {
-		if cookie.Name == "lume_auth" && cookie.Value != "" {
+		if cookie.Name == "ovumcy_auth" && cookie.Value != "" {
 			return cookie.Name + "=" + cookie.Value
 		}
 	}

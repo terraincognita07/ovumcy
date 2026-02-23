@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/api"
+	"github.com/terraincognita07/ovumcy/internal/api"
 )
 
 func TestResolveSecretKey(t *testing.T) {
@@ -53,8 +53,8 @@ func TestCSRFMiddlewareConfigUsesCookieSecureFlag(t *testing.T) {
 	if !secureConfig.CookieHTTPOnly {
 		t.Fatal("expected csrf cookie to be httpOnly")
 	}
-	if secureConfig.CookieName != "lume_csrf" {
-		t.Fatalf("expected csrf cookie name lume_csrf, got %q", secureConfig.CookieName)
+	if secureConfig.CookieName != "ovumcy_csrf" {
+		t.Fatalf("expected csrf cookie name ovumcy_csrf, got %q", secureConfig.CookieName)
 	}
 	if secureConfig.KeyLookup != "form:csrf_token" {
 		t.Fatalf("expected csrf key lookup form:csrf_token, got %q", secureConfig.KeyLookup)
@@ -124,7 +124,7 @@ func TestRedirectWithErrorCodeKeepsLoginEmailInFlash(t *testing.T) {
 		t.Fatalf("expected redirect location /login, got %q", location)
 	}
 
-	flashCookie := testResponseCookie(response.Cookies(), "lume_flash")
+	flashCookie := testResponseCookie(response.Cookies(), "ovumcy_flash")
 	if flashCookie == nil {
 		t.Fatal("expected flash cookie in rate-limit redirect response")
 	}

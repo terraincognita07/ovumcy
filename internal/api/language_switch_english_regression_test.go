@@ -26,13 +26,13 @@ func TestLanguageSwitchSetsEnglishCookieAndRendersEnglishLogin(t *testing.T) {
 		t.Fatalf("expected redirect to /login, got %q", location)
 	}
 
-	englishCookie := responseCookieValue(englishResponse.Cookies(), "lume_lang")
+	englishCookie := responseCookieValue(englishResponse.Cookies(), "ovumcy_lang")
 	if englishCookie != "en" {
-		t.Fatalf("expected lume_lang cookie value %q, got %q", "en", englishCookie)
+		t.Fatalf("expected ovumcy_lang cookie value %q, got %q", "en", englishCookie)
 	}
 
 	englishLoginRequest := httptest.NewRequest(http.MethodGet, "/login", nil)
-	englishLoginRequest.Header.Set("Cookie", "lume_lang="+englishCookie)
+	englishLoginRequest.Header.Set("Cookie", "ovumcy_lang="+englishCookie)
 	englishLoginResponse, err := app.Test(englishLoginRequest, -1)
 	if err != nil {
 		t.Fatalf("english login request failed: %v", err)

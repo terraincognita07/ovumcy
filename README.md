@@ -1,10 +1,10 @@
-# Lume
+# Ovumcy
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://go.dev/)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://www.docker.com/)
 
-Lume is a privacy-first, self-hosted menstrual cycle tracker.
+Ovumcy is a privacy-first, self-hosted menstrual cycle tracker.
 It runs as a single Go service with SQLite and a server-rendered web UI.
 
 ## Features
@@ -36,8 +36,8 @@ It runs as a single Go service with SQLite and a server-rendered web UI.
 ### Docker
 
 ```bash
-git clone https://github.com/terraincognita07/lume.git
-cd lume
+git clone https://github.com/terraincognita07/ovumcy.git
+cd ovumcy
 docker compose -f docker/docker-compose.yml up -d
 ```
 
@@ -51,11 +51,11 @@ Requirements:
 - Node.js 18+
 
 ```bash
-git clone https://github.com/terraincognita07/lume.git
-cd lume
+git clone https://github.com/terraincognita07/ovumcy.git
+cd ovumcy
 npm ci
 npm run build
-go run ./cmd/lume
+go run ./cmd/ovumcy
 ```
 
 ## Configuration
@@ -67,7 +67,7 @@ Primary variables:
 TZ=UTC
 DEFAULT_LANGUAGE=ru
 SECRET_KEY=replace_with_at_least_32_random_characters
-DB_PATH=data/lume.db
+DB_PATH=data/ovumcy.db
 PORT=8080
 COOKIE_SECURE=false
 
@@ -98,7 +98,7 @@ Common commands from the repository root:
 ```bash
 go test ./...
 npm run build
-go run ./cmd/lume
+go run ./cmd/ovumcy
 ```
 
 CI runs staticcheck, `go vet`, tests, and frontend build on pushes and pull requests.
@@ -119,5 +119,7 @@ CI runs staticcheck, `go vet`, tests, and frontend build on pushes and pull requ
 
 ## License
 
-Lume is licensed under AGPL v3.
+Ovumcy is licensed under AGPL v3.
 See [LICENSE](LICENSE).
+
+

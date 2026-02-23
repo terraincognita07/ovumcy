@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) buildCalendarViewData(user *models.User, language string, messages map[string]string, now time.Time, monthStart time.Time, selectedDate string) (fiber.Map, string, error) {
@@ -23,7 +23,7 @@ func (handler *Handler) buildCalendarViewData(user *models.User, language string
 	prevMonth, nextMonth := calendarAdjacentMonthValues(monthStart)
 
 	data := fiber.Map{
-		"Title":        localizedPageTitle(messages, "meta.title.calendar", "Lume | Calendar"),
+		"Title":        localizedPageTitle(messages, "meta.title.calendar", "Ovumcy | Calendar"),
 		"CurrentUser":  user,
 		"MonthLabel":   localizedMonthYear(language, monthStart),
 		"MonthValue":   monthStart.Format("2006-01"),

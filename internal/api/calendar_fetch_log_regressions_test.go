@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/i18n"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,7 +22,7 @@ func TestFetchLogByDateFindsZuluStoredRowForLocalCalendarDay(t *testing.T) {
 	internalDir := filepath.Dir(apiDir)
 	templatesDir := filepath.Join(internalDir, "templates")
 	localesDir := filepath.Join(internalDir, "i18n", "locales")
-	databasePath := filepath.Join(t.TempDir(), "lume-zulu-fetch.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-zulu-fetch.db")
 
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {
@@ -107,7 +107,7 @@ func TestFetchLogByDateIgnoresUTCShiftedRowForLocalCalendarDay(t *testing.T) {
 	internalDir := filepath.Dir(apiDir)
 	templatesDir := filepath.Join(internalDir, "templates")
 	localesDir := filepath.Join(internalDir, "i18n", "locales")
-	databasePath := filepath.Join(t.TempDir(), "lume-zulu-shifted-fetch.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-zulu-shifted-fetch.db")
 
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {

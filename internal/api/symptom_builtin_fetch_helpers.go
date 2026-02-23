@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) fetchSymptoms(userID uint) ([]models.SymptomType, error) {

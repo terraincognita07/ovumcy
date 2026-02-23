@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
 	"gorm.io/gorm"
 )
 
@@ -89,7 +89,7 @@ func newOnboardingTestAppWithLocation(t *testing.T, location *time.Location) (*f
 	internalDir := filepath.Dir(apiDir)
 	templatesDir := filepath.Join(internalDir, "templates")
 	localesDir := filepath.Join(internalDir, "i18n", "locales")
-	databasePath := filepath.Join(t.TempDir(), "lume-onboarding-test-tz.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-onboarding-test-tz.db")
 
 	database, err := db.OpenSQLite(databasePath)
 	if err != nil {

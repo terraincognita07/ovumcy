@@ -3,8 +3,8 @@ package api
 import (
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) buildCycleStatsForRange(user *models.User, from time.Time, to time.Time, now time.Time) (services.CycleStats, []models.DailyLog, error) {

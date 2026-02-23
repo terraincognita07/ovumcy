@@ -53,7 +53,7 @@
 
         var blob = await response.blob();
         var extension = type === "json" ? "json" : "csv";
-        var fallbackName = "lume-export." + extension;
+        var fallbackName = "ovumcy-export." + extension;
         var filename = parseFilenameFromDisposition(response.headers.get("Content-Disposition") || "", fallbackName);
 
         var objectURL = URL.createObjectURL(blob);
@@ -206,3 +206,4 @@
     context.links[linkIndex].addEventListener("click", handleExport);
   }
 })();
+

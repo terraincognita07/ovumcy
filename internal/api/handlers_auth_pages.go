@@ -54,7 +54,7 @@ func (handler *Handler) ShowRecoveryCodePage(c *fiber.Ctx) error {
 	}
 
 	return handler.render(c, "recovery_code", fiber.Map{
-		"Title":          localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
+		"Title":          localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Ovumcy | Recovery Code"),
 		"RecoveryCode":   recoveryCode,
 		"ContinuePath":   continuePath,
 		"HideNavigation": true,

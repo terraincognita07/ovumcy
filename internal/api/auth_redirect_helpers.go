@@ -1,6 +1,6 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/models"
+import "github.com/terraincognita07/ovumcy/internal/models"
 
 func postLoginRedirectPath(user *models.User) string {
 	if requiresOnboarding(user) {

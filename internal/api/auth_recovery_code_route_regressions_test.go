@@ -38,7 +38,7 @@ func TestRecoveryCodePageRejectsCookieFromDifferentUser(t *testing.T) {
 
 	payload := recoveryCodePagePayload{
 		UserID:       userA.ID,
-		RecoveryCode: "LUME-TEST-CODE-1234",
+		RecoveryCode: "OVUM-TEST-CODE-1234",
 		ContinuePath: "/dashboard",
 	}
 	serialized, err := json.Marshal(payload)

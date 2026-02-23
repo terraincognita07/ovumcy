@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
 	"gorm.io/gorm"
 )
 

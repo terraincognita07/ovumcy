@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {

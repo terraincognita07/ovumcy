@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestOpenSQLiteCreatesCaseInsensitiveUserEmailUniqueIndex(t *testing.T) {
-	databasePath := filepath.Join(t.TempDir(), "lume-email-index.db")
+	databasePath := filepath.Join(t.TempDir(), "ovumcy-email-index.db")
 	database, err := OpenSQLite(databasePath)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
@@ -24,7 +24,7 @@ func TestOpenSQLiteCreatesCaseInsensitiveUserEmailUniqueIndex(t *testing.T) {
 	})
 
 	firstUser := models.User{
-		Email:        "QA-Test2@Lume.Local",
+		Email:        "QA-Test2@Ovumcy.Local",
 		PasswordHash: "hash-1",
 		Role:         models.RoleOwner,
 		CycleLength:  models.DefaultCycleLength,
@@ -36,7 +36,7 @@ func TestOpenSQLiteCreatesCaseInsensitiveUserEmailUniqueIndex(t *testing.T) {
 	}
 
 	secondUser := models.User{
-		Email:        "qa-test2@lume.local",
+		Email:        "qa-test2@ovumcy.local",
 		PasswordHash: "hash-2",
 		Role:         models.RoleOwner,
 		CycleLength:  models.DefaultCycleLength,

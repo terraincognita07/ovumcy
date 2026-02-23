@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
 	"gorm.io/gorm"
 )
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestExportCSVRespectsRequestedDateRange(t *testing.T) {

@@ -3,8 +3,8 @@ package api
 import (
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) deleteDailyLogByDate(userID uint, day time.Time) error {

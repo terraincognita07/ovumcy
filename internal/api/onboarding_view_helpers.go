@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User, now time.Time) fiber.Map {
@@ -27,7 +27,7 @@ func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User,
 	}
 
 	return fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.onboarding", "Lume | Onboarding"),
+		"Title":           localizedPageTitle(messages, "meta.title.onboarding", "Ovumcy | Onboarding"),
 		"CurrentUser":     user,
 		"HideNavigation":  true,
 		"OnboardingStep":  parseOnboardingStep(c.Query("step")),

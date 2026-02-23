@@ -95,7 +95,7 @@
   }
 
   function initLanguageSwitcher() {
-    applyHTMLLanguage(readCookie("lume_lang") || document.documentElement.getAttribute("lang"));
+    applyHTMLLanguage(readCookie("ovumcy_lang") || document.documentElement.getAttribute("lang"));
 
     var links = document.querySelectorAll("a.lang-link");
     for (var index = 0; index < links.length; index++) {
@@ -320,7 +320,7 @@
     }
 
     var storage = loginPasswordDraftStorage();
-    var storageKey = form.getAttribute("data-password-draft-key") || "lume_login_password_draft";
+    var storageKey = form.getAttribute("data-password-draft-key") || "ovumcy_login_password_draft";
     var hasError = isTruthyDataValue(form.getAttribute("data-login-has-error"));
 
     function persistPasswordDraft() {
@@ -1071,12 +1071,12 @@
         this.downloadFailed = false;
 
         try {
-          var content = "Lume recovery code\n\n" + code + "\n\nStore this code offline and private.";
+          var content = "Ovumcy recovery code\n\n" + code + "\n\nStore this code offline and private.";
           var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
           var objectURL = URL.createObjectURL(blob);
           var link = document.createElement("a");
           link.href = objectURL;
-          link.download = "lume-recovery-code.txt";
+          link.download = "ovumcy-recovery-code.txt";
           document.body.appendChild(link);
           link.click();
           link.remove();

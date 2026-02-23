@@ -1,6 +1,6 @@
 package api
 
-import "github.com/terraincognita07/lume/internal/services"
+import "github.com/terraincognita07/ovumcy/internal/services"
 
 func isValidOnboardingCycleLength(value int) bool {
 	return value >= 15 && value <= 90

@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestBuildCycleStatsForRange_AppliesOnboardingBaseline(t *testing.T) {

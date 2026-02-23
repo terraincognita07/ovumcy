@@ -20,10 +20,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/terraincognita07/lume/internal/api"
-	"github.com/terraincognita07/lume/internal/cli"
-	"github.com/terraincognita07/lume/internal/db"
-	"github.com/terraincognita07/lume/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/api"
+	"github.com/terraincognita07/ovumcy/internal/cli"
+	"github.com/terraincognita07/ovumcy/internal/db"
+	"github.com/terraincognita07/ovumcy/internal/i18n"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid SECRET_KEY: %v", err)
 	}
-	dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
+	dbPath := getEnv("DB_PATH", filepath.Join("data", "ovumcy.db"))
 	port, err := resolvePort()
 	if err != nil {
 		log.Fatalf("invalid PORT: %v", err)
@@ -85,7 +85,7 @@ func main() {
 	}
 
 	appConfig := fiber.Config{
-		AppName:               "Lume",
+		AppName:               "Ovumcy",
 		DisableStartupMessage: true,
 	}
 	if trustProxyEnabled {
@@ -142,7 +142,7 @@ func main() {
 	}()
 
 	log.Printf(
-		"Lume listening on http://0.0.0.0:%s (rev: %s, tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
+		"Ovumcy listening on http://0.0.0.0:%s (rev: %s, tz: %s, rate_limits: login=%d/%s forgot=%d/%s api=%d/%s, trusted_proxy=%t)",
 		port,
 		buildRevision(),
 		location.String(),
@@ -196,9 +196,9 @@ func tryRunCLICommand() (bool, error) {
 	switch command {
 	case "reset-password":
 		if len(os.Args) != 3 {
-			return true, fmt.Errorf("usage: lume reset-password <email>")
+			return true, fmt.Errorf("usage: ovumcy reset-password <email>")
 		}
-		dbPath := getEnv("DB_PATH", filepath.Join("data", "lume.db"))
+		dbPath := getEnv("DB_PATH", filepath.Join("data", "ovumcy.db"))
 		email := strings.TrimSpace(os.Args[2])
 		return true, cli.RunResetPasswordCommand(dbPath, email)
 	default:
@@ -309,7 +309,7 @@ func parseCSV(value string) []string {
 func csrfMiddlewareConfig(cookieSecure bool) csrf.Config {
 	return csrf.Config{
 		KeyLookup:      "form:csrf_token",
-		CookieName:     "lume_csrf",
+		CookieName:     "ovumcy_csrf",
 		CookieSameSite: "Lax",
 		CookieHTTPOnly: true,
 		CookieSecure:   cookieSecure,
@@ -409,7 +409,7 @@ func logRateLimitHit(c *fiber.Ctx) {
 }
 
 func limiterLanguage(c *fiber.Ctx, i18nManager *i18n.Manager) string {
-	language := strings.TrimSpace(c.Cookies("lume_lang"))
+	language := strings.TrimSpace(c.Cookies("ovumcy_lang"))
 	if language != "" {
 		return i18nManager.NormalizeLanguage(language)
 	}

@@ -2,14 +2,14 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 const (
-	authCookieName         = "lume_auth"
-	languageCookieName     = "lume_lang"
-	flashCookieName        = "lume_flash"
-	recoveryCodeCookieName = "lume_recovery_code"
+	authCookieName         = "ovumcy_auth"
+	languageCookieName     = "ovumcy_lang"
+	flashCookieName        = "ovumcy_flash"
+	recoveryCodeCookieName = "ovumcy_recovery_code"
 	contextUserKey         = "current_user"
 	contextLanguageKey     = "current_language"
 	contextMessagesKey     = "current_messages"

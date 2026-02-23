@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
-	"github.com/terraincognita07/lume/internal/services"
+	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {

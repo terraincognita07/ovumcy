@@ -14,7 +14,7 @@ func TestOnboardingDateInputUsesCurrentLanguage(t *testing.T) {
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	request := httptest.NewRequest(http.MethodGet, "/onboarding", nil)
-	request.Header.Set("Cookie", authCookie+"; lume_lang=en")
+	request.Header.Set("Cookie", authCookie+"; ovumcy_lang=en")
 	response, err := app.Test(request, -1)
 	if err != nil {
 		t.Fatalf("onboarding request failed: %v", err)
@@ -45,7 +45,7 @@ func TestOnboardingDateInputUsesRussianPlaceholder(t *testing.T) {
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	request := httptest.NewRequest(http.MethodGet, "/onboarding", nil)
-	request.Header.Set("Cookie", authCookie+"; lume_lang=ru")
+	request.Header.Set("Cookie", authCookie+"; ovumcy_lang=ru")
 	response, err := app.Test(request, -1)
 	if err != nil {
 		t.Fatalf("onboarding request failed: %v", err)

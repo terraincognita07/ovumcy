@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/terraincognita07/lume/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func dayHasData(entry models.DailyLog) bool {
