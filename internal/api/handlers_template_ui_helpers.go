@@ -14,7 +14,19 @@ func templateUserIdentity(user *models.User) string {
 	if displayName := strings.TrimSpace(user.DisplayName); displayName != "" {
 		return displayName
 	}
-	return strings.TrimSpace(user.Email)
+	email := strings.TrimSpace(user.Email)
+	if email == "" {
+		return "account"
+	}
+	atIndex := strings.Index(email, "@")
+	if atIndex <= 0 {
+		return email
+	}
+	localPart := strings.TrimSpace(email[:atIndex])
+	if localPart == "" {
+		return "account"
+	}
+	return localPart
 }
 
 func isActiveTemplateRoute(currentPath string, route string) bool {

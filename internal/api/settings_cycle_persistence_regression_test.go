@@ -26,9 +26,10 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	form := url.Values{
-		"cycle_length":     {"28"},
-		"period_length":    {"6"},
-		"auto_period_fill": {"true"},
+		"cycle_length":      {"28"},
+		"period_length":     {"6"},
+		"auto_period_fill":  {"true"},
+		"last_period_start": {"2026-02-10"},
 	}
 	updateRequest := httptest.NewRequest(http.MethodPost, "/settings/cycle", strings.NewReader(form.Encode()))
 	updateRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -55,7 +56,7 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 	}
 
 	persisted := models.User{}
-	if err := database.Select("cycle_length", "period_length", "auto_period_fill").First(&persisted, user.ID).Error; err != nil {
+	if err := database.Select("cycle_length", "period_length", "auto_period_fill", "last_period_start").First(&persisted, user.ID).Error; err != nil {
 		t.Fatalf("load persisted user cycle values: %v", err)
 	}
 	if persisted.CycleLength != 28 {
@@ -66,6 +67,9 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 	}
 	if !persisted.AutoPeriodFill {
 		t.Fatalf("expected persisted auto_period_fill=true")
+	}
+	if persisted.LastPeriodStart == nil || persisted.LastPeriodStart.Format("2006-01-02") != "2026-02-10" {
+		t.Fatalf("expected persisted last_period_start=2026-02-10, got %v", persisted.LastPeriodStart)
 	}
 
 	settingsRequest := httptest.NewRequest(http.MethodGet, "/settings", nil)
@@ -98,5 +102,9 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 	periodInputPattern := regexp.MustCompile(`(?s)name="period_length".*?value="6"`)
 	if !periodInputPattern.MatchString(rendered) {
 		t.Fatalf("expected period slider value 6 in rendered settings page")
+	}
+	lastPeriodInputPattern := regexp.MustCompile(`(?s)name="last_period_start".*?value="2026-02-10"`)
+	if !lastPeriodInputPattern.MatchString(rendered) {
+		t.Fatalf("expected last_period_start date input to render persisted value")
 	}
 }

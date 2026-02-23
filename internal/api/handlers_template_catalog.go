@@ -11,6 +11,7 @@ var pageTemplates = []string{
 	"calendar",
 	"stats",
 	"settings",
+	"not_found",
 	"privacy",
 }
 

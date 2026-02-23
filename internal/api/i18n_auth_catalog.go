@@ -21,6 +21,7 @@ var authErrorKeys = map[string]string{
 	"invalid settings input":                          "settings.error.invalid_input",
 	"invalid profile input":                           "settings.error.invalid_profile_input",
 	"display name too long":                           "settings.error.display_name_too_long",
+	"invalid cycle start date":                        "settings.error.invalid_last_period_start",
 	"invalid password":                                "settings.error.invalid_password",
 	"period flow is required":                         "calendar.error.period_flow_required",
 	"date is required":                                "onboarding.error.date_required",

@@ -13,7 +13,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	input, parseError := parseCycleSettingsInput(c)
+	input, parseError := handler.parseCycleSettingsInput(c)
 	if parseError != "" {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, parseError)
 	}
@@ -22,7 +22,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update cycle settings")
 	}
 
-	applyCycleSettings(user, input)
+	applyCycleSettings(user, input, handler.location)
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})

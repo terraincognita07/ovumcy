@@ -88,6 +88,18 @@
           class="w-full range-field">
       </div>
 
+      <div class="space-y-2">
+        <label class="field-label" for="settings-last-period-start">{{t .Messages "settings.cycle.last_period_start"}}</label>
+        <input
+          id="settings-last-period-start"
+          type="date"
+          name="last_period_start"
+          max="{{.TodayISO}}"
+          value="{{.LastPeriodStart}}"
+          class="input-field">
+        <p class="journal-muted text-xs">{{t .Messages "settings.cycle.last_period_start_hint"}}</p>
+      </div>
+
       <div class="space-y-1">
         <p class="status-error text-sm" x-cloak x-show="(cycleLength - periodLength) < 8">{{t .Messages "settings.cycle.error_incompatible"}}</p>
         <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) >= 8 && (cycleLength - periodLength) < 15">{{t .Messages "settings.cycle.warning_approximate"}}</p>

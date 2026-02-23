@@ -70,7 +70,10 @@ func TestDashboardNavigationShowsCurrentUserIdentity(t *testing.T) {
 	if !strings.Contains(rendered, `aria-label="Current user"`) {
 		t.Fatalf("expected current user label in navigation")
 	}
-	if !strings.Contains(rendered, "identity-owner@example.com") {
-		t.Fatalf("expected email identity in navigation when display name is empty")
+	if !strings.Contains(rendered, "identity-owner") {
+		t.Fatalf("expected local-part identity in navigation when display name is empty")
+	}
+	if strings.Contains(rendered, "identity-owner@example.com") {
+		t.Fatalf("did not expect full email identity in navigation fallback")
 	}
 }

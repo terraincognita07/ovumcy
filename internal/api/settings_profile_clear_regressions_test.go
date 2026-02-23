@@ -82,7 +82,10 @@ func TestProfileUpdateShowsMessageWhenDisplayNameCleared(t *testing.T) {
 	if strings.Contains(string(dashboardBody), ">Maya</span>") {
 		t.Fatalf("did not expect stale display name in navigation after clear")
 	}
-	if !strings.Contains(string(dashboardBody), "profile-clear@example.com") {
-		t.Fatalf("expected navigation fallback to email after display name clear")
+	if !strings.Contains(string(dashboardBody), "profile-clear") {
+		t.Fatalf("expected navigation fallback to local-part identity after display name clear")
+	}
+	if strings.Contains(string(dashboardBody), "profile-clear@example.com") {
+		t.Fatalf("did not expect full email in navigation fallback after display name clear")
 	}
 }

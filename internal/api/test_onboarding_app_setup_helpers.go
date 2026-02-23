@@ -56,5 +56,6 @@ func newOnboardingTestAppWithCookieSecure(t *testing.T, cookieSecure bool) (*fib
 	app := fiber.New()
 	app.Use(handler.LanguageMiddleware)
 	RegisterRoutes(app, handler)
+	app.Use(handler.NotFound)
 	return app, database
 }

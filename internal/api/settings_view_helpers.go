@@ -2,6 +2,7 @@ package api
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/lume/internal/models"
@@ -59,7 +60,7 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	}
 
 	persisted := models.User{}
-	if err := handler.db.Select("cycle_length", "period_length", "auto_period_fill").First(&persisted, user.ID).Error; err != nil {
+	if err := handler.db.Select("cycle_length", "period_length", "auto_period_fill", "last_period_start").First(&persisted, user.ID).Error; err != nil {
 		return nil, err
 	}
 
@@ -75,6 +76,13 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	user.CycleLength = cycleLength
 	user.PeriodLength = periodLength
 	user.AutoPeriodFill = autoPeriodFill
+	user.LastPeriodStart = persisted.LastPeriodStart
+
+	lastPeriodStart := ""
+	if persisted.LastPeriodStart != nil {
+		lastPeriodStart = dateAtLocation(*persisted.LastPeriodStart, handler.location).Format("2006-01-02")
+	}
+	today := dateAtLocation(time.Now().In(handler.location), handler.location).Format("2006-01-02")
 
 	data := fiber.Map{
 		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Lume | Settings"),
@@ -85,6 +93,8 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 		"CycleLength":            cycleLength,
 		"PeriodLength":           periodLength,
 		"AutoPeriodFill":         autoPeriodFill,
+		"LastPeriodStart":        lastPeriodStart,
+		"TodayISO":               today,
 	}
 
 	if user.Role == models.RoleOwner {

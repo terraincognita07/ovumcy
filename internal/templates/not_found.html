@@ -1,0 +1,18 @@
+{{define "content"}}
+<section class="mx-auto max-w-3xl">
+  <div class="journal-card journal-hero p-7 sm:p-10 text-center space-y-5">
+    <p class="journal-kicker">404</p>
+    <h1 class="journal-title">{{t .Messages "not_found.title"}}</h1>
+    <p class="journal-muted">{{t .Messages "not_found.subtitle"}}</p>
+
+    <div class="flex flex-wrap justify-center gap-3">
+      <a href="{{.PrimaryPath}}" class="btn-primary">{{t .Messages .PrimaryLabelKey}}</a>
+      {{if .CurrentUser}}
+      <a href="/calendar" class="btn-secondary">{{t .Messages "nav.calendar"}}</a>
+      {{else}}
+      <a href="/privacy" class="btn-secondary">{{t .Messages "nav.privacy"}}</a>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}

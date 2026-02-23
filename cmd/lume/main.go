@@ -127,6 +127,7 @@ func main() {
 
 	app.Static("/static", filepath.Join("web", "static"))
 	api.RegisterRoutes(app, handler)
+	app.Use(handler.NotFound)
 
 	sigCtx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopSignals()

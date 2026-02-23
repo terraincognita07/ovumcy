@@ -63,4 +63,30 @@ func TestSettingsCycleRejectsOutOfRangeAndIncompatibleValues(t *testing.T) {
 	if !strings.Contains(string(incompatibleBody), "status-error") {
 		t.Fatalf("expected status-error markup for incompatible cycle/period values, got %q", string(incompatibleBody))
 	}
+
+	futureDateForm := url.Values{
+		"cycle_length":      {"28"},
+		"period_length":     {"6"},
+		"last_period_start": {"2999-01-01"},
+	}
+	futureDateRequest := httptest.NewRequest(http.MethodPost, "/settings/cycle", strings.NewReader(futureDateForm.Encode()))
+	futureDateRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	futureDateRequest.Header.Set("HX-Request", "true")
+	futureDateRequest.Header.Set("Cookie", authCookie)
+
+	futureDateResponse, err := app.Test(futureDateRequest, -1)
+	if err != nil {
+		t.Fatalf("future-date settings request failed: %v", err)
+	}
+	defer futureDateResponse.Body.Close()
+	if futureDateResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected HTMX status 200 for future last_period_start, got %d", futureDateResponse.StatusCode)
+	}
+	futureDateBody, err := io.ReadAll(futureDateResponse.Body)
+	if err != nil {
+		t.Fatalf("read future-date response body: %v", err)
+	}
+	if !strings.Contains(string(futureDateBody), "status-error") {
+		t.Fatalf("expected status-error markup for future last_period_start, got %q", string(futureDateBody))
+	}
 }

@@ -37,9 +37,11 @@ type changePasswordInput struct {
 }
 
 type cycleSettingsInput struct {
-	CycleLength    int  `json:"cycle_length" form:"cycle_length"`
-	PeriodLength   int  `json:"period_length" form:"period_length"`
-	AutoPeriodFill bool `json:"auto_period_fill" form:"auto_period_fill"`
+	CycleLength        int    `json:"cycle_length" form:"cycle_length"`
+	PeriodLength       int    `json:"period_length" form:"period_length"`
+	AutoPeriodFill     bool   `json:"auto_period_fill" form:"auto_period_fill"`
+	LastPeriodStart    string `json:"last_period_start" form:"last_period_start"`
+	LastPeriodStartSet bool   `json:"-" form:"-"`
 }
 
 type profileSettingsInput struct {

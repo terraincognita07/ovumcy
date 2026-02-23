@@ -69,4 +69,7 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	if !strings.Contains(rendered, `id="settings-period-length"`) || !strings.Contains(rendered, `max="14"`) {
 		t.Fatalf("expected settings period slider max=14")
 	}
+	if !strings.Contains(rendered, `id="settings-last-period-start"`) {
+		t.Fatalf("expected settings cycle form to include editable last-period-start field")
+	}
 }
