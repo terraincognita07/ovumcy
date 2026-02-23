@@ -38,7 +38,6 @@ It runs as a single Go service with SQLite and a server-rendered web UI.
 - First-party cookies only (auth, CSRF, language).
 - Data is stored locally in SQLite on your infrastructure.
 - Role model: `owner` has full access.
-- `partner` role exists in code, but self-service partner onboarding/invites are not public yet.
 
 If you found a security issue, see [SECURITY.md](SECURITY.md).
 
