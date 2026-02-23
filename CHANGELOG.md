@@ -27,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - daily logs (period day, flow, symptoms, notes),
   - cycle predictions (next period, ovulation, fertile window),
   - calendar and statistics views,
-  - owner/partner roles with read-only partner access,
   - CSV/JSON export,
   - Russian/English localization.
 
