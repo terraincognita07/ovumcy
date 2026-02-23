@@ -29,27 +29,12 @@ func (handler *Handler) parseOnboardingStep1Values(c *fiber.Ctx, today time.Time
 		return onboardingStep1Values{}, "last period start must be within last 60 days"
 	}
 
-	// Legacy compatibility: if old clients still submit period_end, treat it as
-	// exclusive (first clean day) and infer period length from date difference.
-	inferredPeriodLength := 0
-	rawPeriodEnd := strings.TrimSpace(input.PeriodEnd)
-	if rawPeriodEnd != "" {
-		parsedEnd, err := parseDayParam(rawPeriodEnd, handler.location)
-		if err == nil {
-			days := int(parsedEnd.Sub(parsedDay).Hours() / 24)
-			if days >= 1 {
-				inferredPeriodLength = clampOnboardingPeriodLength(days)
-			}
-		}
-	}
-
 	return onboardingStep1Values{
-		Start:                parsedDay,
-		InferredPeriodLength: inferredPeriodLength,
+		Start: parsedDay,
 	}, ""
 }
 
-func parseOnboardingStep2Input(c *fiber.Ctx, location *time.Location) (onboardingStep2Input, string) {
+func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 	input := onboardingStep2Input{}
 
 	contentType := strings.ToLower(c.Get("Content-Type"))
@@ -75,30 +60,9 @@ func parseOnboardingStep2Input(c *fiber.Ctx, location *time.Location) (onboardin
 
 	input.CycleLength = clampOnboardingCycleLength(input.CycleLength)
 	input.PeriodLength = clampOnboardingPeriodLength(input.PeriodLength)
-	input.PeriodLength = inferLegacyOnboardingPeriodLength(c, location, input.PeriodLength)
 	_, input.PeriodLength = sanitizeOnboardingCycleAndPeriod(input.CycleLength, input.PeriodLength)
 
 	return input, ""
-}
-
-func inferLegacyOnboardingPeriodLength(c *fiber.Ctx, location *time.Location, fallbackPeriodLength int) int {
-	rawStart := strings.TrimSpace(c.FormValue("last_period_start"))
-	rawEnd := strings.TrimSpace(c.FormValue("period_end"))
-	if rawStart == "" || rawEnd == "" {
-		return clampOnboardingPeriodLength(fallbackPeriodLength)
-	}
-
-	startDay, startErr := parseDayParam(rawStart, location)
-	endDay, endErr := parseDayParam(rawEnd, location)
-	if startErr != nil || endErr != nil {
-		return clampOnboardingPeriodLength(fallbackPeriodLength)
-	}
-
-	days := int(endDay.Sub(startDay).Hours() / 24)
-	if days < 1 {
-		return clampOnboardingPeriodLength(fallbackPeriodLength)
-	}
-	return clampOnboardingPeriodLength(days)
 }
 
 func sanitizeOnboardingCycleAndPeriod(cycleLength int, periodLength int) (int, int) {

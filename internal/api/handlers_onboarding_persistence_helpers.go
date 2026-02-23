@@ -4,22 +4,13 @@ import "github.com/terraincognita07/lume/internal/models"
 
 func (handler *Handler) saveOnboardingStep1(user *models.User, values onboardingStep1Values) error {
 	updates := map[string]any{
-		"last_period_start":        values.Start,
-		"onboarding_period_status": "",
-		"onboarding_period_end":    nil,
-	}
-	if values.InferredPeriodLength > 0 {
-		_, inferredPeriodLength := sanitizeOnboardingCycleAndPeriod(user.CycleLength, values.InferredPeriodLength)
-		updates["period_length"] = inferredPeriodLength
-		user.PeriodLength = inferredPeriodLength
+		"last_period_start": values.Start,
 	}
 	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
 		return err
 	}
 
 	user.LastPeriodStart = &values.Start
-	user.OnboardingPeriodStatus = ""
-	user.OnboardingPeriodEnd = nil
 	return nil
 }
 

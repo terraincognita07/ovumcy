@@ -51,7 +51,7 @@ func TestOnboardingStep1RejectsFutureAndTooOldDates(t *testing.T) {
 	}
 }
 
-func TestOnboardingStep1AcceptsLegacyPeriodEndWithoutBlocking(t *testing.T) {
+func TestOnboardingStep1IgnoresUnexpectedPeriodEndInput(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "step1-legacy-period-end@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
@@ -68,11 +68,21 @@ func TestOnboardingStep1AcceptsLegacyPeriodEndWithoutBlocking(t *testing.T) {
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("step1 legacy period-end request failed: %v", err)
+		t.Fatalf("step1 request failed: %v", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusNoContent {
 		t.Fatalf("expected status 204, got %d", response.StatusCode)
+	}
+
+	var persistedUser struct {
+		PeriodLength int
+	}
+	if err := database.Table("users").Select("period_length").Where("id = ?", user.ID).First(&persistedUser).Error; err != nil {
+		t.Fatalf("load updated user: %v", err)
+	}
+	if persistedUser.PeriodLength != 5 {
+		t.Fatalf("expected step1 to ignore period_end and keep period_length=5, got %d", persistedUser.PeriodLength)
 	}
 }
 

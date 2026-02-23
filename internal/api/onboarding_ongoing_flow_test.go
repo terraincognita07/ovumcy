@@ -19,7 +19,6 @@ func TestOnboardingFlowCompletesWithOngoingPeriodRangeAndFlowNone(t *testing.T) 
 
 	submitOnboardingStep1(t, app, authCookie, url.Values{
 		"last_period_start": {stepDateRaw},
-		"period_status":     {onboardingPeriodStatusOngoing},
 	})
 
 	submitOnboardingStep2(t, app, authCookie, url.Values{
@@ -49,13 +48,6 @@ func TestOnboardingFlowCompletesWithOngoingPeriodRangeAndFlowNone(t *testing.T) 
 	if updatedUser.LastPeriodStart.Format("2006-01-02") != stepDateRaw {
 		t.Fatalf("expected last period start %s, got %s", stepDateRaw, updatedUser.LastPeriodStart.Format("2006-01-02"))
 	}
-	if updatedUser.OnboardingPeriodStatus != "" {
-		t.Fatalf("expected onboarding period status to be cleared after completion")
-	}
-	if updatedUser.OnboardingPeriodEnd != nil {
-		t.Fatalf("expected onboarding period end to be cleared after completion")
-	}
-
 	for offset := 0; offset < 5; offset++ {
 		day := stepDate.AddDate(0, 0, offset)
 		assertOnboardingPeriodLogForDay(t, database, updatedUser.ID, day)

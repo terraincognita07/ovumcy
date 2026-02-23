@@ -6,25 +6,23 @@ import (
 	"time"
 )
 
-func TestOnboardingFlowLegacyEndDateOverridesSliderAsExclusiveRange(t *testing.T) {
+func TestOnboardingFlowBuildsPeriodRangeFromSliderPeriodLength(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "flow-finished@example.com", "StrongPass1", false)
 
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 	startDay := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, -14)
-	endDayExclusive := startDay.AddDate(0, 0, 5)
+	periodLength := 8
+	endDayExclusive := startDay.AddDate(0, 0, periodLength)
 
 	submitOnboardingStep1(t, app, authCookie, url.Values{
 		"last_period_start": {startDay.Format("2006-01-02")},
-		"period_end":        {endDayExclusive.Format("2006-01-02")},
 	})
 
 	submitOnboardingStep2(t, app, authCookie, url.Values{
-		"cycle_length":      {"28"},
-		"period_length":     {"8"},
-		"auto_period_fill":  {"true"},
-		"last_period_start": {startDay.Format("2006-01-02")},
-		"period_end":        {endDayExclusive.Format("2006-01-02")},
+		"cycle_length":     {"28"},
+		"period_length":    {"8"},
+		"auto_period_fill": {"true"},
 	})
 
 	submitOnboardingComplete(t, app, authCookie)

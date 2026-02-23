@@ -34,10 +34,8 @@ func (handler *Handler) completeOnboardingForUser(userID uint) (time.Time, error
 		}
 
 		return tx.Model(&models.User{}).Where("id = ?", current.ID).Updates(map[string]any{
-			"last_period_start":        startDay,
-			"onboarding_completed":     true,
-			"onboarding_period_status": "",
-			"onboarding_period_end":    nil,
+			"last_period_start":    startDay,
+			"onboarding_completed": true,
 		}).Error
 	})
 	if err != nil {

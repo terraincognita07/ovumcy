@@ -4,13 +4,10 @@ import "time"
 
 type onboardingStep1Input struct {
 	LastPeriodStart string `json:"last_period_start" form:"last_period_start"`
-	PeriodStatus    string `json:"period_status" form:"period_status"`
-	PeriodEnd       string `json:"period_end" form:"period_end"`
 }
 
 type onboardingStep1Values struct {
-	Start                time.Time
-	InferredPeriodLength int
+	Start time.Time
 }
 
 type onboardingStep2Input struct {

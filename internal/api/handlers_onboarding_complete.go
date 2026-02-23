@@ -28,7 +28,5 @@ func (handler *Handler) OnboardingComplete(c *fiber.Ctx) error {
 
 	user.OnboardingCompleted = true
 	user.LastPeriodStart = &startDay
-	user.OnboardingPeriodStatus = ""
-	user.OnboardingPeriodEnd = nil
 	return redirectOrJSON(c, "/dashboard")
 }

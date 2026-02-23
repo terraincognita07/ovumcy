@@ -73,7 +73,7 @@ func TestOnboardingStep2SanitizesOutOfRangeAndIncompatibleValues(t *testing.T) {
 	}
 }
 
-func TestOnboardingStep2LegacyPeriodEndOverridesSlider(t *testing.T) {
+func TestOnboardingStep2IgnoresUnexpectedPeriodEndInput(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "step2-legacy-end-override@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
@@ -102,39 +102,35 @@ func TestOnboardingStep2LegacyPeriodEndOverridesSlider(t *testing.T) {
 	if err := database.First(&updated, user.ID).Error; err != nil {
 		t.Fatalf("load updated user: %v", err)
 	}
-	if updated.PeriodLength != 5 {
-		t.Fatalf("expected period length inferred from legacy dates to be 5, got %d", updated.PeriodLength)
+	if updated.PeriodLength != 8 {
+		t.Fatalf("expected period length to follow slider value 8, got %d", updated.PeriodLength)
 	}
 }
 
-func TestOnboardingStep2LegacyPeriodEndSanitizeFallbacks(t *testing.T) {
+func TestOnboardingStep2SanitizesSliderValuesEvenWhenUnexpectedPeriodEndIsPresent(t *testing.T) {
 	cases := []struct {
 		name              string
-		lastPeriodStart   string
-		periodEnd         string
 		sliderPeriodValue string
+		cycleLength       string
 		wantPeriodLength  int
 	}{
 		{
-			name:              "end equals start falls back to slider",
-			lastPeriodStart:   "2026-02-10",
-			periodEnd:         "2026-02-10",
-			sliderPeriodValue: "5",
-			wantPeriodLength:  5,
-		},
-		{
-			name:              "end before start falls back to slider",
-			lastPeriodStart:   "2026-02-10",
-			periodEnd:         "2026-02-05",
-			sliderPeriodValue: "5",
-			wantPeriodLength:  5,
-		},
-		{
-			name:              "long legacy range clamps to max period",
-			lastPeriodStart:   "2026-02-10",
-			periodEnd:         "2026-02-25",
-			sliderPeriodValue: "5",
+			name:              "clamp to max period length",
+			sliderPeriodValue: "20",
+			cycleLength:       "28",
 			wantPeriodLength:  14,
+		},
+		{
+			name:              "compatibility floor adjusts period length",
+			sliderPeriodValue: "10",
+			cycleLength:       "15",
+			wantPeriodLength:  7,
+		},
+		{
+			name:              "invalid negative value clamps to min",
+			sliderPeriodValue: "-4",
+			cycleLength:       "28",
+			wantPeriodLength:  1,
 		},
 	}
 
@@ -146,10 +142,10 @@ func TestOnboardingStep2LegacyPeriodEndSanitizeFallbacks(t *testing.T) {
 			authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 			form := url.Values{
-				"cycle_length":      {"28"},
+				"cycle_length":      {testCase.cycleLength},
 				"period_length":     {testCase.sliderPeriodValue},
-				"last_period_start": {testCase.lastPeriodStart},
-				"period_end":        {testCase.periodEnd},
+				"last_period_start": {"2026-02-10"},
+				"period_end":        {"2026-02-25"},
 			}
 			request := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(form.Encode()))
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -158,7 +154,7 @@ func TestOnboardingStep2LegacyPeriodEndSanitizeFallbacks(t *testing.T) {
 
 			response, err := app.Test(request, -1)
 			if err != nil {
-				t.Fatalf("legacy sanitize request failed: %v", err)
+				t.Fatalf("sanitize request failed: %v", err)
 			}
 			defer response.Body.Close()
 			if response.StatusCode != http.StatusNoContent {
