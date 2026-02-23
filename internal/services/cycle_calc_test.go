@@ -68,14 +68,14 @@ func TestPredictCycleWindow_ApproximateForShortRemaining(t *testing.T) {
 	if exact {
 		t.Fatalf("expected exact=false for approximate prediction")
 	}
-	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-18" {
-		t.Fatalf("expected ovulation date 2026-02-18, got %s", got)
+	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-17" {
+		t.Fatalf("expected ovulation date 2026-02-17, got %s", got)
 	}
 	if got := fertilityStart.Format("2006-01-02"); got != "2026-02-17" {
 		t.Fatalf("expected fertility start 2026-02-17, got %s", got)
 	}
-	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-19" {
-		t.Fatalf("expected fertility end 2026-02-19, got %s", got)
+	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-18" {
+		t.Fatalf("expected fertility end 2026-02-18, got %s", got)
 	}
 
 	assertCyclePredictionInvariants(t, periodStart, 15, 7, ovulationDate, fertilityStart, fertilityEnd)
@@ -93,14 +93,14 @@ func TestPredictCycleWindow_NormalCycle(t *testing.T) {
 	if !exact {
 		t.Fatalf("expected exact prediction for regular cycle")
 	}
-	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-24" {
-		t.Fatalf("expected ovulation date 2026-02-24, got %s", got)
+	if got := ovulationDate.Format("2006-01-02"); got != "2026-02-23" {
+		t.Fatalf("expected ovulation date 2026-02-23, got %s", got)
 	}
-	if got := fertilityStart.Format("2006-01-02"); got != "2026-02-19" {
-		t.Fatalf("expected fertility start 2026-02-19, got %s", got)
+	if got := fertilityStart.Format("2006-01-02"); got != "2026-02-18" {
+		t.Fatalf("expected fertility start 2026-02-18, got %s", got)
 	}
-	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-25" {
-		t.Fatalf("expected fertility end 2026-02-25, got %s", got)
+	if got := fertilityEnd.Format("2006-01-02"); got != "2026-02-24" {
+		t.Fatalf("expected fertility end 2026-02-24, got %s", got)
 	}
 
 	assertCyclePredictionInvariants(t, periodStart, 28, 5, ovulationDate, fertilityStart, fertilityEnd)

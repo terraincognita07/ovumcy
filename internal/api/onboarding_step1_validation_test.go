@@ -17,7 +17,6 @@ func TestOnboardingStep1RejectsFutureAndTooOldDates(t *testing.T) {
 	futureDate := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, 1).Format("2006-01-02")
 	futureForm := url.Values{
 		"last_period_start": {futureDate},
-		"period_status":     {onboardingPeriodStatusOngoing},
 	}
 	futureRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step1", strings.NewReader(futureForm.Encode()))
 	futureRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -36,7 +35,6 @@ func TestOnboardingStep1RejectsFutureAndTooOldDates(t *testing.T) {
 	oldDate := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, -61).Format("2006-01-02")
 	oldForm := url.Values{
 		"last_period_start": {oldDate},
-		"period_status":     {onboardingPeriodStatusOngoing},
 	}
 	oldRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step1", strings.NewReader(oldForm.Encode()))
 	oldRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -53,16 +51,15 @@ func TestOnboardingStep1RejectsFutureAndTooOldDates(t *testing.T) {
 	}
 }
 
-func TestOnboardingStep1RequiresPeriodEndForFinishedStatus(t *testing.T) {
+func TestOnboardingStep1AcceptsLegacyPeriodEndWithoutBlocking(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	user := createOnboardingTestUser(t, database, "step1-finished-validation@example.com", "StrongPass1", false)
+	user := createOnboardingTestUser(t, database, "step1-legacy-period-end@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
-	stepDate := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, -4).Format("2006-01-02")
+	stepDate := dateAtLocation(time.Now().In(time.UTC), time.UTC).AddDate(0, 0, -4)
 	form := url.Values{
-		"last_period_start": {stepDate},
-		"period_status":     {onboardingPeriodStatusFinished},
-		"period_end":        {""},
+		"last_period_start": {stepDate.Format("2006-01-02")},
+		"period_end":        {stepDate.Format("2006-01-02")},
 	}
 	request := httptest.NewRequest(http.MethodPost, "/onboarding/step1", strings.NewReader(form.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -71,11 +68,11 @@ func TestOnboardingStep1RequiresPeriodEndForFinishedStatus(t *testing.T) {
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("step1 finished-without-end request failed: %v", err)
+		t.Fatalf("step1 legacy period-end request failed: %v", err)
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected status 400, got %d", response.StatusCode)
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", response.StatusCode)
 	}
 }
 
@@ -86,7 +83,6 @@ func TestOnboardingStep1RejectsFarHistoricalDate(t *testing.T) {
 
 	form := url.Values{
 		"last_period_start": {"2024-01-01"},
-		"period_status":     {onboardingPeriodStatusOngoing},
 	}
 	request := httptest.NewRequest(http.MethodPost, "/onboarding/step1", strings.NewReader(form.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")

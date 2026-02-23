@@ -9,9 +9,8 @@ type onboardingStep1Input struct {
 }
 
 type onboardingStep1Values struct {
-	Start  time.Time
-	Status string
-	End    *time.Time
+	Start                time.Time
+	InferredPeriodLength int
 }
 
 type onboardingStep2Input struct {

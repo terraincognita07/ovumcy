@@ -43,7 +43,7 @@ func (handler *Handler) OnboardingStep2(c *fiber.Ctx) error {
 		return redirectOrJSON(c, "/dashboard")
 	}
 
-	values, validationError := parseOnboardingStep2Input(c)
+	values, validationError := parseOnboardingStep2Input(c, handler.location)
 	if validationError != "" {
 		return apiError(c, fiber.StatusBadRequest, validationError)
 	}

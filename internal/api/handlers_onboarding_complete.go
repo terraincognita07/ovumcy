@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,8 +18,7 @@ func (handler *Handler) OnboardingComplete(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "complete onboarding steps first")
 	}
 
-	today := dateAtLocation(time.Now().In(handler.location), handler.location)
-	startDay, err := handler.completeOnboardingForUser(user.ID, today)
+	startDay, err := handler.completeOnboardingForUser(user.ID)
 	if err != nil {
 		if errors.Is(err, errOnboardingStepsRequired) {
 			return apiError(c, fiber.StatusBadRequest, "complete onboarding steps first")

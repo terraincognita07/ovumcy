@@ -27,11 +27,34 @@ func TestRecoveryCodePageUsesStandardCheckboxLayout(t *testing.T) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", response.StatusCode)
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", response.StatusCode)
+	}
+	if location := response.Header.Get("Location"); location != "/recovery-code" {
+		t.Fatalf("expected redirect to /recovery-code, got %q", location)
 	}
 
-	body, err := io.ReadAll(response.Body)
+	authCookie := responseCookieValue(response.Cookies(), authCookieName)
+	recoveryCookie := responseCookieValue(response.Cookies(), recoveryCodeCookieName)
+	if authCookie == "" || recoveryCookie == "" {
+		t.Fatalf("expected auth and recovery cookies in register response")
+	}
+
+	recoveryRequest := httptest.NewRequest(http.MethodGet, "/recovery-code", nil)
+	recoveryRequest.Header.Set("Accept-Language", "en")
+	recoveryRequest.Header.Set("Cookie", authCookieName+"="+authCookie+"; "+recoveryCodeCookieName+"="+recoveryCookie)
+
+	recoveryResponse, err := app.Test(recoveryRequest, -1)
+	if err != nil {
+		t.Fatalf("recovery page request failed: %v", err)
+	}
+	defer recoveryResponse.Body.Close()
+
+	if recoveryResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected recovery status 200, got %d", recoveryResponse.StatusCode)
+	}
+
+	body, err := io.ReadAll(recoveryResponse.Body)
 	if err != nil {
 		t.Fatalf("read recovery code page body: %v", err)
 	}
@@ -47,5 +70,8 @@ func TestRecoveryCodePageUsesStandardCheckboxLayout(t *testing.T) {
 	}
 	if !strings.Contains(rendered, `x-show="copyFailed"`) {
 		t.Fatalf("expected recovery page to render explicit copy failure feedback state")
+	}
+	if !strings.Contains(rendered, `href="/lang/ru?next=%2Frecovery-code"`) {
+		t.Fatalf("expected language switch link to keep recovery-code GET route")
 	}
 }

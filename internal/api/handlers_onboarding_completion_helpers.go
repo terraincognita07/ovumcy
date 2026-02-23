@@ -10,7 +10,7 @@ import (
 
 var errOnboardingStepsRequired = errors.New("complete onboarding steps first")
 
-func (handler *Handler) completeOnboardingForUser(userID uint, today time.Time) (time.Time, error) {
+func (handler *Handler) completeOnboardingForUser(userID uint) (time.Time, error) {
 	var startDay time.Time
 	err := handler.db.Transaction(func(tx *gorm.DB) error {
 		var current models.User
@@ -22,26 +22,12 @@ func (handler *Handler) completeOnboardingForUser(userID uint, today time.Time) 
 		}
 		startDay = dateAtLocation(*current.LastPeriodStart, handler.location)
 
-		var endDay time.Time
-		status := normalizeOnboardingPeriodStatus(current.OnboardingPeriodStatus)
-		if status == "" {
-			status = onboardingPeriodStatusOngoing
+		periodLength := current.PeriodLength
+		if !isValidOnboardingPeriodLength(periodLength) {
+			periodLength = models.DefaultPeriodLength
 		}
-		if status == onboardingPeriodStatusFinished {
-			if current.OnboardingPeriodEnd == nil {
-				return errOnboardingStepsRequired
-			}
-			endDay = dateAtLocation(*current.OnboardingPeriodEnd, handler.location)
-			if endDay.Before(startDay) || endDay.After(today) {
-				return errOnboardingStepsRequired
-			}
-		} else {
-			periodLength := current.PeriodLength
-			if !isValidOnboardingPeriodLength(periodLength) {
-				periodLength = models.DefaultPeriodLength
-			}
-			endDay = startDay.AddDate(0, 0, periodLength-1)
-		}
+		_, periodLength = sanitizeOnboardingCycleAndPeriod(current.CycleLength, periodLength)
+		endDay := startDay.AddDate(0, 0, periodLength-1)
 
 		if err := handler.upsertOnboardingPeriodRange(tx, current.ID, startDay, endDay); err != nil {
 			return err

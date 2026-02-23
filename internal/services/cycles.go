@@ -163,30 +163,18 @@ func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int
 	if periodLength <= 0 {
 		periodLength = models.DefaultPeriodLength
 	}
-	ovulationOffset, ovulationExact := CalcOvulationDay(cycleLength, periodLength)
-	if ovulationOffset <= 0 {
+	ovulationDay, ovulationExact := CalcOvulationDay(cycleLength, periodLength)
+	if ovulationDay <= 0 {
 		return time.Time{}, time.Time{}, time.Time{}, false, false
 	}
-	if ovulationExact {
-		lutealPhase := lutealPhaseDays
-		if lutealPhase <= 0 {
-			lutealPhase = 14
-		}
-		ovulationOffset = cycleLength - lutealPhase
-		if ovulationOffset <= periodLength {
-			ovulationOffset = periodLength + 1
-		}
-		if ovulationOffset >= cycleLength {
-			ovulationOffset = cycleLength - 1
-		}
-	}
+	_ = lutealPhaseDays // retained for compatibility; ovulation day is computed by CalcOvulationDay.
 
 	nextPeriodStart := dateOnly(periodStart.AddDate(0, 0, cycleLength))
 	periodEnd := dateOnly(periodStart.AddDate(0, 0, periodLength-1))
 	firstNonPeriodDay := dateOnly(periodEnd.AddDate(0, 0, 1))
 	lastPrePeriodDay := dateOnly(nextPeriodStart.AddDate(0, 0, -1))
 
-	ovulationDate := dateOnly(periodStart.AddDate(0, 0, ovulationOffset))
+	ovulationDate := dateOnly(periodStart.AddDate(0, 0, ovulationDay-1))
 	if !ovulationDate.Before(nextPeriodStart) {
 		ovulationDate = lastPrePeriodDay
 	}

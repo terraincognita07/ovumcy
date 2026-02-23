@@ -85,19 +85,30 @@
     var periodExceedsCycleMessage = String(
       safeConfig.periodExceedsCycleMessage || "Period length must not exceed cycle length."
     );
+    function normalizeOnboardingStep(rawStep) {
+      var step = Number(rawStep);
+      if (!Number.isFinite(step)) {
+        step = 0;
+      }
+      step = Math.round(step);
+      if (step < 0) {
+        return 0;
+      }
+      if (step > 3) {
+        return 3;
+      }
+      return step;
+    }
 
     return {
-      step: 0,
+      step: normalizeOnboardingStep(safeConfig.initialStep),
       minDate: safeConfig.minDate || "",
       maxDate: safeConfig.maxDate || "",
       selectedDate: safeConfig.lastPeriodStart || "",
-      periodStatus: safeConfig.onboardingPeriodStatus || "",
-      periodEndDate: safeConfig.onboardingPeriodEnd || "",
       cycleLength: Number(safeConfig.cycleLength || 28),
       periodLength: Number(safeConfig.periodLength || 5),
       autoPeriodFill: safeConfig.autoPeriodFill !== false,
       dayOptions: [],
-      endDayOptions: [],
       periodExceedsCycleMessage: periodExceedsCycleMessage,
       clearStepStatuses: function () {
         var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"];
@@ -114,6 +125,26 @@
           return;
         }
         node.textContent = "";
+      },
+      syncStepInURL: function () {
+        if (!window.history || typeof window.history.replaceState !== "function") {
+          return;
+        }
+        try {
+          var currentURL = new URL(window.location.href);
+          if (this.step > 0) {
+            currentURL.searchParams.set("step", String(this.step));
+          } else {
+            currentURL.searchParams.delete("step");
+          }
+          var nextPath = currentURL.pathname + currentURL.search + currentURL.hash;
+          var currentPath = window.location.pathname + window.location.search + window.location.hash;
+          if (nextPath !== currentPath) {
+            window.history.replaceState({}, "", nextPath);
+          }
+        } catch {
+          // Ignore malformed URLs and keep current location unchanged.
+        }
       },
       renderStepStatus: function (statusID, kind, message) {
         var node = document.getElementById(statusID);
@@ -166,16 +197,16 @@
         return true;
       },
       init: function () {
+        this.step = normalizeOnboardingStep(this.step);
+        this.syncStepInURL();
         this.dayOptions = buildDayOptions(this.minDate, this.maxDate, lang);
         this.onStartDateChanged();
       },
       goToStep: function (value) {
-        var nextStep = Number(value);
-        if (!Number.isFinite(nextStep)) {
-          return;
-        }
+        var nextStep = normalizeOnboardingStep(value);
         this.clearStepStatuses();
         this.step = nextStep;
+        this.syncStepInURL();
       },
       begin: function () {
         this.goToStep(1);
@@ -197,38 +228,8 @@
         this.onStartDateChanged();
         this.clearStepStatus("onboarding-step1-status");
       },
-      setPeriodEndDate: function (value) {
-        this.periodEndDate = value || "";
-        this.clearStepStatus("onboarding-step1-status");
-      },
-      setPeriodStatus: function (value) {
-        this.periodStatus = value || "";
-        if (this.periodStatus !== "finished") {
-          this.periodEndDate = "";
-        }
-        this.refreshEndDayOptions();
-        this.clearStepStatus("onboarding-step1-status");
-      },
       onStartDateChanged: function () {
         this.clearStepStatus("onboarding-step1-status");
-        if (!this.selectedDate) {
-          this.periodStatus = "";
-          this.periodEndDate = "";
-          this.endDayOptions = [];
-          return;
-        }
-        this.refreshEndDayOptions();
-      },
-      refreshEndDayOptions: function () {
-        if (!this.selectedDate) {
-          this.endDayOptions = [];
-          this.periodEndDate = "";
-          return;
-        }
-        this.endDayOptions = buildDayOptions(this.selectedDate, this.maxDate, lang);
-        if (!isDateWithinRange(this.periodEndDate, this.selectedDate, this.maxDate)) {
-          this.periodEndDate = "";
-        }
       }
     };
   };

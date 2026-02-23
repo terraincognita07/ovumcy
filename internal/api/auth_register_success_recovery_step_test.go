@@ -28,18 +28,39 @@ func TestRegisterSuccessSetsAuthCookieAndShowsRecoveryStep(t *testing.T) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", response.StatusCode)
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", response.StatusCode)
+	}
+	if location := response.Header.Get("Location"); location != "/recovery-code" {
+		t.Fatalf("expected redirect to /recovery-code, got %q", location)
 	}
 
 	authCookie := responseCookieValue(response.Cookies(), authCookieName)
 	if authCookie == "" {
 		t.Fatalf("expected auth cookie in register response for auto-login")
 	}
+	recoveryCookie := responseCookieValue(response.Cookies(), recoveryCodeCookieName)
+	if recoveryCookie == "" {
+		t.Fatalf("expected recovery page cookie in register response")
+	}
 
-	body, err := io.ReadAll(response.Body)
+	recoveryRequest := httptest.NewRequest(http.MethodGet, "/recovery-code", nil)
+	recoveryRequest.Header.Set("Accept-Language", "en")
+	recoveryRequest.Header.Set("Cookie", authCookieName+"="+authCookie+"; "+recoveryCodeCookieName+"="+recoveryCookie)
+
+	recoveryResponse, err := app.Test(recoveryRequest, -1)
 	if err != nil {
-		t.Fatalf("read response body: %v", err)
+		t.Fatalf("recovery page request failed: %v", err)
+	}
+	defer recoveryResponse.Body.Close()
+
+	if recoveryResponse.StatusCode != http.StatusOK {
+		t.Fatalf("expected recovery page status 200, got %d", recoveryResponse.StatusCode)
+	}
+
+	body, err := io.ReadAll(recoveryResponse.Body)
+	if err != nil {
+		t.Fatalf("read recovery response body: %v", err)
 	}
 	rendered := string(body)
 	if !strings.Contains(rendered, "Save your recovery code") {

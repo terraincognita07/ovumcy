@@ -99,6 +99,7 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 
 func (handler *Handler) Logout(c *fiber.Ctx) error {
 	handler.clearAuthCookie(c)
+	handler.clearRecoveryCodePageCookie(c)
 	if isHTMX(c) {
 		c.Set("HX-Redirect", "/login")
 		return c.SendStatus(fiber.StatusOK)

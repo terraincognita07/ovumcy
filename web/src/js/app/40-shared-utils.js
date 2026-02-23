@@ -74,19 +74,6 @@
     return result;
   }
 
-  function isDateWithinRange(value, minRaw, maxRaw) {
-    if (!value) {
-      return false;
-    }
-    var current = parseDateValue(value);
-    var min = parseDateValue(minRaw);
-    var max = parseDateValue(maxRaw);
-    if (!current || !min || !max) {
-      return false;
-    }
-    return current >= min && current <= max;
-  }
-
   function setTimedFlag(target, key, timeoutMs) {
     target[key] = true;
     window.setTimeout(function () {

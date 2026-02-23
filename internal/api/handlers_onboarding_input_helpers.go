@@ -29,39 +29,27 @@ func (handler *Handler) parseOnboardingStep1Values(c *fiber.Ctx, today time.Time
 		return onboardingStep1Values{}, "last period start must be within last 60 days"
 	}
 
-	rawPeriodStatus := strings.TrimSpace(input.PeriodStatus)
-	if rawPeriodStatus == "" {
-		return onboardingStep1Values{}, "period status is required"
-	}
-	periodStatus := normalizeOnboardingPeriodStatus(rawPeriodStatus)
-	if periodStatus == "" {
-		return onboardingStep1Values{}, "invalid period status"
-	}
-
-	var periodEnd *time.Time
-	if periodStatus == onboardingPeriodStatusFinished {
-		rawPeriodEnd := strings.TrimSpace(input.PeriodEnd)
-		if rawPeriodEnd == "" {
-			return onboardingStep1Values{}, "period end is required"
-		}
+	// Legacy compatibility: if old clients still submit period_end, treat it as
+	// exclusive (first clean day) and infer period length from date difference.
+	inferredPeriodLength := 0
+	rawPeriodEnd := strings.TrimSpace(input.PeriodEnd)
+	if rawPeriodEnd != "" {
 		parsedEnd, err := parseDayParam(rawPeriodEnd, handler.location)
-		if err != nil {
-			return onboardingStep1Values{}, "invalid period end"
+		if err == nil {
+			days := int(parsedEnd.Sub(parsedDay).Hours() / 24)
+			if days >= 1 {
+				inferredPeriodLength = clampOnboardingPeriodLength(days)
+			}
 		}
-		if parsedEnd.Before(parsedDay) || parsedEnd.After(today) {
-			return onboardingStep1Values{}, "period end must be between start and today"
-		}
-		periodEnd = &parsedEnd
 	}
 
 	return onboardingStep1Values{
-		Start:  parsedDay,
-		Status: periodStatus,
-		End:    periodEnd,
+		Start:                parsedDay,
+		InferredPeriodLength: inferredPeriodLength,
 	}, ""
 }
 
-func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
+func parseOnboardingStep2Input(c *fiber.Ctx, location *time.Location) (onboardingStep2Input, string) {
 	input := onboardingStep2Input{}
 
 	contentType := strings.ToLower(c.Get("Content-Type"))
@@ -84,14 +72,65 @@ func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 			AutoPeriodFill: parseBoolValue(c.FormValue("auto_period_fill")),
 		}
 	}
-	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return onboardingStep2Input{}, "cycle length must be between 15 and 90"
-	}
-	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return onboardingStep2Input{}, "period length must be between 1 and 14"
-	}
-	if !canEstimateOvulation(input.CycleLength, input.PeriodLength) {
-		return onboardingStep2Input{}, "period length is incompatible with cycle length"
-	}
+
+	input.CycleLength = clampOnboardingCycleLength(input.CycleLength)
+	input.PeriodLength = clampOnboardingPeriodLength(input.PeriodLength)
+	input.PeriodLength = inferLegacyOnboardingPeriodLength(c, location, input.PeriodLength)
+	_, input.PeriodLength = sanitizeOnboardingCycleAndPeriod(input.CycleLength, input.PeriodLength)
+
 	return input, ""
+}
+
+func inferLegacyOnboardingPeriodLength(c *fiber.Ctx, location *time.Location, fallbackPeriodLength int) int {
+	rawStart := strings.TrimSpace(c.FormValue("last_period_start"))
+	rawEnd := strings.TrimSpace(c.FormValue("period_end"))
+	if rawStart == "" || rawEnd == "" {
+		return clampOnboardingPeriodLength(fallbackPeriodLength)
+	}
+
+	startDay, startErr := parseDayParam(rawStart, location)
+	endDay, endErr := parseDayParam(rawEnd, location)
+	if startErr != nil || endErr != nil {
+		return clampOnboardingPeriodLength(fallbackPeriodLength)
+	}
+
+	days := int(endDay.Sub(startDay).Hours() / 24)
+	if days < 1 {
+		return clampOnboardingPeriodLength(fallbackPeriodLength)
+	}
+	return clampOnboardingPeriodLength(days)
+}
+
+func sanitizeOnboardingCycleAndPeriod(cycleLength int, periodLength int) (int, int) {
+	safeCycleLength := clampOnboardingCycleLength(cycleLength)
+	safePeriodLength := clampOnboardingPeriodLength(periodLength)
+
+	if safeCycleLength-safePeriodLength < 8 {
+		safePeriodLength = safeCycleLength - 8
+		if safePeriodLength < 1 {
+			safePeriodLength = 1
+		}
+	}
+
+	return safeCycleLength, safePeriodLength
+}
+
+func clampOnboardingCycleLength(value int) int {
+	if value < 15 {
+		return 15
+	}
+	if value > 90 {
+		return 90
+	}
+	return value
+}
+
+func clampOnboardingPeriodLength(value int) int {
+	if value < 1 {
+		return 1
+	}
+	if value > 14 {
+		return 14
+	}
+	return value
 }

@@ -40,6 +40,27 @@ func (handler *Handler) ShowRegisterPage(c *fiber.Ctx) error {
 	return handler.render(c, "register", data)
 }
 
+func (handler *Handler) ShowRecoveryCodePage(c *fiber.Ctx) error {
+	user, err := handler.authenticateRequest(c)
+	if err != nil {
+		return c.Redirect("/login", fiber.StatusSeeOther)
+	}
+	c.Locals(contextUserKey, user)
+
+	fallbackContinuePath := postLoginRedirectPath(user)
+	recoveryCode, continuePath := handler.readRecoveryCodePageCookie(c, user.ID, fallbackContinuePath)
+	if recoveryCode == "" {
+		return c.Redirect(fallbackContinuePath, fiber.StatusSeeOther)
+	}
+
+	return handler.render(c, "recovery_code", fiber.Map{
+		"Title":          localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
+		"RecoveryCode":   recoveryCode,
+		"ContinuePath":   continuePath,
+		"HideNavigation": true,
+	})
+}
+
 func (handler *Handler) ShowForgotPasswordPage(c *fiber.Ctx) error {
 	flash := handler.popFlashCookie(c)
 	data := buildForgotPasswordPageData(c, currentMessages(c), flash)

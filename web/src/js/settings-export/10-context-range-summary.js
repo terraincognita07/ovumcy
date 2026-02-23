@@ -136,7 +136,8 @@
         return null;
       }
 
-      var toDate = cloneDate(bounds.maxBound);
+      var today = new Date();
+      var toDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       var fromDate = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate() - days + 1);
       return { from: fromDate, to: toDate };
     }

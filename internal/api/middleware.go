@@ -6,12 +6,13 @@ import (
 )
 
 const (
-	authCookieName     = "lume_auth"
-	languageCookieName = "lume_lang"
-	flashCookieName    = "lume_flash"
-	contextUserKey     = "current_user"
-	contextLanguageKey = "current_language"
-	contextMessagesKey = "current_messages"
+	authCookieName         = "lume_auth"
+	languageCookieName     = "lume_lang"
+	flashCookieName        = "lume_flash"
+	recoveryCodeCookieName = "lume_recovery_code"
+	contextUserKey         = "current_user"
+	contextLanguageKey     = "current_language"
+	contextMessagesKey     = "current_messages"
 )
 
 func currentUser(c *fiber.Ctx) (*models.User, bool) {

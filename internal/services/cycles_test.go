@@ -59,7 +59,7 @@ func TestBuildCycleStats(t *testing.T) {
 	if stats.NextPeriodStart.Format("2006-01-02") != "2025-03-26" {
 		t.Fatalf("unexpected next period start: %s", stats.NextPeriodStart.Format("2006-01-02"))
 	}
-	if stats.OvulationDate.Format("2006-01-02") != "2025-03-12" {
+	if stats.OvulationDate.Format("2006-01-02") != "2025-03-11" {
 		t.Fatalf("unexpected ovulation date: %s", stats.OvulationDate.Format("2006-01-02"))
 	}
 	if !stats.OvulationExact {

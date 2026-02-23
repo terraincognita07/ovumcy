@@ -94,9 +94,13 @@ func (handler *Handler) renderRecoveryCodeResponse(c *fiber.Ctx, user *models.Us
 		})
 	}
 
-	return handler.render(c, "recovery_code", fiber.Map{
-		"Title":        localizedPageTitle(currentMessages(c), "meta.title.recovery_code", "Lume | Recovery Code"),
-		"RecoveryCode": recoveryCode,
-		"ContinuePath": postLoginRedirectPath(user),
-	})
+	continuePath := "/dashboard"
+	userID := uint(0)
+	if user != nil {
+		userID = user.ID
+		continuePath = postLoginRedirectPath(user)
+	}
+	handler.setRecoveryCodePageCookie(c, userID, recoveryCode, continuePath)
+
+	return redirectToPath(c, "/recovery-code")
 }

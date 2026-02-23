@@ -6,9 +6,11 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/terraincognita07/lume/internal/models"
 )
 
-func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
+func TestOnboardingStep2SanitizesOutOfRangeAndIncompatibleValues(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "step2-validation@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
@@ -27,26 +29,19 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 		t.Fatalf("invalid cycle request failed: %v", err)
 	}
 	defer invalidCycleResponse.Body.Close()
-	if invalidCycleResponse.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected invalid cycle status 400, got %d", invalidCycleResponse.StatusCode)
+	if invalidCycleResponse.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected invalid cycle status 204, got %d", invalidCycleResponse.StatusCode)
 	}
 
-	invalidPeriodForm := url.Values{
-		"cycle_length":  {"29"},
-		"period_length": {"15"},
+	var updated models.User
+	if err := database.First(&updated, user.ID).Error; err != nil {
+		t.Fatalf("load updated user: %v", err)
 	}
-	invalidPeriodRequest := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(invalidPeriodForm.Encode()))
-	invalidPeriodRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	invalidPeriodRequest.Header.Set("HX-Request", "true")
-	invalidPeriodRequest.Header.Set("Cookie", authCookie)
-
-	invalidPeriodResponse, err := app.Test(invalidPeriodRequest, -1)
-	if err != nil {
-		t.Fatalf("invalid period request failed: %v", err)
+	if updated.CycleLength != 15 {
+		t.Fatalf("expected clamped cycle length 15, got %d", updated.CycleLength)
 	}
-	defer invalidPeriodResponse.Body.Close()
-	if invalidPeriodResponse.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected invalid period status 400, got %d", invalidPeriodResponse.StatusCode)
+	if updated.PeriodLength != 5 {
+		t.Fatalf("expected sanitized period length 5, got %d", updated.PeriodLength)
 	}
 
 	incompatibleForm := url.Values{
@@ -63,7 +58,120 @@ func TestOnboardingStep2RejectsOutOfRangeValues(t *testing.T) {
 		t.Fatalf("incompatible request failed: %v", err)
 	}
 	defer incompatibleResponse.Body.Close()
-	if incompatibleResponse.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected incompatible values status 400, got %d", incompatibleResponse.StatusCode)
+	if incompatibleResponse.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected incompatible values status 204, got %d", incompatibleResponse.StatusCode)
+	}
+
+	if err := database.First(&updated, user.ID).Error; err != nil {
+		t.Fatalf("reload updated user: %v", err)
+	}
+	if updated.CycleLength != 21 {
+		t.Fatalf("expected persisted cycle length 21, got %d", updated.CycleLength)
+	}
+	if updated.PeriodLength != 13 {
+		t.Fatalf("expected adjusted period length 13 for compatibility, got %d", updated.PeriodLength)
+	}
+}
+
+func TestOnboardingStep2LegacyPeriodEndOverridesSlider(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "step2-legacy-end-override@example.com", "StrongPass1", false)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	form := url.Values{
+		"cycle_length":      {"28"},
+		"period_length":     {"8"},
+		"last_period_start": {"2026-02-10"},
+		"period_end":        {"2026-02-15"},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("HX-Request", "true")
+	request.Header.Set("Cookie", authCookie)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("legacy end override request failed: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", response.StatusCode)
+	}
+
+	var updated models.User
+	if err := database.First(&updated, user.ID).Error; err != nil {
+		t.Fatalf("load updated user: %v", err)
+	}
+	if updated.PeriodLength != 5 {
+		t.Fatalf("expected period length inferred from legacy dates to be 5, got %d", updated.PeriodLength)
+	}
+}
+
+func TestOnboardingStep2LegacyPeriodEndSanitizeFallbacks(t *testing.T) {
+	cases := []struct {
+		name              string
+		lastPeriodStart   string
+		periodEnd         string
+		sliderPeriodValue string
+		wantPeriodLength  int
+	}{
+		{
+			name:              "end equals start falls back to slider",
+			lastPeriodStart:   "2026-02-10",
+			periodEnd:         "2026-02-10",
+			sliderPeriodValue: "5",
+			wantPeriodLength:  5,
+		},
+		{
+			name:              "end before start falls back to slider",
+			lastPeriodStart:   "2026-02-10",
+			periodEnd:         "2026-02-05",
+			sliderPeriodValue: "5",
+			wantPeriodLength:  5,
+		},
+		{
+			name:              "long legacy range clamps to max period",
+			lastPeriodStart:   "2026-02-10",
+			periodEnd:         "2026-02-25",
+			sliderPeriodValue: "5",
+			wantPeriodLength:  14,
+		},
+	}
+
+	for _, testCase := range cases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			app, database := newOnboardingTestApp(t)
+			user := createOnboardingTestUser(t, database, "step2-legacy-sanitize-"+strings.ReplaceAll(testCase.name, " ", "-")+"@example.com", "StrongPass1", false)
+			authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+			form := url.Values{
+				"cycle_length":      {"28"},
+				"period_length":     {testCase.sliderPeriodValue},
+				"last_period_start": {testCase.lastPeriodStart},
+				"period_end":        {testCase.periodEnd},
+			}
+			request := httptest.NewRequest(http.MethodPost, "/onboarding/step2", strings.NewReader(form.Encode()))
+			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			request.Header.Set("HX-Request", "true")
+			request.Header.Set("Cookie", authCookie)
+
+			response, err := app.Test(request, -1)
+			if err != nil {
+				t.Fatalf("legacy sanitize request failed: %v", err)
+			}
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusNoContent {
+				t.Fatalf("expected status 204, got %d", response.StatusCode)
+			}
+
+			var updated models.User
+			if err := database.First(&updated, user.ID).Error; err != nil {
+				t.Fatalf("load updated user: %v", err)
+			}
+			if updated.PeriodLength != testCase.wantPeriodLength {
+				t.Fatalf("expected period length %d, got %d", testCase.wantPeriodLength, updated.PeriodLength)
+			}
+		})
 	}
 }

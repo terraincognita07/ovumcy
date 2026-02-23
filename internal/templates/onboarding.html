@@ -5,25 +5,21 @@
     minDate: "{{.MinDate}}",
     maxDate: "{{.MaxDate}}",
     lastPeriodStart: "{{.LastPeriodStart}}",
-    onboardingPeriodStatus: "{{.OnboardingPeriodStatus}}",
-    onboardingPeriodEnd: "{{.OnboardingPeriodEnd}}",
+    initialStep: {{.OnboardingStep}},
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     periodExceedsCycleMessage: "{{t .Messages "onboarding.step2.error_incompatible"}}",
     lang: "{{.Lang}}"
   }) : {
-    step: 0,
+    step: {{.OnboardingStep}},
     minDate: "{{.MinDate}}",
     maxDate: "{{.MaxDate}}",
     selectedDate: "{{.LastPeriodStart}}",
-    periodStatus: "{{.OnboardingPeriodStatus}}",
-    periodEndDate: "{{.OnboardingPeriodEnd}}",
     cycleLength: {{.CycleLength}},
     periodLength: {{.PeriodLength}},
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     dayOptions: [],
-    endDayOptions: [],
     clearStepStatuses: function () {
       var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"]
       for (var index = 0; index < statusIDs.length; index++) {
@@ -61,23 +57,8 @@
       this.selectedDate = value || ""
       this.clearStepStatus("onboarding-step1-status")
     },
-    setPeriodEndDate: function (value) {
-      this.periodEndDate = value || ""
-      this.clearStepStatus("onboarding-step1-status")
-    },
-    setPeriodStatus: function (value) {
-      this.periodStatus = value || ""
-      if (this.periodStatus !== "finished") {
-        this.periodEndDate = ""
-      }
-      this.clearStepStatus("onboarding-step1-status")
-    },
     onStartDateChanged: function () {
       this.clearStepStatus("onboarding-step1-status")
-      if (!this.selectedDate) {
-        this.periodStatus = ""
-        this.periodEndDate = ""
-      }
     }
   }'
 >
@@ -118,10 +99,8 @@
         hx-swap="innerHTML"
         x-on:htmx:after-request="onStepOneSaved($event)"
         class="space-y-4">
-        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-        <input type="hidden" name="last_period_start" :value="selectedDate">
-        <input type="hidden" name="period_status" :value="periodStatus">
-        <input type="hidden" name="period_end" :value="periodStatus === 'finished' ? periodEndDate : ''">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" name="last_period_start" :value="selectedDate">
 
         <label class="field-label" for="last-period-start">{{t .Messages "onboarding.step1.field"}}</label>
         <input
@@ -144,50 +123,6 @@
               @click="setStartDate(day.value)"
               x-text="day.label"></button>
           </template>
-        </div>
-
-        <div class="space-y-2" x-cloak x-show="selectedDate">
-          <p class="field-label">{{t .Messages "onboarding.step1.status_question"}}</p>
-          <div class="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              class="check-chip check-chip-sm justify-center"
-              :class="{ 'choice-chip-active': periodStatus === 'ongoing' }"
-              @click="setPeriodStatus('ongoing')">
-              🩸 <span>{{t .Messages "onboarding.step1.status_ongoing"}}</span>
-            </button>
-            <button
-              type="button"
-              class="check-chip check-chip-sm justify-center"
-              :class="{ 'choice-chip-active': periodStatus === 'finished' }"
-              @click="setPeriodStatus('finished')">
-              ✅ <span>{{t .Messages "onboarding.step1.status_finished"}}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="space-y-2" x-cloak x-show="selectedDate && periodStatus === 'finished'">
-          <label class="field-label" for="last-period-end">{{t .Messages "onboarding.step1.end_question"}}</label>
-          <input
-            id="last-period-end"
-            type="date"
-            class="input-field"
-            lang="{{.Lang}}"
-            placeholder="{{t .Messages "onboarding.step1.date_placeholder"}}"
-            x-model="periodEndDate"
-            :min="selectedDate || minDate"
-            :max="maxDate">
-
-          <div class="grid max-h-60 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
-            <template x-for="day in endDayOptions" :key="'end-' + day.value">
-              <button
-                type="button"
-                class="check-chip check-chip-sm justify-center"
-                :class="{ 'choice-chip-active': periodEndDate === day.value }"
-                @click="setPeriodEndDate(day.value)"
-                x-text="day.label"></button>
-            </template>
-          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
