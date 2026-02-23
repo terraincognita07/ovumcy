@@ -42,7 +42,7 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 		t.Fatalf("read body: %v", err)
 	}
 	rendered := string(body)
-	if !strings.Contains(rendered, `x-data='typeof settingsCycleForm === "function" ? settingsCycleForm({ cycleLength: 29, periodLength: 6, autoPeriodFill: true }) : { cycleLength: 29, periodLength: 6, autoPeriodFill: true }'`) {
+	if !strings.Contains(rendered, `x-data='settingsCycleForm({ cycleLength: 29, periodLength: 6, autoPeriodFill: true })'`) {
 		t.Fatalf("expected settings cycle form state to include persisted values")
 	}
 	if !strings.Contains(rendered, `<span x-text="cycleLength">29</span>`) {

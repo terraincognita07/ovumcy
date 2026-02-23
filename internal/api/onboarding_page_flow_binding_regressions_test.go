@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-func TestOnboardingPageUsesFailOpenFlowFallback(t *testing.T) {
+func TestOnboardingPageUsesOnboardingFlowFactoryBinding(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	user := createOnboardingTestUser(t, database, "onboarding-fallback@example.com", "StrongPass1", false)
+	user := createOnboardingTestUser(t, database, "onboarding-flow-binding@example.com", "StrongPass1", false)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
 	request := httptest.NewRequest(http.MethodGet, "/onboarding", nil)
@@ -33,14 +33,8 @@ func TestOnboardingPageUsesFailOpenFlowFallback(t *testing.T) {
 	}
 	rendered := string(body)
 
-	if !strings.Contains(rendered, `x-data='typeof onboardingFlow === "function" ? onboardingFlow(`) {
-		t.Fatalf("expected fail-open onboarding flow fallback in x-data")
-	}
-	if !strings.Contains(rendered, `clearStepStatuses: function ()`) {
-		t.Fatalf("expected onboarding flow to include status cleanup helper")
-	}
-	if !strings.Contains(rendered, `this.clearStepStatuses()`) {
-		t.Fatalf("expected onboarding step navigation to clear stale status messages")
+	if !strings.Contains(rendered, `x-data='onboardingFlow(`) {
+		t.Fatalf("expected onboarding root to bind onboardingFlow factory")
 	}
 
 	rootSectionPattern := regexp.MustCompile(`(?s)<section\s+class="mx-auto max-w-4xl"[^>]*>`)

@@ -87,7 +87,7 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 		t.Fatalf("read settings page body: %v", err)
 	}
 	rendered := string(settingsBody)
-	if !strings.Contains(rendered, `x-data='typeof settingsCycleForm === "function" ? settingsCycleForm({ cycleLength: 28, periodLength: 6, autoPeriodFill: true }) : { cycleLength: 28, periodLength: 6, autoPeriodFill: true }'`) {
+	if !strings.Contains(rendered, `x-data='settingsCycleForm({ cycleLength: 28, periodLength: 6, autoPeriodFill: true })'`) {
 		t.Fatalf("expected settings cycle form state to include persisted values")
 	}
 

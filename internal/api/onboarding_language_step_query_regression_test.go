@@ -39,7 +39,4 @@ func TestOnboardingPagePreservesStepQueryInLanguageLinks(t *testing.T) {
 	if !strings.Contains(rendered, `initialStep: 2`) {
 		t.Fatalf("expected onboarding alpine config to receive step from query")
 	}
-	if !strings.Contains(rendered, `step: 2,`) {
-		t.Fatalf("expected fallback onboarding flow state to include current step")
-	}
 }

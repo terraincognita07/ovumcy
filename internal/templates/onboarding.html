@@ -1,7 +1,7 @@
 {{define "content"}}
 <section
   class="mx-auto max-w-4xl"
-  x-data='typeof onboardingFlow === "function" ? onboardingFlow({
+  x-data='onboardingFlow({
     minDate: "{{.MinDate}}",
     maxDate: "{{.MaxDate}}",
     lastPeriodStart: "{{.LastPeriodStart}}",
@@ -11,56 +11,7 @@
     autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
     periodExceedsCycleMessage: "{{t .Messages "onboarding.step2.error_incompatible"}}",
     lang: "{{.Lang}}"
-  }) : {
-    step: {{.OnboardingStep}},
-    minDate: "{{.MinDate}}",
-    maxDate: "{{.MaxDate}}",
-    selectedDate: "{{.LastPeriodStart}}",
-    cycleLength: {{.CycleLength}},
-    periodLength: {{.PeriodLength}},
-    autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}},
-    dayOptions: [],
-    clearStepStatuses: function () {
-      var statusIDs = ["onboarding-step1-status", "onboarding-step2-status", "onboarding-step3-status"]
-      for (var index = 0; index < statusIDs.length; index++) {
-        var node = document.getElementById(statusIDs[index])
-        if (node) {
-          node.textContent = ""
-        }
-      }
-    },
-    clearStepStatus: function (statusID) {
-      var node = document.getElementById(statusID)
-      if (node) {
-        node.textContent = ""
-      }
-    },
-    begin: function () {
-      this.step = 1
-    },
-    goToStep: function (value) {
-      var nextStep = Number(value)
-      this.clearStepStatuses()
-      this.step = Number.isFinite(nextStep) ? nextStep : 0
-    },
-    onStepOneSaved: function (event) {
-      if (event && event.detail && event.detail.successful) {
-        this.goToStep(2)
-      }
-    },
-    onStepTwoSaved: function (event) {
-      if (event && event.detail && event.detail.successful) {
-        this.goToStep(3)
-      }
-    },
-    setStartDate: function (value) {
-      this.selectedDate = value || ""
-      this.clearStepStatus("onboarding-step1-status")
-    },
-    onStartDateChanged: function () {
-      this.clearStepStatus("onboarding-step1-status")
-    }
-  }'
+  })'
 >
   <div class="journal-card journal-hero p-6 sm:p-8">
     <div class="space-y-3" x-show="step > 0" x-transition>
@@ -140,7 +91,7 @@
         hx-post="/onboarding/step2"
         hx-target="#onboarding-step2-status"
         hx-swap="innerHTML"
-        x-on:submit="if (typeof validateStepTwoBeforeSubmit === 'function' && !validateStepTwoBeforeSubmit($event)) { $event.preventDefault() }"
+        x-on:submit="if (!validateStepTwoBeforeSubmit($event)) { $event.preventDefault() }"
         x-on:htmx:after-request="onStepTwoSaved($event)"
         class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -158,7 +109,7 @@
             name="cycle_length"
             value="{{.CycleLength}}"
             x-model.number="cycleLength"
-            @input="if (typeof onCycleLengthChanged === 'function') { onCycleLengthChanged() }"
+            @input="onCycleLengthChanged()"
             class="w-full range-field">
         </div>
 
@@ -175,7 +126,7 @@
             name="period_length"
             value="{{.PeriodLength}}"
             x-model.number="periodLength"
-            @input="if (typeof onPeriodLengthChanged === 'function') { onPeriodLengthChanged() }"
+            @input="onPeriodLengthChanged()"
             class="w-full range-field">
         </div>
 
