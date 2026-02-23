@@ -13,7 +13,7 @@ func (handler *Handler) buildCycleStatsForRange(user *models.User, from time.Tim
 		return services.CycleStats{}, nil, err
 	}
 
-	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats := services.BuildCycleStats(logs, now)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 	return stats, logs, nil
 }

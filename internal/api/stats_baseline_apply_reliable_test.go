@@ -10,8 +10,7 @@ import (
 
 func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 	handler := &Handler{
-		location:        time.UTC,
-		lutealPhaseDays: 14,
+		location: time.UTC,
 	}
 
 	userLastPeriod := mustParseBaselineDay(t, "2025-03-27")
@@ -35,7 +34,7 @@ func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 	}
 
 	now := mustParseBaselineDay(t, "2025-03-05")
-	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats := services.BuildCycleStats(logs, now)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
 	if stats.AverageCycleLength != 28 {

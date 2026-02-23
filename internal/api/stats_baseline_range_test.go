@@ -10,7 +10,6 @@ func TestBuildCycleStatsForRange_AppliesOnboardingBaseline(t *testing.T) {
 	t.Parallel()
 
 	handler, database := newDataAccessTestHandler(t)
-	handler.lutealPhaseDays = 14
 	user := createDataAccessTestUser(t, database, "stats-range@example.com")
 
 	lastPeriodStart := mustParseBaselineDay(t, "2026-02-16")

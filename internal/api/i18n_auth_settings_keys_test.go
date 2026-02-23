@@ -12,8 +12,8 @@ func TestAuthErrorTranslationKey_NormalizesInput(t *testing.T) {
 	if got := authErrorTranslationKey(" PERIOD LENGTH MUST NOT EXCEED CYCLE LENGTH "); got != "onboarding.error.period_length_exceeds_cycle" {
 		t.Fatalf("expected onboarding period-length/cycle-length key, got %q", got)
 	}
-	if got := authErrorTranslationKey(" PERIOD LENGTH IS INCOMPATIBLE WITH CYCLE LENGTH "); got != "onboarding.error.period_cycle_incompatible" {
-		t.Fatalf("expected onboarding period/cycle compatibility key, got %q", got)
+	if got := authErrorTranslationKey(" PERIOD LENGTH IS INCOMPATIBLE WITH CYCLE LENGTH "); got != "settings.cycle.error_incompatible" {
+		t.Fatalf("expected settings cycle compatibility key, got %q", got)
 	}
 }
 

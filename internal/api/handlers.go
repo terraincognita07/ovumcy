@@ -33,7 +33,6 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		secretKey:       []byte(secret),
 		location:        location,
 		cookieSecure:    cookieSecure,
-		lutealPhaseDays: 14,
 		i18n:            i18nManager,
 		templates:       templates,
 		partials:        partials,

@@ -57,7 +57,6 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 			stats.LastPeriodStart,
 			cycleLength,
 			predictedPeriodLength,
-			handler.lutealPhaseDays,
 		)
 		if !ovulationCalculable {
 			stats.OvulationDate = time.Time{}

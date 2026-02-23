@@ -119,7 +119,6 @@
   "onboarding.error.cycle_length_range": "Длина цикла должна быть от 15 до 90 дней.",
   "onboarding.error.period_length_range": "Длина месячных должна быть от 1 до 14 дней.",
   "onboarding.error.period_length_exceeds_cycle": "Длина месячных не может быть больше длины цикла.",
-  "onboarding.error.period_cycle_incompatible": "Длина менструации несовместима с длиной цикла.",
   "onboarding.error.incomplete": "Сначала завершите предыдущие шаги онбординга.",
   "onboarding.error.generic": "Не удалось сохранить данные онбординга. Попробуйте ещё раз.",
   "settings.title": "Настройки",

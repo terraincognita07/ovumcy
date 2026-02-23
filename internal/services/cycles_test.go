@@ -42,7 +42,7 @@ func TestBuildCycleStats(t *testing.T) {
 	}
 
 	now := mustParseDay(t, "2025-03-05")
-	stats := BuildCycleStats(logs, now, 14)
+	stats := BuildCycleStats(logs, now)
 
 	if stats.MedianCycleLength != 28 {
 		t.Fatalf("expected median cycle length 28, got %d", stats.MedianCycleLength)
@@ -89,7 +89,7 @@ func TestBuildCycleStats_ShortCycleLongPeriodDoesNotOverlapPredictions(t *testin
 	}
 
 	now := mustParseDay(t, "2026-02-12")
-	stats := BuildCycleStats(logs, now, 14)
+	stats := BuildCycleStats(logs, now)
 
 	if !stats.OvulationDate.IsZero() {
 		t.Fatalf("expected no ovulation date for incompatible cycle, got %s", stats.OvulationDate.Format("2006-01-02"))

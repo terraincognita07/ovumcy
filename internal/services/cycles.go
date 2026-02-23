@@ -28,13 +28,10 @@ type detectedCycle struct {
 	PeriodLength int
 }
 
-func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int) CycleStats {
+func BuildCycleStats(logs []models.DailyLog, now time.Time) CycleStats {
 	stats := CycleStats{CurrentPhase: "unknown"}
 	if len(logs) == 0 {
 		return stats
-	}
-	if lutealPhaseDays <= 0 {
-		lutealPhaseDays = 14
 	}
 
 	sorted := make([]models.DailyLog, 0, len(logs))
@@ -84,7 +81,6 @@ func BuildCycleStats(logs []models.DailyLog, now time.Time, lutealPhaseDays int)
 		stats.LastPeriodStart,
 		predictionCycleLength,
 		predictedPeriodLength,
-		lutealPhaseDays,
 	)
 	if ovulationCalculable {
 		stats.OvulationDate = ovulationDate
@@ -156,7 +152,7 @@ func CalcOvulationDay(cycleLen, periodLen int) (int, bool) {
 	return ovDay, true
 }
 
-func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int, lutealPhaseDays int) (time.Time, time.Time, time.Time, bool, bool) {
+func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int) (time.Time, time.Time, time.Time, bool, bool) {
 	if periodStart.IsZero() || cycleLength <= 0 {
 		return time.Time{}, time.Time{}, time.Time{}, false, false
 	}
@@ -167,7 +163,6 @@ func PredictCycleWindow(periodStart time.Time, cycleLength int, periodLength int
 	if ovulationDay <= 0 {
 		return time.Time{}, time.Time{}, time.Time{}, false, false
 	}
-	_ = lutealPhaseDays // retained for compatibility; ovulation day is computed by CalcOvulationDay.
 
 	nextPeriodStart := dateOnly(periodStart.AddDate(0, 0, cycleLength))
 	periodEnd := dateOnly(periodStart.AddDate(0, 0, periodLength-1))

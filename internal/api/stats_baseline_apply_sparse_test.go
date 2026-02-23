@@ -10,8 +10,7 @@ import (
 
 func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.T) {
 	handler := &Handler{
-		location:        time.UTC,
-		lutealPhaseDays: 14,
+		location: time.UTC,
 	}
 
 	userLastPeriod := mustParseBaselineDay(t, "2026-02-07")
@@ -28,7 +27,7 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 	}
 
 	now := mustParseBaselineDay(t, "2026-02-17")
-	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats := services.BuildCycleStats(logs, now)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
 	if stats.AverageCycleLength != 29 {
@@ -56,8 +55,7 @@ func TestApplyUserCycleBaseline_UsesOnboardingValuesWhenDataIsSparse(t *testing.
 
 func TestApplyUserCycleBaseline_MarksIncompatibleCycleAsUncalculable(t *testing.T) {
 	handler := &Handler{
-		location:        time.UTC,
-		lutealPhaseDays: 14,
+		location: time.UTC,
 	}
 
 	userLastPeriod := mustParseBaselineDay(t, "2026-02-10")
@@ -73,7 +71,7 @@ func TestApplyUserCycleBaseline_MarksIncompatibleCycleAsUncalculable(t *testing.
 	}
 
 	now := mustParseBaselineDay(t, "2026-02-12")
-	stats := services.BuildCycleStats(logs, now, handler.lutealPhaseDays)
+	stats := services.BuildCycleStats(logs, now)
 	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
 
 	if !stats.OvulationDate.IsZero() {

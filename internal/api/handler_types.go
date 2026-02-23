@@ -14,7 +14,6 @@ type Handler struct {
 	secretKey       []byte
 	location        *time.Location
 	cookieSecure    bool
-	lutealPhaseDays int
 	i18n            *i18n.Manager
 	templates       map[string]*template.Template
 	partials        map[string]*template.Template
