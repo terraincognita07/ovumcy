@@ -3,7 +3,7 @@ services:
     image: ${OVUMCY_IMAGE:-ghcr.io/terraincognita07/ovumcy:latest}
     container_name: ovumcy
     env_file:
-      - ../.env
+      - ./.env
     environment:
       - TZ=${TZ:-UTC}
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-ru}

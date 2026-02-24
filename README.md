@@ -53,19 +53,21 @@ If you found a security issue, see [SECURITY.md](SECURITY.md).
 
 Uses the prebuilt image from GHCR by default (`ghcr.io/terraincognita07/ovumcy:latest`).
 
+For public GHCR images, pull does not require GitHub login.
+
 ```bash
 git clone https://github.com/terraincognita07/ovumcy.git
 cd ovumcy
 cp .env.example .env
 # edit SECRET_KEY in .env
-docker compose -f docker/docker-compose.yml pull
-docker compose -f docker/docker-compose.yml up -d
+docker compose pull
+docker compose up -d
 ```
 
 Pin a specific image tag if needed:
 
 ```bash
-OVUMCY_IMAGE=ghcr.io/terraincognita07/ovumcy:v0.1.0 docker compose -f docker/docker-compose.yml up -d
+OVUMCY_IMAGE=ghcr.io/terraincognita07/ovumcy:v0.1.0 docker compose up -d
 ```
 
 Then open `http://localhost:8080`.
