@@ -216,6 +216,7 @@
   "dashboard.current_phase": "Текущая фаза",
   "dashboard.cycle_day": "День цикла",
   "dashboard.cycle_day_long_hint": "Дольше обычного цикла (%d дн.).",
+  "dashboard.cycle_day_stale_hint": "Данные цикла могут быть устаревшими. Обновите дату начала последних месячных.",
   "dashboard.next_period": "Следующие месячные",
   "dashboard.ovulation": "Овуляция",
   "dashboard.ovulation_approximate": "(приблизительно)",

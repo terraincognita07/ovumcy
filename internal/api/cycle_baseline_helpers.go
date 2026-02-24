@@ -27,6 +27,9 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 	if isValidOnboardingPeriodLength(user.PeriodLength) {
 		periodLength = user.PeriodLength
 	}
+	if periodLength <= 0 {
+		periodLength = models.DefaultPeriodLength
+	}
 
 	reliableCycleData := len(services.CycleLengths(logs)) >= 2
 	if !reliableCycleData {
@@ -51,7 +54,7 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 		stats.NextPeriodStart = dateAtLocation(stats.LastPeriodStart.AddDate(0, 0, cycleLength), handler.location)
 		predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
 		if predictedPeriodLength <= 0 {
-			predictedPeriodLength = models.DefaultPeriodLength
+			predictedPeriodLength = periodLength
 		}
 		ovulationDate, fertilityWindowStart, fertilityWindowEnd, ovulationExact, ovulationCalculable := services.PredictCycleWindow(
 			stats.LastPeriodStart,
@@ -82,7 +85,9 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 	}
 
 	today := dateAtLocation(now.In(handler.location), handler.location)
-	if !stats.LastPeriodStart.IsZero() && !today.Before(stats.LastPeriodStart) {
+	if _, projectedCycleDay, projectionOK := projectCycleStart(stats.LastPeriodStart, cycleLength, today); projectionOK {
+		stats.CurrentCycleDay = projectedCycleDay
+	} else if !stats.LastPeriodStart.IsZero() && !today.Before(stats.LastPeriodStart) {
 		stats.CurrentCycleDay = int(today.Sub(stats.LastPeriodStart).Hours()/24) + 1
 	} else {
 		stats.CurrentCycleDay = 0
@@ -91,4 +96,28 @@ func (handler *Handler) applyUserCycleBaseline(user *models.User, logs []models.
 	stats.CurrentPhase = handler.detectCurrentPhase(stats, logs, today)
 
 	return stats
+}
+
+func projectCycleStart(lastPeriodStart time.Time, cycleLength int, today time.Time) (time.Time, int, bool) {
+	if lastPeriodStart.IsZero() || cycleLength <= 0 {
+		return time.Time{}, 0, false
+	}
+	if today.Before(lastPeriodStart) {
+		return lastPeriodStart, 0, true
+	}
+
+	elapsedDays := int(today.Sub(lastPeriodStart).Hours() / 24)
+	cyclesElapsed := elapsedDays / cycleLength
+	projectedStart := dateAtLocation(lastPeriodStart.AddDate(0, 0, cyclesElapsed*cycleLength), today.Location())
+	projectedCycleDay := (elapsedDays % cycleLength) + 1
+	return projectedStart, projectedCycleDay, true
+}
+
+func shiftCycleStartToFutureOvulation(cycleStart time.Time, ovulationDate time.Time, cycleLength int, today time.Time) time.Time {
+	if cycleLength <= 0 || !ovulationDate.Before(today) {
+		return cycleStart
+	}
+	lagDays := int(today.Sub(ovulationDate).Hours() / 24)
+	shiftCycles := lagDays/cycleLength + 1
+	return dateAtLocation(cycleStart.AddDate(0, 0, shiftCycles*cycleLength), today.Location())
 }

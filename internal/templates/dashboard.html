@@ -9,14 +9,16 @@
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.cycle_day"}}</p>
       <p class="stat-value mt-3">{{if gt .Stats.CurrentCycleDay 0}}{{.Stats.CurrentCycleDay}}{{else}}{{.NoDataLabel}}{{end}}</p>
-      {{if .CycleDayWarning}}
+      {{if .CycleDataStale}}
+      <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.cycle_day_stale_hint"}}</p>
+      {{else if .CycleDayWarning}}
       <p class="warning-amber mt-2 text-xs">{{printf (t .Messages "dashboard.cycle_day_long_hint") .CycleDayReference}}</p>
       {{end}}
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.next_period"}}</p>
-      <p class="stat-value mt-3">{{if .Stats.NextPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.NextPeriodStart "02.01.2006"}}{{end}}</p>
+      <p class="stat-value mt-3">{{if .DisplayNextPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .DisplayNextPeriodStart "02.01.2006"}}{{end}}</p>
       {{if .NextPeriodInPast}}
       <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.prediction_in_past"}}</p>
       {{end}}
@@ -24,8 +26,8 @@
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.ovulation"}}</p>
-      <p class="stat-value mt-3">{{if .Stats.OvulationImpossible}}{{t .Messages "dashboard.ovulation_unavailable"}}{{else if .Stats.OvulationDate.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.OvulationDate "02.01.2006"}}{{end}}</p>
-      {{if and (not .Stats.OvulationImpossible) (not .Stats.OvulationDate.IsZero) (not .Stats.OvulationExact)}}
+      <p class="stat-value mt-3">{{if .DisplayOvulationImpossible}}{{t .Messages "dashboard.ovulation_unavailable"}}{{else if .DisplayOvulationDate.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .DisplayOvulationDate "02.01.2006"}}{{end}}</p>
+      {{if and (not .DisplayOvulationImpossible) (not .DisplayOvulationDate.IsZero) (not .DisplayOvulationExact)}}
       <p class="journal-muted mt-2 text-xs">{{t .Messages "dashboard.ovulation_approximate"}}</p>
       {{end}}
       {{if .OvulationInPast}}

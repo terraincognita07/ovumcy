@@ -216,6 +216,7 @@
   "dashboard.current_phase": "Current phase",
   "dashboard.cycle_day": "Cycle day",
   "dashboard.cycle_day_long_hint": "Longer than your typical cycle (%d days).",
+  "dashboard.cycle_day_stale_hint": "Cycle data may be outdated. Update your last period start date.",
   "dashboard.next_period": "Next period",
   "dashboard.ovulation": "Ovulation",
   "dashboard.ovulation_approximate": "(approximate)",

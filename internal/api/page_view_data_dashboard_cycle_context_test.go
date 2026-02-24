@@ -8,7 +8,7 @@ import (
 	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
-func TestBuildDashboardViewDataFlagsLongCycleAndPastPredictions(t *testing.T) {
+func TestBuildDashboardViewDataKeepsPredictionsFutureAndFlagsStaleCycleData(t *testing.T) {
 	t.Parallel()
 
 	handler, database := newDataAccessTestHandler(t)
@@ -41,14 +41,38 @@ func TestBuildDashboardViewDataFlagsLongCycleAndPastPredictions(t *testing.T) {
 	if reference, ok := data["CycleDayReference"].(int); !ok || reference != 28 {
 		t.Fatalf("expected cycle day reference 28, got %#v", data["CycleDayReference"])
 	}
-	if warning, ok := data["CycleDayWarning"].(bool); !ok || !warning {
-		t.Fatalf("expected long cycle day warning=true, got %#v", data["CycleDayWarning"])
+	if stale, ok := data["CycleDataStale"].(bool); !ok || !stale {
+		t.Fatalf("expected stale cycle data warning=true, got %#v", data["CycleDataStale"])
 	}
-	if past, ok := data["NextPeriodInPast"].(bool); !ok || !past {
-		t.Fatalf("expected next period to be marked as past, got %#v", data["NextPeriodInPast"])
+	if past, ok := data["NextPeriodInPast"].(bool); !ok || past {
+		t.Fatalf("expected next period to be projected into future, got %#v", data["NextPeriodInPast"])
 	}
-	if past, ok := data["OvulationInPast"].(bool); !ok || !past {
-		t.Fatalf("expected ovulation to be marked as past, got %#v", data["OvulationInPast"])
+	if past, ok := data["OvulationInPast"].(bool); !ok || past {
+		t.Fatalf("expected ovulation to be projected into future, got %#v", data["OvulationInPast"])
+	}
+
+	stats, ok := data["Stats"].(services.CycleStats)
+	if !ok {
+		t.Fatalf("expected cycle stats in view data, got %#v", data["Stats"])
+	}
+	if stats.CurrentCycleDay <= 0 || stats.CurrentCycleDay > 28 {
+		t.Fatalf("expected cycle day within 1..28, got %d", stats.CurrentCycleDay)
+	}
+
+	displayNextPeriodStart, ok := data["DisplayNextPeriodStart"].(time.Time)
+	if !ok {
+		t.Fatalf("expected display next period in view data, got %#v", data["DisplayNextPeriodStart"])
+	}
+	if !displayNextPeriodStart.After(now) {
+		t.Fatalf("expected display next period after now, got %s", displayNextPeriodStart.Format("2006-01-02"))
+	}
+
+	displayOvulationDate, ok := data["DisplayOvulationDate"].(time.Time)
+	if !ok {
+		t.Fatalf("expected display ovulation in view data, got %#v", data["DisplayOvulationDate"])
+	}
+	if !displayOvulationDate.IsZero() && displayOvulationDate.Before(now) {
+		t.Fatalf("expected display ovulation date not in past, got %s", displayOvulationDate.Format("2006-01-02"))
 	}
 }
 
@@ -99,5 +123,9 @@ func TestBuildDashboardViewDataMarksOvulationAsUncalculableForIncompatibleCycle(
 	}
 	if !stats.OvulationDate.IsZero() {
 		t.Fatalf("expected no ovulation date for incompatible cycle values")
+	}
+	displayImpossible, ok := data["DisplayOvulationImpossible"].(bool)
+	if !ok || !displayImpossible {
+		t.Fatalf("expected display ovulation impossible=true, got %#v", data["DisplayOvulationImpossible"])
 	}
 }
