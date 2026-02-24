@@ -130,9 +130,14 @@
   }
 
   .lang-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.85rem;
     border-radius: 999px;
     padding: 0.28rem 0.72rem;
     font-size: 0.72rem;
+    line-height: 1.25;
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--text-muted);
@@ -145,7 +150,7 @@
 
   .lang-link-active {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    color: #5a4a3a;
+    color: #4a3c2f;
     box-shadow: 0 6px 12px rgba(212, 165, 116, 0.26);
   }
 
@@ -799,6 +804,22 @@
     font-weight: 800;
   }
 
+  .choice-input:disabled + .radio-tile,
+  .choice-input:disabled + .check-chip {
+    opacity: 0.76;
+  }
+
+  .choice-input:disabled:checked + .radio-tile,
+  .choice-input:disabled:checked + .check-chip {
+    border-color: rgba(232, 196, 168, 0.8);
+    background: rgba(255, 249, 240, 0.72);
+    box-shadow: none;
+  }
+
+  .choice-input:disabled:checked + .check-chip::after {
+    content: none;
+  }
+
   .choice-chip-active {
     border-color: rgba(212, 165, 116, 0.95);
     background: rgba(232, 196, 168, 0.5);
@@ -1060,17 +1081,29 @@
 
   .toast-close {
     flex: 0 0 auto;
-    border: none;
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
     color: inherit;
-    font-size: 1rem;
+    font-size: 0.9rem;
     line-height: 1;
-    opacity: 0.78;
+    opacity: 0.92;
     cursor: pointer;
   }
 
   .toast-close:hover {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.58);
+  }
+
+  .toast-close:focus-visible {
+    outline: 2px solid rgba(90, 74, 58, 0.35);
+    outline-offset: 1px;
   }
 
   .save-status {

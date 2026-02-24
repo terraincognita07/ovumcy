@@ -23,7 +23,8 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 
 	cycleDayReference := dashboardCycleReferenceLength(user, stats)
 	cycleDayWarning := dashboardCycleDayLooksLong(stats.CurrentCycleDay, cycleDayReference)
-	cycleDataStale := dashboardCycleDataLooksStale(stats.LastPeriodStart, today, cycleDayReference)
+	cycleStaleAnchor := dashboardCycleStaleAnchor(user, stats, handler.location)
+	cycleDataStale := dashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
 	displayNextPeriodStart, displayOvulationDate, displayOvulationExact, displayOvulationImpossible := dashboardUpcomingPredictions(stats, user, today, cycleDayReference)
 	nextPeriodInPast := !displayNextPeriodStart.IsZero() && displayNextPeriodStart.Before(today)
 	ovulationInPast := !displayOvulationImpossible && !displayOvulationDate.IsZero() && displayOvulationDate.Before(today)
@@ -79,6 +80,16 @@ func dashboardCycleDataLooksStale(lastPeriodStart time.Time, today time.Time, re
 	}
 	rawCycleDay := int(today.Sub(lastPeriodStart).Hours()/24) + 1
 	return rawCycleDay > referenceLength
+}
+
+func dashboardCycleStaleAnchor(user *models.User, stats services.CycleStats, location *time.Location) time.Time {
+	if user == nil || user.LastPeriodStart == nil || user.LastPeriodStart.IsZero() {
+		return stats.LastPeriodStart
+	}
+	if location == nil {
+		location = time.UTC
+	}
+	return dateAtLocation(*user.LastPeriodStart, location)
 }
 
 func dashboardUpcomingPredictions(stats services.CycleStats, user *models.User, today time.Time, cycleLength int) (time.Time, time.Time, bool, bool) {

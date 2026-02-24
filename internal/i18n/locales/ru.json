@@ -53,7 +53,7 @@
   "auth.forgot_password_title": "Восстановление пароля",
   "auth.forgot_password_subtitle": "Введите код восстановления, чтобы продолжить.",
   "auth.reset_password_title": "Установите новый пароль",
-  "auth.reset_password_subtitle": "Используйте надежный пароль для аккаунта.",
+  "auth.reset_password_subtitle": "Используйте надёжный пароль для аккаунта.",
   "auth.reset_password": "Сбросить пароль",
   "auth.recovery_title_short": "Восстановление",
   "auth.recovery_code_title": "Сохраните код восстановления",

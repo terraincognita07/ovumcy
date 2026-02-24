@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Privacy breadcrumb naming is aligned with app navigation (`Dashboard`/`Панель` for authenticated users).
 - Profile save now supports inline HTMX success feedback, matching other settings forms.
 - Mobile quick navigation tab bar was added for faster section switching.
+- Day editor symptom chips now clear visual active state immediately when `Period day` is turned off (UI state now matches saved payload).
+- Dashboard stale-cycle detection now prioritizes the owner-set cycle anchor date (`last_period_start`) to avoid showing stale data as factual.
+- Language switch active pill styling was hardened for mobile, and frontend asset cache-busting versions were bumped to force fresh JS/CSS after deploy.
+- Toast UX improved with longer visibility window and clearer close button affordance for manual dismissal.
+- Russian copy polish: public text now consistently uses `надёжный` where applicable.
 
 ## [0.1.0] - 2026-02-23
 

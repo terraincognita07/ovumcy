@@ -3,7 +3,7 @@
 
   var PASSWORD_HIDE_ICON = "\u{1F648}";
   var PASSWORD_SHOW_ICON = "\u{1F441}";
-  var TOAST_VISIBLE_MS = 2200;
+  var TOAST_VISIBLE_MS = 5200;
   var TOAST_EXIT_MS = 220;
   var STATUS_CLEAR_MS = 2000;
   var DOWNLOAD_REVOKE_MS = 500;
@@ -839,18 +839,26 @@
     };
   };
 
+  function clearCheckedInputs(root, selector) {
+    if (!root || !root.querySelectorAll) {
+      return;
+    }
+    var inputs = root.querySelectorAll(selector);
+    for (var index = 0; index < inputs.length; index++) {
+      var input = inputs[index];
+      input.checked = false;
+      if (input.removeAttribute) {
+        input.removeAttribute("checked");
+      }
+    }
+  }
+
   window.dayEditorForm = function (config) {
     var safeConfig = config || {};
     return {
       isPeriod: !!safeConfig.isPeriod,
       clearNonPeriodSelections: function () {
-        if (!this.$root || !this.$root.querySelectorAll) {
-          return;
-        }
-        var symptoms = this.$root.querySelectorAll("input[name='symptom_ids']");
-        for (var index = 0; index < symptoms.length; index++) {
-          symptoms[index].checked = false;
-        }
+        clearCheckedInputs(this.$root, "input[name='symptom_ids']");
       },
       init: function () {
         this.$watch("isPeriod", function (value) {
@@ -879,13 +887,7 @@
         return String(this.notesPreview || "").trim().length > 0;
       },
       clearNonPeriodSelections: function () {
-        if (!this.$root || !this.$root.querySelectorAll) {
-          return;
-        }
-        var symptoms = this.$root.querySelectorAll("input[name='symptom_ids']");
-        for (var index = 0; index < symptoms.length; index++) {
-          symptoms[index].checked = false;
-        }
+        clearCheckedInputs(this.$root, "input[name='symptom_ids']");
         this.syncSymptoms();
       },
       init: function () {
