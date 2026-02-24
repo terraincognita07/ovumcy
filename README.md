@@ -56,6 +56,8 @@ Uses the prebuilt image from GHCR by default (`ghcr.io/terraincognita07/ovumcy:l
 ```bash
 git clone https://github.com/terraincognita07/ovumcy.git
 cd ovumcy
+cp .env.example .env
+# edit SECRET_KEY in .env
 docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml up -d
 ```
