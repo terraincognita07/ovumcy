@@ -1,8 +1,6 @@
 services:
   ovumcy:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ${OVUMCY_IMAGE:-ghcr.io/terraincognita07/ovumcy:latest}
     container_name: ovumcy
     environment:
       - TZ=UTC

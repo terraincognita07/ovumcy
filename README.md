@@ -51,10 +51,19 @@ If you found a security issue, see [SECURITY.md](SECURITY.md).
 
 ### Docker
 
+Uses the prebuilt image from GHCR by default (`ghcr.io/terraincognita07/ovumcy:latest`).
+
 ```bash
 git clone https://github.com/terraincognita07/ovumcy.git
 cd ovumcy
+docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml up -d
+```
+
+Pin a specific image tag if needed:
+
+```bash
+OVUMCY_IMAGE=ghcr.io/terraincognita07/ovumcy:v0.1.0 docker compose -f docker/docker-compose.yml up -d
 ```
 
 Then open `http://localhost:8080`.
