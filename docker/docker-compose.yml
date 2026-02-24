@@ -1,6 +1,7 @@
 services:
   ovumcy:
     image: ${OVUMCY_IMAGE:-ghcr.io/terraincognita07/ovumcy:latest}
+    pull_policy: always
     container_name: ovumcy
     env_file:
       - ../.env
