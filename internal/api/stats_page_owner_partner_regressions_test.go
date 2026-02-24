@@ -77,3 +77,37 @@ func TestBuildStatsPageDataPartnerNoBaseline(t *testing.T) {
 		t.Fatalf("expected IsOwner=false for partner, got %#v", data["IsOwner"])
 	}
 }
+
+func TestBuildStatsPageDataMarksStaleCycleFromUserBaseline(t *testing.T) {
+	t.Parallel()
+
+	handler, database := newDataAccessTestHandler(t)
+	user := createDataAccessTestUser(t, database, "stats-page-stale@example.com")
+	user.Role = models.RoleOwner
+
+	now := time.Date(2026, time.February, 24, 0, 0, 0, 0, time.UTC)
+	lastPeriodStart := now.AddDate(0, 0, -55)
+	if err := database.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
+		"cycle_length":      28,
+		"period_length":     5,
+		"last_period_start": lastPeriodStart,
+	}).Error; err != nil {
+		t.Fatalf("update user cycle baseline: %v", err)
+	}
+
+	user.CycleLength = 28
+	user.PeriodLength = 5
+	user.LastPeriodStart = &lastPeriodStart
+
+	data, errorMessage, err := handler.buildStatsPageData(&user, "en", map[string]string{}, now)
+	if err != nil {
+		t.Fatalf("buildStatsPageData returned error: %v", err)
+	}
+	if errorMessage != "" {
+		t.Fatalf("expected empty error message, got %q", errorMessage)
+	}
+
+	if stale, ok := data["CycleDataStale"].(bool); !ok || !stale {
+		t.Fatalf("expected CycleDataStale=true for stale owner baseline, got %#v", data["CycleDataStale"])
+	}
+}

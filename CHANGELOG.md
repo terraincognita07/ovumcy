@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Language switch active pill styling was hardened for mobile, and frontend asset cache-busting versions were bumped to force fresh JS/CSS after deploy.
 - Toast UX improved with longer visibility window and clearer close button affordance for manual dismissal.
 - Russian copy polish: public text now consistently uses `надёжный` where applicable.
+- Language switch active state now uses explicit `aria-current` styling and hard color values to avoid mobile active-pill label disappearance.
+- HTMX save-status success banners are now dismissible (`×`) and no longer rely on `status-transient` 2s fade behavior.
+- Stats page current-phase card now follows stale-cycle detection used on dashboard (shows `Unknown` with stale-phase hint when baseline is outdated).
 
 ## [0.1.0] - 2026-02-23
 

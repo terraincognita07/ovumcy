@@ -45,7 +45,7 @@ func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
 		if message == "" || message == messageKey {
 			message = "Profile updated successfully."
 		}
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
+		return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
 	}
 	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: status})
 	return redirectOrJSON(c, "/settings")

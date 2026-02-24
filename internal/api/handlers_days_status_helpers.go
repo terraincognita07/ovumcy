@@ -15,5 +15,5 @@ func (handler *Handler) sendDaySaveStatus(c *fiber.Ctx) error {
 		pattern = "Saved at %s"
 	}
 	message := fmt.Sprintf(pattern, timestamp)
-	return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
+	return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
 }

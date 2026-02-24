@@ -1,0 +1,53 @@
+package api
+
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/terraincognita07/ovumcy/internal/models"
+)
+
+func TestStatsPageShowsUnknownPhaseWhenCycleDataIsStale(t *testing.T) {
+	app, database := newOnboardingTestApp(t)
+	user := createOnboardingTestUser(t, database, "stats-stale-ui@example.com", "StrongPass1", true)
+	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
+
+	lastPeriodStart := dateAtLocation(time.Now().UTC(), time.UTC).AddDate(0, 0, -60)
+	if err := database.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
+		"cycle_length":      28,
+		"period_length":     5,
+		"last_period_start": lastPeriodStart,
+	}).Error; err != nil {
+		t.Fatalf("update user cycle context: %v", err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/stats", nil)
+	request.Header.Set("Accept-Language", "en")
+	request.Header.Set("Cookie", authCookie)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("stats request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.StatusCode)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read stats body: %v", err)
+	}
+	rendered := string(body)
+	if !strings.Contains(rendered, "Unknown") {
+		t.Fatalf("expected stale stats phase to be rendered as unknown")
+	}
+	if !strings.Contains(rendered, "Phase shown as estimate due stale baseline.") {
+		t.Fatalf("expected stale-phase explanatory hint on stats page")
+	}
+}

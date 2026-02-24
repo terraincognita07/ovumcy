@@ -27,7 +27,12 @@
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.current_phase"}}</p>
+      {{if .CycleDataStale}}
+      <p class="stat-value mt-2"><span class="mr-2">{{phaseIcon "unknown"}}</span>{{phaseLabel .Messages "unknown"}}</p>
+      <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.phase_estimated"}}</p>
+      {{else}}
       <p class="stat-value mt-2"><span class="mr-2">{{phaseIcon .Stats.CurrentPhase}}</span>{{phaseLabel .Messages .Stats.CurrentPhase}}</p>
+      {{end}}
     </article>
   </div>
 

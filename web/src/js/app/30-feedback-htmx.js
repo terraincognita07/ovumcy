@@ -94,12 +94,77 @@
     button.classList.remove("btn-loading");
   }
 
+  function clearStatusTargetIfEmpty(target) {
+    if (!target || target.querySelector(".status-ok") || target.querySelector(".status-error")) {
+      return;
+    }
+    target.textContent = "";
+  }
+
+  function closeLabelText() {
+    return document.body.getAttribute("data-toast-close") || "Close";
+  }
+
+  function ensureDismissibleSuccessStatus(target) {
+    if (!target || !target.querySelector) {
+      return null;
+    }
+
+    var successNode = target.querySelector(".status-ok");
+    if (!successNode) {
+      return null;
+    }
+
+    if (successNode.querySelector(".toast-close")) {
+      return successNode;
+    }
+
+    var message = String(successNode.textContent || "").trim();
+    successNode.textContent = "";
+
+    var body = document.createElement("div");
+    body.className = "toast-body";
+
+    var text = document.createElement("span");
+    text.className = "toast-message";
+    text.textContent = message;
+    body.appendChild(text);
+
+    var closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "toast-close";
+    closeButton.setAttribute("aria-label", closeLabelText());
+    closeButton.textContent = "×";
+    closeButton.addEventListener("click", function () {
+      successNode.remove();
+      clearStatusTargetIfEmpty(target);
+    });
+    body.appendChild(closeButton);
+
+    successNode.appendChild(body);
+    return successNode;
+  }
+
   function scheduleClearSuccessStatus(target) {
+    var successNode = ensureDismissibleSuccessStatus(target);
+    if (!successNode) {
+      return;
+    }
+
     window.setTimeout(function () {
-      if (target.querySelector(".status-ok")) {
-        target.textContent = "";
+      if (!target.contains(successNode)) {
+        clearStatusTargetIfEmpty(target);
+        return;
       }
-    }, STATUS_CLEAR_MS);
+
+      successNode.classList.add("toast-exit");
+      window.setTimeout(function () {
+        if (target.contains(successNode)) {
+          successNode.remove();
+        }
+        clearStatusTargetIfEmpty(target);
+      }, TOAST_EXIT_MS);
+    }, TOAST_VISIBLE_MS);
   }
 
   function maybeRefreshDayEditor(target) {

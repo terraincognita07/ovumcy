@@ -54,6 +54,9 @@ func TestSettingsCycleUpdatePersistsAndRendersAfterReload(t *testing.T) {
 	if !strings.Contains(string(updateBody), "status-ok") {
 		t.Fatalf("expected htmx success status markup, got %q", string(updateBody))
 	}
+	if strings.Contains(string(updateBody), "status-transient") {
+		t.Fatalf("did not expect transient status class in htmx success markup, got %q", string(updateBody))
+	}
 
 	persisted := models.User{}
 	if err := database.Select("cycle_length", "period_length", "auto_period_fill", "last_period_start").First(&persisted, user.ID).Error; err != nil {

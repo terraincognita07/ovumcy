@@ -32,7 +32,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		if message == "settings.success.cycle_updated" {
 			message = "Cycle settings updated successfully."
 		}
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok status-transient\">%s</div>", template.HTMLEscapeString(message)))
+		return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
 	}
 
 	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: "cycle_updated"})

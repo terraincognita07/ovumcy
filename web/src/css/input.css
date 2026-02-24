@@ -148,10 +148,14 @@
     background: rgba(232, 196, 168, 0.38);
   }
 
-  .lang-link-active {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    color: #4a3c2f;
-    box-shadow: 0 6px 12px rgba(212, 165, 116, 0.26);
+  .lang-link-active,
+  .lang-link[aria-current="page"] {
+    background: linear-gradient(135deg, #c78f5f, #d8aa80);
+    color: #3f2d1e !important;
+    -webkit-text-fill-color: #3f2d1e;
+    background-clip: border-box;
+    mix-blend-mode: normal;
+    box-shadow: 0 6px 12px rgba(186, 131, 80, 0.26);
   }
 
   .menu-toggle {

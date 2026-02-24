@@ -84,6 +84,10 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
 	observedCycleCount := len(services.CycleLengths(logs))
 	hasReliableTrend := trendPointCount >= 3
+	today := dateAtLocation(now, handler.location)
+	cycleDayReference := dashboardCycleReferenceLength(user, stats)
+	cycleStaleAnchor := dashboardCycleStaleAnchor(user, stats, handler.location)
+	cycleDataStale := dashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
 	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
 	if err != nil {
 		return nil, symptomErrorMessage, err
@@ -99,6 +103,7 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 		"HasObservedCycleData": observedCycleCount > 0,
 		"HasTrendData":         trendPointCount > 0,
 		"HasReliableTrend":     hasReliableTrend,
+		"CycleDataStale":       cycleDataStale,
 		"SymptomCounts":        symptomCounts,
 		"IsOwner":              isOwnerUser(user),
 	}
