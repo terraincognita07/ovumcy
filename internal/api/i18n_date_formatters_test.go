@@ -52,3 +52,25 @@ func TestLocalizedDateLabel(t *testing.T) {
 		t.Fatalf("expected fallback date label, got %q", got)
 	}
 }
+
+func TestLocalizedDateDisplay(t *testing.T) {
+	value := time.Date(2026, time.January, 29, 0, 0, 0, 0, time.UTC)
+
+	if got := localizedDateDisplay("ru", value); got != "29.01.2026" {
+		t.Fatalf("expected russian display date, got %q", got)
+	}
+	if got := localizedDateDisplay("en", value); got != "Jan 29, 2026" {
+		t.Fatalf("expected english display date, got %q", got)
+	}
+}
+
+func TestLocalizedDateShort(t *testing.T) {
+	value := time.Date(2026, time.January, 29, 0, 0, 0, 0, time.UTC)
+
+	if got := localizedDateShort("ru", value); got != "29.01" {
+		t.Fatalf("expected russian short date, got %q", got)
+	}
+	if got := localizedDateShort("en", value); got != "Jan 29" {
+		t.Fatalf("expected english short date, got %q", got)
+	}
+}

@@ -15,6 +15,7 @@ func buildPrivacyMetaDescription(messages map[string]string) string {
 
 func buildPrivacyPageData(messages map[string]string, backQuery string, user *models.User) fiber.Map {
 	backFallback := "/login"
+	breadcrumbBackLabelKey := "common.home"
 	data := fiber.Map{
 		"Title":           localizedPageTitle(messages, "meta.title.privacy", "Ovumcy | Privacy Policy"),
 		"MetaDescription": buildPrivacyMetaDescription(messages),
@@ -23,7 +24,9 @@ func buildPrivacyPageData(messages map[string]string, backQuery string, user *mo
 	if user != nil {
 		data["CurrentUser"] = user
 		backFallback = "/dashboard"
+		breadcrumbBackLabelKey = "nav.dashboard"
 	}
 	data["BackPath"] = sanitizeRedirectPath(backQuery, backFallback)
+	data["BreadcrumbBackLabelKey"] = breadcrumbBackLabelKey
 	return data
 }

@@ -110,6 +110,17 @@
     return new Date(value.getFullYear(), value.getMonth(), value.getDate());
   }
 
+  function formatDateForDisplay(formatter, rawISODate) {
+    var parsed = parseISODate(rawISODate);
+    if (!parsed) {
+      return String(rawISODate || "").trim();
+    }
+    if (formatter && typeof formatter.format === "function") {
+      return formatter.format(parsed);
+    }
+    return formatISODate(parsed);
+  }
+
   function dateKey(value) {
     return Number(formatISODate(value).replace(/-/g, ""));
   }

@@ -51,7 +51,7 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	if !strings.Contains(rendered, `name="symptom_ids"`) {
 		t.Fatalf("expected symptoms controls to stay available regardless of period toggle")
 	}
-	if !strings.Contains(rendered, "Period toggle, flow, and symptoms are auto-saved. Use Save for notes.") {
+	if !strings.Contains(rendered, "All fields are auto-saved") {
 		t.Fatalf("expected autosave hint text in day editor panel")
 	}
 }

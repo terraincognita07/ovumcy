@@ -553,7 +553,7 @@
       return "";
     }
     var name = String(target.getAttribute("name") || "").trim();
-    if (name === "is_period" || name === "flow" || name === "symptom_ids") {
+    if (name === "is_period" || name === "flow" || name === "symptom_ids" || name === "notes") {
       return name;
     }
     return "";
@@ -654,7 +654,28 @@
       if (!form) {
         return;
       }
-      queueDayEditorAutosave(form, fieldName === "symptom_ids" ? 120 : 0);
+      var delayMs = 0;
+      if (fieldName === "symptom_ids") {
+        delayMs = 120;
+      } else if (fieldName === "notes") {
+        delayMs = 220;
+      }
+      queueDayEditorAutosave(form, delayMs);
+    });
+
+    document.body.addEventListener("input", function (event) {
+      var target = getEventTarget(event);
+      if (!target || !target.closest || target.tagName !== "TEXTAREA") {
+        return;
+      }
+      if (dayEditorAutosaveFieldName(target) !== "notes") {
+        return;
+      }
+      var form = target.closest("form[data-day-editor-autosave]");
+      if (!form) {
+        return;
+      }
+      queueDayEditorAutosave(form, 700);
     });
 
     document.body.addEventListener("htmx:responseError", function (event) {

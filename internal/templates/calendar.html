@@ -52,27 +52,42 @@
             @click="selectDayFromEvent($event)"
             :class="{ 'selected': isSelectedDay($el.dataset.day) }"
             class="{{.CellClass}}">
-            <div class="flex items-center justify-between">
+            <div class="calendar-cell-header">
               <span class="{{.TextClass}}">{{.Day}}</span>
               {{if .IsToday}}
-              <span class="calendar-today-pill">{{t $.Messages "calendar.tag.today"}}</span>
+              <span class="calendar-today-pill" title="{{t $.Messages "calendar.tag.today"}}">
+                <span class="calendar-tag-label-full">{{t $.Messages "calendar.tag.today"}}</span>
+                <span class="calendar-tag-label-short">{{t $.Messages "calendar.tag.today_short"}}</span>
+              </span>
               {{else if .OvulationDot}}
               <span class="text-base" title="{{t $.Messages "calendar.ovulation_icon"}}">🌞</span>
               {{end}}
             </div>
 
-            <div class="mt-2 flex flex-wrap justify-center gap-1">
+            <div class="calendar-badges mt-2">
               {{if .IsPeriod}}
-              <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.period"}}</span>
+              <span class="{{.BadgeClass}}" title="{{t $.Messages "calendar.tag.period"}}">
+                <span class="calendar-tag-label-full">{{t $.Messages "calendar.tag.period"}}</span>
+                <span class="calendar-tag-label-short">{{t $.Messages "calendar.tag.period_short"}}</span>
+              </span>
               {{end}}
               {{if and (not .IsPeriod) .IsPredicted}}
-              <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.predicted"}}</span>
+              <span class="{{.BadgeClass}}" title="{{t $.Messages "calendar.tag.predicted"}}">
+                <span class="calendar-tag-label-full">{{t $.Messages "calendar.tag.predicted"}}</span>
+                <span class="calendar-tag-label-short">{{t $.Messages "calendar.tag.predicted_short"}}</span>
+              </span>
               {{end}}
               {{if and (not .IsPeriod) (not .IsPredicted) .IsOvulation}}
-              <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.ovulation"}}</span>
+              <span class="{{.BadgeClass}}" title="{{t $.Messages "calendar.tag.ovulation"}}">
+                <span class="calendar-tag-label-full">{{t $.Messages "calendar.tag.ovulation"}}</span>
+                <span class="calendar-tag-label-short">{{t $.Messages "calendar.tag.ovulation_short"}}</span>
+              </span>
               {{end}}
               {{if and (not .IsPeriod) (not .IsPredicted) (not .IsOvulation) .IsFertility}}
-              <span class="{{.BadgeClass}}">{{t $.Messages "calendar.tag.fertile"}}</span>
+              <span class="{{.BadgeClass}}" title="{{t $.Messages "calendar.tag.fertile"}}">
+                <span class="calendar-tag-label-full">{{t $.Messages "calendar.tag.fertile"}}</span>
+                <span class="calendar-tag-label-short">{{t $.Messages "calendar.tag.fertile_short"}}</span>
+              </span>
               {{end}}
             </div>
           </button>

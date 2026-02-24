@@ -40,16 +40,16 @@ func TestCalendarRendersOvulationTagWithoutFertileOverride(t *testing.T) {
 
 	febRendered := renderCalendarMonthHTML(t, app, authCookie, "2026-02")
 	febDayMarkup := extractCalendarDayMarkup(t, febRendered, "2026-02-23")
-	if !regexp.MustCompile(`calendar-tag-ovulation">Ovulation</span>`).MatchString(febDayMarkup) {
+	if !regexp.MustCompile(`(?s)calendar-tag-ovulation[^"]*".*?<span class="calendar-tag-label-full">Ovulation</span>`).MatchString(febDayMarkup) {
 		t.Fatalf("expected ovulation tag on 2026-02-23 in February calendar")
 	}
-	if regexp.MustCompile(`calendar-tag-fertile">Fertile</span>`).MatchString(febDayMarkup) {
+	if regexp.MustCompile(`(?s)calendar-tag-fertile[^"]*".*?<span class="calendar-tag-label-full">Fertile</span>`).MatchString(febDayMarkup) {
 		t.Fatalf("did not expect fertile tag on ovulation day 2026-02-23")
 	}
 
 	marRendered := renderCalendarMonthHTML(t, app, authCookie, "2026-03")
 	marDayMarkup := extractCalendarDayMarkup(t, marRendered, "2026-03-23")
-	if !regexp.MustCompile(`calendar-tag-ovulation">Ovulation</span>`).MatchString(marDayMarkup) {
+	if !regexp.MustCompile(`(?s)calendar-tag-ovulation[^"]*".*?<span class="calendar-tag-label-full">Ovulation</span>`).MatchString(marDayMarkup) {
 		t.Fatalf("expected projected ovulation tag on 2026-03-23 in March calendar")
 	}
 }

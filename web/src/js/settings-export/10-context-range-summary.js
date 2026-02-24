@@ -3,6 +3,7 @@
     var monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
     var weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
     var monthNameFormatter = new Intl.DateTimeFormat(locale, { month: "long" });
+    var summaryDateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
 
     var context = {
       section: section,
@@ -38,6 +39,7 @@
       calendarClose: section.querySelector("[data-export-calendar-close]"),
       monthFormatter: monthFormatter,
       weekdayFormatter: weekdayFormatter,
+      summaryDateFormatter: summaryDateFormatter,
       monthNames: buildMonthNames(monthNameFormatter)
     };
 
@@ -217,12 +219,18 @@
       var selectedRangeFrom = String(selectedFrom || "").trim();
       var selectedRangeTo = String(selectedTo || "").trim();
       if (selectedRangeFrom && selectedRangeTo) {
-        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [selectedRangeFrom, selectedRangeTo]);
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [
+          formatDateForDisplay(context.summaryDateFormatter, selectedRangeFrom),
+          formatDateForDisplay(context.summaryDateFormatter, selectedRangeTo)
+        ]);
         return;
       }
 
       if (hasData && dateFrom && dateTo) {
-        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [dateFrom, dateTo]);
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [
+          formatDateForDisplay(context.summaryDateFormatter, dateFrom),
+          formatDateForDisplay(context.summaryDateFormatter, dateTo)
+        ]);
       } else {
         context.summaryRangeNode.textContent = context.summaryRangeEmpty;
       }

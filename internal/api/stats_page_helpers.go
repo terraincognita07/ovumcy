@@ -82,20 +82,23 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 	}
 
 	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
+	observedCycleCount := len(services.CycleLengths(logs))
 	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
 	if err != nil {
 		return nil, symptomErrorMessage, err
 	}
 
 	data := fiber.Map{
-		"Title":           localizedPageTitle(messages, "meta.title.stats", "Ovumcy | Stats"),
-		"CurrentUser":     user,
-		"Stats":           stats,
-		"ChartData":       chartPayload,
-		"ChartBaseline":   baselineCycleLength,
-		"TrendPointCount": trendPointCount,
-		"SymptomCounts":   symptomCounts,
-		"IsOwner":         isOwnerUser(user),
+		"Title":                localizedPageTitle(messages, "meta.title.stats", "Ovumcy | Stats"),
+		"CurrentUser":          user,
+		"Stats":                stats,
+		"ChartData":            chartPayload,
+		"ChartBaseline":        baselineCycleLength,
+		"TrendPointCount":      trendPointCount,
+		"HasObservedCycleData": observedCycleCount > 0,
+		"HasTrendData":         trendPointCount > 0,
+		"SymptomCounts":        symptomCounts,
+		"IsOwner":              isOwnerUser(user),
 	}
 	return data, "", nil
 }

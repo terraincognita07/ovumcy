@@ -25,6 +25,9 @@ func TestBuildPrivacyPageDataGuestUsesLoginBackFallback(t *testing.T) {
 	if _, exists := data["CurrentUser"]; exists {
 		t.Fatalf("did not expect CurrentUser for guest payload")
 	}
+	if key, ok := data["BreadcrumbBackLabelKey"].(string); !ok || key != "common.home" {
+		t.Fatalf("expected guest breadcrumb key common.home, got %#v", data["BreadcrumbBackLabelKey"])
+	}
 }
 
 func TestBuildPrivacyPageDataAuthenticatedUsesDashboardBackFallback(t *testing.T) {
@@ -39,5 +42,8 @@ func TestBuildPrivacyPageDataAuthenticatedUsesDashboardBackFallback(t *testing.T
 	currentUser, ok := data["CurrentUser"].(*models.User)
 	if !ok || currentUser != user {
 		t.Fatalf("expected CurrentUser pointer to be preserved, got %#v", data["CurrentUser"])
+	}
+	if key, ok := data["BreadcrumbBackLabelKey"].(string); !ok || key != "nav.dashboard" {
+		t.Fatalf("expected auth breadcrumb key nav.dashboard, got %#v", data["BreadcrumbBackLabelKey"])
 	}
 }

@@ -110,6 +110,17 @@
     return new Date(value.getFullYear(), value.getMonth(), value.getDate());
   }
 
+  function formatDateForDisplay(formatter, rawISODate) {
+    var parsed = parseISODate(rawISODate);
+    if (!parsed) {
+      return String(rawISODate || "").trim();
+    }
+    if (formatter && typeof formatter.format === "function") {
+      return formatter.format(parsed);
+    }
+    return formatISODate(parsed);
+  }
+
   function dateKey(value) {
     return Number(formatISODate(value).replace(/-/g, ""));
   }
@@ -241,6 +252,7 @@
     var monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
     var weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
     var monthNameFormatter = new Intl.DateTimeFormat(locale, { month: "long" });
+    var summaryDateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
 
     var context = {
       section: section,
@@ -276,6 +288,7 @@
       calendarClose: section.querySelector("[data-export-calendar-close]"),
       monthFormatter: monthFormatter,
       weekdayFormatter: weekdayFormatter,
+      summaryDateFormatter: summaryDateFormatter,
       monthNames: buildMonthNames(monthNameFormatter)
     };
 
@@ -455,12 +468,18 @@
       var selectedRangeFrom = String(selectedFrom || "").trim();
       var selectedRangeTo = String(selectedTo || "").trim();
       if (selectedRangeFrom && selectedRangeTo) {
-        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [selectedRangeFrom, selectedRangeTo]);
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [
+          formatDateForDisplay(context.summaryDateFormatter, selectedRangeFrom),
+          formatDateForDisplay(context.summaryDateFormatter, selectedRangeTo)
+        ]);
         return;
       }
 
       if (hasData && dateFrom && dateTo) {
-        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [dateFrom, dateTo]);
+        context.summaryRangeNode.textContent = formatTemplate(context.summaryRangeTemplate, [
+          formatDateForDisplay(context.summaryDateFormatter, dateFrom),
+          formatDateForDisplay(context.summaryDateFormatter, dateTo)
+        ]);
       } else {
         context.summaryRangeNode.textContent = context.summaryRangeEmpty;
       }
@@ -878,6 +897,7 @@
   var bounds = createBounds(context.rawMinDate, context.rawMaxDate);
   var rangeController = createDateRangeController(context, bounds);
   var summaryController = createSummaryController(context, bounds, rangeController);
+  var useNativeDatePicker = context.fromInput.type === "date" && context.toInput.type === "date";
 
   function onRangeChanged(side) {
     rangeController.validate(side);
@@ -911,19 +931,21 @@
   bindRangeInput(context.fromInput, "from", onRangeChanged);
   bindRangeInput(context.toInput, "to", onRangeChanged);
 
-  context.fromInput.addEventListener("focus", function () {
-    calendarController.openCalendarForInput(context.fromInput);
-  });
-  context.fromInput.addEventListener("click", function () {
-    calendarController.openCalendarForInput(context.fromInput);
-  });
+  if (!useNativeDatePicker) {
+    context.fromInput.addEventListener("focus", function () {
+      calendarController.openCalendarForInput(context.fromInput);
+    });
+    context.fromInput.addEventListener("click", function () {
+      calendarController.openCalendarForInput(context.fromInput);
+    });
 
-  context.toInput.addEventListener("focus", function () {
-    calendarController.openCalendarForInput(context.toInput);
-  });
-  context.toInput.addEventListener("click", function () {
-    calendarController.openCalendarForInput(context.toInput);
-  });
+    context.toInput.addEventListener("focus", function () {
+      calendarController.openCalendarForInput(context.toInput);
+    });
+    context.toInput.addEventListener("click", function () {
+      calendarController.openCalendarForInput(context.toInput);
+    });
+  }
 
   for (var presetIndex = 0; presetIndex < context.presetButtons.length; presetIndex++) {
     (function (button) {
@@ -936,55 +958,59 @@
     })(context.presetButtons[presetIndex]);
   }
 
-  if (context.calendarTitleToggle) {
-    context.calendarTitleToggle.addEventListener("click", calendarController.toggleCalendarJump);
-  }
-  if (context.calendarMonth) {
-    context.calendarMonth.addEventListener("change", calendarController.syncJumpControls);
-  }
-  if (context.calendarYear) {
-    context.calendarYear.addEventListener("input", calendarController.syncJumpControls);
-    context.calendarYear.addEventListener("keydown", calendarController.onYearKeydown);
-  }
-  if (context.calendarPrev) {
-    context.calendarPrev.addEventListener("click", function () {
-      calendarController.moveMonth(-1);
-    });
-  }
-  if (context.calendarNext) {
-    context.calendarNext.addEventListener("click", function () {
-      calendarController.moveMonth(1);
-    });
-  }
-  if (context.calendarApply) {
-    context.calendarApply.addEventListener("click", calendarController.applyJumpSelection);
-  }
-  if (context.calendarClose) {
-    context.calendarClose.addEventListener("click", calendarController.closeCalendar);
-  }
+  if (!useNativeDatePicker) {
+    if (context.calendarTitleToggle) {
+      context.calendarTitleToggle.addEventListener("click", calendarController.toggleCalendarJump);
+    }
+    if (context.calendarMonth) {
+      context.calendarMonth.addEventListener("change", calendarController.syncJumpControls);
+    }
+    if (context.calendarYear) {
+      context.calendarYear.addEventListener("input", calendarController.syncJumpControls);
+      context.calendarYear.addEventListener("keydown", calendarController.onYearKeydown);
+    }
+    if (context.calendarPrev) {
+      context.calendarPrev.addEventListener("click", function () {
+        calendarController.moveMonth(-1);
+      });
+    }
+    if (context.calendarNext) {
+      context.calendarNext.addEventListener("click", function () {
+        calendarController.moveMonth(1);
+      });
+    }
+    if (context.calendarApply) {
+      context.calendarApply.addEventListener("click", calendarController.applyJumpSelection);
+    }
+    if (context.calendarClose) {
+      context.calendarClose.addEventListener("click", calendarController.closeCalendar);
+    }
 
-  document.addEventListener("click", function (event) {
-    if (!context.calendarPanel || context.calendarPanel.classList.contains("hidden")) {
-      return;
-    }
-    var target = event.target;
-    if (!target) {
-      return;
-    }
-    if (context.calendarPanel.contains(target)) {
-      return;
-    }
-    if (target === context.fromInput || target === context.toInput) {
-      return;
-    }
-    calendarController.closeCalendar();
-  });
-
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") {
+    document.addEventListener("click", function (event) {
+      if (!context.calendarPanel || context.calendarPanel.classList.contains("hidden")) {
+        return;
+      }
+      var target = event.target;
+      if (!target) {
+        return;
+      }
+      if (context.calendarPanel.contains(target)) {
+        return;
+      }
+      if (target === context.fromInput || target === context.toInput) {
+        return;
+      }
       calendarController.closeCalendar();
-    }
-  });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        calendarController.closeCalendar();
+      }
+    });
+  } else if (context.calendarPanel) {
+    context.calendarPanel.classList.add("hidden");
+  }
 
   var handleExport = createExportHandler(context, rangeController);
   for (var linkIndex = 0; linkIndex < context.links.length; linkIndex++) {

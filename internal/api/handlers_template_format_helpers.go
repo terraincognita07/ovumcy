@@ -15,6 +15,15 @@ func formatTemplateDate(value time.Time, layout string) string {
 	return value.Format(layout)
 }
 
+func formatTemplateLocalizedDate(language string, value time.Time, style string) string {
+	switch style {
+	case "short":
+		return localizedDateShort(language, value)
+	default:
+		return localizedDateDisplay(language, value)
+	}
+}
+
 func formatTemplateFloat(value float64) string {
 	rounded := math.Round(value*10) / 10
 	if math.Abs(rounded-math.Round(rounded)) < 1e-9 {

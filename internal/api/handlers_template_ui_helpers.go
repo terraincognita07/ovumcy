@@ -29,6 +29,13 @@ func templateUserIdentity(user *models.User) string {
 	return localPart
 }
 
+func templateHasDisplayName(user *models.User) bool {
+	if user == nil {
+		return false
+	}
+	return strings.TrimSpace(user.DisplayName) != ""
+}
+
 func isActiveTemplateRoute(currentPath string, route string) bool {
 	path := strings.TrimSpace(currentPath)
 	if path == "" {

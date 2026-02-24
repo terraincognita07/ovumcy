@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -34,6 +35,10 @@ func TestPrivacyRouteBackLinkForAuthenticatedUser(t *testing.T) {
 	}
 	rendered := string(body)
 	if !strings.Contains(rendered, `href="/dashboard"`) {
-		t.Fatalf("expected back link to point to /dashboard for authenticated users")
+		t.Fatalf("expected privacy page to include dashboard backlink for authenticated users")
+	}
+	breadcrumbPattern := regexp.MustCompile(`(?s)<p class="journal-muted text-sm">\s*<a href="/dashboard" class="inline-link">Dashboard</a>`)
+	if !breadcrumbPattern.MatchString(rendered) {
+		t.Fatalf("expected breadcrumb to use dashboard naming for authenticated users")
 	}
 }

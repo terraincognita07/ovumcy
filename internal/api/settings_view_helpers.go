@@ -52,6 +52,7 @@ func classifySettingsErrorSource(errorSource string) (string, string) {
 
 func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
 	messages := currentMessages(c)
+	language := currentLanguage(c)
 	status := settingsStatusFromFlashOrQuery(c, flash)
 	errorKey := ""
 	changePasswordErrorKey := ""
@@ -107,6 +108,16 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 		data["HasExportData"] = totalEntries > 0
 		data["ExportDateFrom"] = firstDate
 		data["ExportDateTo"] = lastDate
+		displayFrom := firstDate
+		if parsedFrom, parseErr := parseDayParam(firstDate, handler.location); parseErr == nil {
+			displayFrom = localizedDateDisplay(language, parsedFrom)
+		}
+		displayTo := lastDate
+		if parsedTo, parseErr := parseDayParam(lastDate, handler.location); parseErr == nil {
+			displayTo = localizedDateDisplay(language, parsedTo)
+		}
+		data["ExportDateFromDisplay"] = displayFrom
+		data["ExportDateToDisplay"] = displayTo
 	}
 
 	return data, nil

@@ -20,7 +20,14 @@
     <h2 class="journal-subtitle">👤 {{t .Messages "settings.profile.title"}}</h2>
     <p class="journal-muted mt-2 text-sm">{{t .Messages "settings.profile.subtitle"}}</p>
 
-    <form action="/api/settings/profile" method="post" class="mt-5 space-y-4">
+    <form
+      action="/api/settings/profile"
+      method="post"
+      hx-post="/api/settings/profile"
+      hx-target="#settings-profile-status"
+      hx-swap="innerHTML"
+      class="mt-5 space-y-4"
+      data-save-feedback>
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
       <label class="field-label" for="settings-display-name">{{t .Messages "settings.profile.display_name"}}</label>
@@ -37,12 +44,13 @@
       <label class="field-label" for="settings-profile-email">{{t .Messages "settings.profile.email"}}</label>
       <input id="settings-profile-email" type="email" value="{{.CurrentUser.Email}}" readonly class="input-field readonly-field">
 
-      <button type="submit" class="btn-secondary">{{t .Messages "settings.profile.submit"}}</button>
+      <button type="submit" class="btn-secondary" data-save-button data-saving-label="{{t .Messages "common.saving"}}">{{t .Messages "settings.profile.submit"}}</button>
+      <div id="settings-profile-status" class="save-status text-sm"></div>
     </form>
   </section>
 
   {{if eq .CurrentUser.Role "owner"}}
-  <section class="journal-card p-5 sm:p-6" x-data='settingsCycleForm({ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} })'>
+  <section id="settings-cycle" class="journal-card p-5 sm:p-6" x-data='settingsCycleForm({ cycleLength: {{.CycleLength}}, periodLength: {{.PeriodLength}}, autoPeriodFill: {{if .AutoPeriodFill}}true{{else}}false{{end}} })'>
     <h2 class="journal-subtitle">🗓️ {{t .Messages "settings.cycle.title"}}</h2>
 
     <form
@@ -104,10 +112,18 @@
       </div>
 
       <div class="space-y-1">
-        <p class="status-error text-sm" x-cloak x-show="(cycleLength - periodLength) < 8">{{t .Messages "settings.cycle.error_incompatible"}}</p>
-        <p class="warning-amber text-sm" x-cloak x-show="(cycleLength - periodLength) >= 8 && (cycleLength - periodLength) < 15">{{t .Messages "settings.cycle.warning_approximate"}}</p>
-        <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength > 8">{{t .Messages "settings.cycle.info_period_long"}}</p>
-        <p class="journal-muted text-sm" x-cloak x-show="(cycleLength - periodLength) >= 15 && periodLength <= 8 && cycleLength < 24">{{t .Messages "settings.cycle.info_cycle_short"}}</p>
+        <template x-if="(cycleLength - periodLength) < 8">
+          <p class="status-error text-sm">{{t .Messages "settings.cycle.error_incompatible"}}</p>
+        </template>
+        <template x-if="(cycleLength - periodLength) >= 8 && (cycleLength - periodLength) < 15">
+          <p class="warning-amber text-sm">{{t .Messages "settings.cycle.warning_approximate"}}</p>
+        </template>
+        <template x-if="(cycleLength - periodLength) >= 15 && periodLength > 8">
+          <p class="journal-muted text-sm">{{t .Messages "settings.cycle.info_period_long"}}</p>
+        </template>
+        <template x-if="(cycleLength - periodLength) >= 15 && periodLength <= 8 && cycleLength < 24">
+          <p class="journal-muted text-sm">{{t .Messages "settings.cycle.info_cycle_short"}}</p>
+        </template>
       </div>
 
       <div class="space-y-2">
@@ -220,11 +236,11 @@
         <label class="field-label" for="export-from">{{t .Messages "settings.export_from"}}</label>
         <input
           id="export-from"
-          type="text"
-          inputmode="numeric"
+          type="date"
           autocomplete="off"
-          spellcheck="false"
-          placeholder="{{t .Messages "settings.export_date_placeholder"}}"
+          lang="{{.Lang}}"
+          aria-label="{{t .Messages "settings.export_from"}}"
+          {{if .HasExportData}}min="{{.ExportDateFrom}}" max="{{.ExportDateTo}}"{{end}}
           data-export-from
           class="input-field w-full"
           {{if .HasExportData}}value="{{.ExportDateFrom}}"{{end}}>
@@ -233,11 +249,11 @@
         <label class="field-label" for="export-to">{{t .Messages "settings.export_to"}}</label>
         <input
           id="export-to"
-          type="text"
-          inputmode="numeric"
+          type="date"
           autocomplete="off"
-          spellcheck="false"
-          placeholder="{{t .Messages "settings.export_date_placeholder"}}"
+          lang="{{.Lang}}"
+          aria-label="{{t .Messages "settings.export_to"}}"
+          {{if .HasExportData}}min="{{.ExportDateFrom}}" max="{{.ExportDateTo}}"{{end}}
           data-export-to
           class="input-field w-full"
           {{if .HasExportData}}value="{{.ExportDateTo}}"{{end}}>
@@ -287,7 +303,7 @@
     </div>
     <p class="journal-muted text-sm" data-export-summary-total>{{printf (t .Messages "settings.export_summary_total") .ExportTotalEntries}}</p>
     <p class="journal-muted text-sm" data-export-summary-range>
-      {{if .HasExportData}}{{printf (t .Messages "settings.export_summary_range") .ExportDateFrom .ExportDateTo}}{{else}}{{t .Messages "settings.export_summary_range_empty"}}{{end}}
+      {{if .HasExportData}}{{printf (t .Messages "settings.export_summary_range") .ExportDateFromDisplay .ExportDateToDisplay}}{{else}}{{t .Messages "settings.export_summary_range_empty"}}{{end}}
     </p>
     <p class="journal-muted mt-3 text-xs">{{t .Messages "settings.export_data_hint"}}</p>
   </section>
@@ -337,7 +353,7 @@
   </section>
 </section>
 {{if eq .CurrentUser.Role "owner"}}
-<script src="/static/js/settings-export.js?v=20260222-2"></script>
+<script src="/static/js/settings-export.js?v=20260224-1"></script>
 {{end}}
 {{end}}
 

@@ -34,6 +34,12 @@ func TestBuildStatsPageDataOwnerBaselineAndFlags(t *testing.T) {
 	if _, ok := data["ChartData"].(fiber.Map); !ok {
 		t.Fatalf("expected ChartData fiber.Map, got %T", data["ChartData"])
 	}
+	if hasObserved, ok := data["HasObservedCycleData"].(bool); !ok || hasObserved {
+		t.Fatalf("expected HasObservedCycleData=false without completed cycles, got %#v", data["HasObservedCycleData"])
+	}
+	if hasTrend, ok := data["HasTrendData"].(bool); !ok || hasTrend {
+		t.Fatalf("expected HasTrendData=false without completed cycles, got %#v", data["HasTrendData"])
+	}
 }
 
 func TestBuildStatsPageDataPartnerNoBaseline(t *testing.T) {

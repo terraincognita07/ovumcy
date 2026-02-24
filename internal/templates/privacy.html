@@ -2,7 +2,7 @@
 <section class="mx-auto max-w-3xl space-y-6">
   <div>
     <p class="journal-muted text-sm">
-      <a href="/" class="inline-link">{{t .Messages "common.home"}}</a>
+      <a href="{{.BackPath}}" class="inline-link">{{t .Messages .BreadcrumbBackLabelKey}}</a>
       <span aria-hidden="true"> &gt; </span>
       <span>{{t .Messages "privacy.title"}}</span>
     </p>

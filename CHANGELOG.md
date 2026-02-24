@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker Compose now uses `pull_policy: always`, so a single `docker compose up -d` pulls the latest image.
 - Dashboard cycle-day calculation is now bounded to cycle length (no unbounded growth when the start date is stale).
 - Dashboard next period/ovulation predictions are projected into upcoming cycles, and stale-cycle warning text is shown when baseline dates are outdated.
+- Mobile calendar day badges/today pill now avoid clipping/overflow with short labels and bounded cell content.
+- Date formatting is now locale-aware in dashboard and settings export summaries (RU/EN consistency).
+- Settings cycle warnings now render contextually (DOM no longer keeps all warning variants visible at once).
+- Stats cards and chart caption now show explicit no-data states instead of misleading default cycle values.
+- Settings export range uses native `type="date"` inputs with min/max bounds; custom export calendar is skipped when native picker is available.
+- Calendar day notes now auto-save consistently with other day fields.
+- Privacy breadcrumb naming is aligned with app navigation (`Dashboard`/`Панель` for authenticated users).
+- Profile save now supports inline HTMX success feedback, matching other settings forms.
+- Mobile quick navigation tab bar was added for faster section switching.
 
 ## [0.1.0] - 2026-02-23
 

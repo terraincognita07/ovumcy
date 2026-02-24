@@ -51,7 +51,7 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	if !strings.Contains(rendered, `<span x-text="periodLength">6</span>`) {
 		t.Fatalf("expected period label fallback text to include persisted value")
 	}
-	if !strings.Contains(rendered, `x-show="(cycleLength - periodLength) < 8"`) {
+	if !strings.Contains(rendered, `x-if="(cycleLength - periodLength) < 8"`) {
 		t.Fatalf("expected settings cycle form to include hard-validation state for incompatible cycle values")
 	}
 	if !strings.Contains(rendered, `'btn--disabled': (cycleLength - periodLength) < 8`) {
@@ -71,6 +71,13 @@ func TestSettingsPageRendersPersistedCycleValues(t *testing.T) {
 	}
 	if !strings.Contains(rendered, `id="settings-last-period-start"`) {
 		t.Fatalf("expected settings cycle form to include editable last-period-start field")
+	}
+	if !strings.Contains(rendered, `id="export-from"`) || !strings.Contains(rendered, `id="export-to"`) {
+		t.Fatalf("expected export date range inputs to be rendered")
+	}
+	exportInputPattern := regexp.MustCompile(`(?s)id="export-from".*?type="date".*?id="export-to".*?type="date"`)
+	if !exportInputPattern.MatchString(rendered) {
+		t.Fatalf("expected export inputs to use native date type for client-side validation")
 	}
 	lastPeriodInputAccessibilityPattern := regexp.MustCompile(`(?s)id="settings-last-period-start".*?lang="en".*?aria-label="Last period start date".*?min="\d{4}-01-01"`)
 	if !lastPeriodInputAccessibilityPattern.MatchString(rendered) {

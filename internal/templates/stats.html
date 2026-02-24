@@ -12,12 +12,12 @@
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.average_cycle"}}</p>
-      <p class="stat-value mt-2">{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
+      <p class="stat-value mt-2">{{if and .HasObservedCycleData (gt .Stats.AverageCycleLength 0.0)}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.median_cycle"}}</p>
-      <p class="stat-value mt-2">{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
+      <p class="stat-value mt-2">{{if and .HasObservedCycleData (gt .Stats.MedianCycleLength 0)}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</p>
     </article>
 
     <article class="journal-card stat-card reveal">
@@ -35,7 +35,7 @@
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h2 class="journal-subtitle">{{t .Messages "stats.cycle_trend"}}</h2>
-        <span class="journal-muted text-xs">{{t .Messages "stats.last_12_cycles"}}</span>
+        <span class="journal-muted text-xs">{{if .HasTrendData}}{{t .Messages "stats.recent_cycles"}}{{else}}{{t .Messages "stats.no_cycle_data"}}{{end}}</span>
       </div>
       <div class="mb-3 flex flex-wrap items-center gap-3 text-xs journal-muted">
         <span class="inline-flex items-center gap-2">

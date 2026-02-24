@@ -18,20 +18,22 @@
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.next_period"}}</p>
-      <p class="stat-value mt-3">{{if .DisplayNextPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .DisplayNextPeriodStart "02.01.2006"}}{{end}}</p>
+      <p class="stat-value mt-3">{{if .DisplayNextPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatLocalizedDate .Lang .DisplayNextPeriodStart "full"}}{{end}}</p>
       {{if .NextPeriodInPast}}
       <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.prediction_in_past"}}</p>
+      <p class="mt-3"><a href="/settings#settings-cycle" class="btn-secondary text-sm">{{t .Messages "dashboard.update_cycle_data"}}</a></p>
       {{end}}
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.ovulation"}}</p>
-      <p class="stat-value mt-3">{{if .DisplayOvulationImpossible}}{{t .Messages "dashboard.ovulation_unavailable"}}{{else if .DisplayOvulationDate.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .DisplayOvulationDate "02.01.2006"}}{{end}}</p>
+      <p class="stat-value mt-3">{{if .DisplayOvulationImpossible}}{{t .Messages "dashboard.ovulation_unavailable"}}{{else if .DisplayOvulationDate.IsZero}}{{.NoDataLabel}}{{else}}{{formatLocalizedDate .Lang .DisplayOvulationDate "full"}}{{end}}</p>
       {{if and (not .DisplayOvulationImpossible) (not .DisplayOvulationDate.IsZero) (not .DisplayOvulationExact)}}
       <p class="journal-muted mt-2 text-xs">{{t .Messages "dashboard.ovulation_approximate"}}</p>
       {{end}}
       {{if .OvulationInPast}}
       <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.prediction_in_past"}}</p>
+      <p class="mt-3"><a href="/settings#settings-cycle" class="btn-secondary text-sm">{{t .Messages "dashboard.update_cycle_data"}}</a></p>
       {{end}}
     </article>
   </div>
@@ -105,8 +107,8 @@
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_cycle"}}</dt><dd>{{if gt .Stats.AverageCycleLength 0.0}}{{formatFloat .Stats.AverageCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.median_cycle"}}</dt><dd>{{if gt .Stats.MedianCycleLength 0}}{{.Stats.MedianCycleLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
         <div class="stat-row"><dt>{{t .Messages "dashboard.average_period"}}</dt><dd>{{if gt .Stats.AveragePeriodLength 0.0}}{{formatFloat .Stats.AveragePeriodLength}} {{t .Messages "common.days_short"}}{{else}}{{.NoDataLabel}}{{end}}</dd></div>
-        <div class="stat-row"><dt>{{t .Messages "dashboard.last_period_start"}}</dt><dd>{{if .Stats.LastPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.LastPeriodStart "02.01"}}{{end}}</dd></div>
-        <div class="stat-row"><dt>{{t .Messages "dashboard.fertile_window"}}</dt><dd>{{if .Stats.FertilityWindowStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatDate .Stats.FertilityWindowStart "02.01"}} - {{formatDate .Stats.FertilityWindowEnd "02.01"}}{{end}}</dd></div>
+        <div class="stat-row"><dt>{{t .Messages "dashboard.last_period_start"}}</dt><dd>{{if .Stats.LastPeriodStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatLocalizedDate .Lang .Stats.LastPeriodStart "short"}}{{end}}</dd></div>
+        <div class="stat-row"><dt>{{t .Messages "dashboard.fertile_window"}}</dt><dd>{{if .Stats.FertilityWindowStart.IsZero}}{{.NoDataLabel}}{{else}}{{formatLocalizedDate .Lang .Stats.FertilityWindowStart "short"}} - {{formatLocalizedDate .Lang .Stats.FertilityWindowEnd "short"}}{{end}}</dd></div>
       </dl>
 
       <div class="mt-4 space-y-4 text-sm" x-show="!isPeriod" x-transition.opacity.duration.220ms>

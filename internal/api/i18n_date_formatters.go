@@ -79,3 +79,39 @@ func localizedDashboardDate(language string, value time.Time) string {
 	}
 	return fmt.Sprintf("%s %d, %d, %s", month, value.Day(), value.Year(), weekday)
 }
+
+func localizedDateDisplay(language string, value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+
+	lang := strings.ToLower(strings.TrimSpace(language))
+	if lang == "ru" {
+		return value.Format("02.01.2006")
+	}
+
+	months := monthShortNames["en"]
+	monthIndex := int(value.Month()) - 1
+	if monthIndex < 0 || monthIndex >= len(months) {
+		return value.Format("Jan 2, 2006")
+	}
+	return fmt.Sprintf("%s %d, %d", months[monthIndex], value.Day(), value.Year())
+}
+
+func localizedDateShort(language string, value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+
+	lang := strings.ToLower(strings.TrimSpace(language))
+	if lang == "ru" {
+		return value.Format("02.01")
+	}
+
+	months := monthShortNames["en"]
+	monthIndex := int(value.Month()) - 1
+	if monthIndex < 0 || monthIndex >= len(months) {
+		return value.Format("Jan 2")
+	}
+	return fmt.Sprintf("%s %d", months[monthIndex], value.Day())
+}
