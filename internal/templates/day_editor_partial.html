@@ -32,7 +32,7 @@
 
     <fieldset class="space-y-2">
       <legend class="field-label">{{t .Messages "dashboard.symptoms"}}</legend>
-      {{template "symptom_options" (dict "Messages" .Messages "Symptoms" .Symptoms "SelectedSymptomID" .SelectedSymptomID "Lang" .Lang "Compact" true "IncludePreviewHooks" false)}}
+      {{template "symptom_options" (dict "Messages" .Messages "Symptoms" .Symptoms "SelectedSymptomID" .SelectedSymptomID "Lang" .Lang "Compact" true "IncludePreviewHooks" false "DisableWhenNotPeriod" true)}}
     </fieldset>
 
     <label class="field-label" for="calendar-notes">{{t .Messages "dashboard.notes"}}</label>

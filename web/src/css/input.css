@@ -145,7 +145,7 @@
 
   .lang-link-active {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    color: #fff;
+    color: #5a4a3a;
     box-shadow: 0 6px 12px rgba(212, 165, 116, 0.26);
   }
 
@@ -1044,6 +1044,33 @@
     opacity: 0;
     transform: translateY(4px);
     transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .toast-body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .toast-message {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .toast-close {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    opacity: 0.78;
+    cursor: pointer;
+  }
+
+  .toast-close:hover {
+    opacity: 1;
   }
 
   .save-status {

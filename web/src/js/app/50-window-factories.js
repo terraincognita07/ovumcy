@@ -19,7 +19,23 @@
   window.dayEditorForm = function (config) {
     var safeConfig = config || {};
     return {
-      isPeriod: !!safeConfig.isPeriod
+      isPeriod: !!safeConfig.isPeriod,
+      clearNonPeriodSelections: function () {
+        if (!this.$root || !this.$root.querySelectorAll) {
+          return;
+        }
+        var symptoms = this.$root.querySelectorAll("input[name='symptom_ids']");
+        for (var index = 0; index < symptoms.length; index++) {
+          symptoms[index].checked = false;
+        }
+      },
+      init: function () {
+        this.$watch("isPeriod", function (value) {
+          if (!value) {
+            this.clearNonPeriodSelections();
+          }
+        }.bind(this));
+      }
     };
   };
 
@@ -39,10 +55,25 @@
       hasNotesPreview: function () {
         return String(this.notesPreview || "").trim().length > 0;
       },
+      clearNonPeriodSelections: function () {
+        if (!this.$root || !this.$root.querySelectorAll) {
+          return;
+        }
+        var symptoms = this.$root.querySelectorAll("input[name='symptom_ids']");
+        for (var index = 0; index < symptoms.length; index++) {
+          symptoms[index].checked = false;
+        }
+        this.syncSymptoms();
+      },
       init: function () {
         var notesField = this.$root ? this.$root.querySelector("#today-notes") : null;
         this.notesPreview = notesField ? String(notesField.value || "") : "";
         this.syncSymptoms();
+        this.$watch("isPeriod", function (value) {
+          if (!value) {
+            this.clearNonPeriodSelections();
+          }
+        }.bind(this));
       }
     };
   };

@@ -34,10 +34,31 @@
       var container = getStack();
       var toast = document.createElement("div");
       toast.className = (kind === "error" ? "status-error" : "status-ok") + " reveal";
-      toast.textContent = message;
+      var body = document.createElement("div");
+      body.className = "toast-body";
+
+      var text = document.createElement("span");
+      text.className = "toast-message";
+      text.textContent = message;
+      body.appendChild(text);
+
+      var closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "toast-close";
+      closeButton.setAttribute("aria-label", document.body.getAttribute("data-toast-close") || "Close");
+      closeButton.textContent = "×";
+      closeButton.addEventListener("click", function () {
+        toast.remove();
+      });
+      body.appendChild(closeButton);
+
+      toast.appendChild(body);
       container.appendChild(toast);
 
       window.setTimeout(function () {
+        if (!toast.parentNode) {
+          return;
+        }
         toast.classList.add("toast-exit");
         window.setTimeout(function () {
           toast.remove();

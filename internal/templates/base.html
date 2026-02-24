@@ -17,6 +17,7 @@
 <body
   data-confirm-cancel="{{t .Messages "confirm.no"}}"
   data-confirm-delete="{{t .Messages "confirm.yes"}}"
+  data-toast-close="{{t .Messages "common.close"}}"
   data-request-failed="{{t .Messages "common.error.request_failed"}}">
   <div class="app-shell" x-data="appShellState()">
     <header class="paper-header">
@@ -179,6 +180,7 @@
       name="symptom_ids"
       value="{{.ID}}"
       class="choice-input"
+      {{if $.DisableWhenNotPeriod}}:disabled="!isPeriod"{{end}}
       {{if $.IncludePreviewHooks}}data-symptom-label="{{$label}}" @change="syncSymptoms"{{end}}
       {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
     <span class="{{if $.Compact}}check-chip check-chip-sm{{else}}check-chip{{end}}">

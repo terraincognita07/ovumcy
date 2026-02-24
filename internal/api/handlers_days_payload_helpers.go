@@ -18,6 +18,7 @@ func normalizeDayPayload(payload dayPayload) (dayPayload, error) {
 	}
 	if !payload.IsPeriod {
 		payload.Flow = models.FlowNone
+		payload.SymptomIDs = []uint{}
 	}
 	payload.Notes = trimDayNotes(payload.Notes)
 	return payload, nil

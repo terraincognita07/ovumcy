@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -45,11 +46,15 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	if !strings.Contains(rendered, `data-day-editor-autosave="true"`) {
 		t.Fatalf("expected calendar day editor form to enable autosave hooks")
 	}
-	if strings.Count(rendered, `:disabled="!isPeriod"`) != 1 {
-		t.Fatalf("expected only flow controls to depend on period toggle")
+	if strings.Count(rendered, `:disabled="!isPeriod"`) < 2 {
+		t.Fatalf("expected flow and symptom controls to depend on period toggle")
 	}
 	if !strings.Contains(rendered, `name="symptom_ids"`) {
-		t.Fatalf("expected symptoms controls to stay available regardless of period toggle")
+		t.Fatalf("expected symptoms controls to be rendered in day editor")
+	}
+	symptomDisablePattern := regexp.MustCompile(`(?s)name="symptom_ids"[^>]*:disabled="!isPeriod"`)
+	if !symptomDisablePattern.MatchString(rendered) {
+		t.Fatalf("expected symptoms to be disabled when period toggle is off")
 	}
 	if !strings.Contains(rendered, "All fields are auto-saved") {
 		t.Fatalf("expected autosave hint text in day editor panel")

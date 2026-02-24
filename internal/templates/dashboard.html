@@ -3,14 +3,20 @@
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.current_phase"}}</p>
+      {{if .CycleDataStale}}
+      <p class="stat-value mt-3"><span class="mr-2">{{phaseIcon "unknown"}}</span>{{phaseLabel .Messages "unknown"}}</p>
+      <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.phase_estimated"}}</p>
+      {{else}}
       <p class="stat-value mt-3"><span class="mr-2">{{phaseIcon .Stats.CurrentPhase}}</span>{{phaseLabel .Messages .Stats.CurrentPhase}}</p>
+      {{end}}
     </article>
 
     <article class="journal-card stat-card reveal">
       <p class="stat-label">{{t .Messages "dashboard.cycle_day"}}</p>
-      <p class="stat-value mt-3">{{if gt .Stats.CurrentCycleDay 0}}{{.Stats.CurrentCycleDay}}{{else}}{{.NoDataLabel}}{{end}}</p>
+      <p class="stat-value mt-3">{{if gt .Stats.CurrentCycleDay 0}}{{if .CycleDataStale}}~{{end}}{{.Stats.CurrentCycleDay}}{{else}}{{.NoDataLabel}}{{end}}</p>
       {{if .CycleDataStale}}
       <p class="warning-amber mt-2 text-xs">{{t .Messages "dashboard.cycle_day_stale_hint"}}</p>
+      <p class="mt-3"><a href="/settings#settings-cycle" class="btn-secondary text-sm">{{t .Messages "dashboard.update_cycle_data"}}</a></p>
       {{else if .CycleDayWarning}}
       <p class="warning-amber mt-2 text-xs">{{printf (t .Messages "dashboard.cycle_day_long_hint") .CycleDayReference}}</p>
       {{end}}
@@ -67,7 +73,7 @@
 
         <fieldset class="space-y-3">
           <legend class="field-label">{{t .Messages "dashboard.symptoms"}}</legend>
-          {{template "symptom_options" (dict "Messages" .Messages "Symptoms" .Symptoms "SelectedSymptomID" .SelectedSymptomID "Lang" .Lang "Compact" false "IncludePreviewHooks" true)}}
+          {{template "symptom_options" (dict "Messages" .Messages "Symptoms" .Symptoms "SelectedSymptomID" .SelectedSymptomID "Lang" .Lang "Compact" false "IncludePreviewHooks" true "DisableWhenNotPeriod" true)}}
         </fieldset>
 
         <label class="field-label" for="today-notes">{{t .Messages "dashboard.notes"}}</label>

@@ -105,7 +105,6 @@
           lang="{{.Lang}}"
           aria-label="{{t .Messages "settings.cycle.last_period_start"}}"
           min="{{.CycleStartMinISO}}"
-          max="{{.TodayISO}}"
           value="{{.LastPeriodStart}}"
           class="input-field">
         <p class="journal-muted text-xs">{{t .Messages "settings.cycle.last_period_start_hint"}}</p>
@@ -240,7 +239,6 @@
           autocomplete="off"
           lang="{{.Lang}}"
           aria-label="{{t .Messages "settings.export_from"}}"
-          {{if .HasExportData}}min="{{.ExportDateFrom}}" max="{{.ExportDateTo}}"{{end}}
           data-export-from
           class="input-field w-full"
           {{if .HasExportData}}value="{{.ExportDateFrom}}"{{end}}>
@@ -253,7 +251,6 @@
           autocomplete="off"
           lang="{{.Lang}}"
           aria-label="{{t .Messages "settings.export_to"}}"
-          {{if .HasExportData}}min="{{.ExportDateFrom}}" max="{{.ExportDateTo}}"{{end}}
           data-export-to
           class="input-field w-full"
           {{if .HasExportData}}value="{{.ExportDateTo}}"{{end}}>

@@ -40,6 +40,9 @@ func TestBuildStatsPageDataOwnerBaselineAndFlags(t *testing.T) {
 	if hasTrend, ok := data["HasTrendData"].(bool); !ok || hasTrend {
 		t.Fatalf("expected HasTrendData=false without completed cycles, got %#v", data["HasTrendData"])
 	}
+	if hasReliable, ok := data["HasReliableTrend"].(bool); !ok || hasReliable {
+		t.Fatalf("expected HasReliableTrend=false without enough completed cycles, got %#v", data["HasReliableTrend"])
+	}
 }
 
 func TestBuildStatsPageDataPartnerNoBaseline(t *testing.T) {
