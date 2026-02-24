@@ -56,9 +56,9 @@ Uses the prebuilt image from GHCR by default (`ghcr.io/terraincognita07/ovumcy:l
 For public GHCR images, pull does not require GitHub login.
 
 ```bash
-git clone https://github.com/terraincognita07/ovumcy.git
-cd ovumcy
-cp .env.example .env
+mkdir -p ovumcy && cd ovumcy
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/terraincognita07/ovumcy/main/docker-compose.yml
+curl -fsSL -o .env https://raw.githubusercontent.com/terraincognita07/ovumcy/main/.env.example
 # edit SECRET_KEY in .env
 docker compose pull
 docker compose up -d
