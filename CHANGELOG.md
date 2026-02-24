@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI now pins `staticcheck` to a fixed version.
 - Docker quick start docs now support a no-clone flow (download docker-compose.yml and .env directly, then run from one folder).
 - Docker Compose now uses `pull_policy: always`, so a single `docker compose up -d` pulls the latest image.
+- Dashboard cycle-day calculation is now bounded to cycle length (no unbounded growth when the start date is stale).
+- Dashboard next period/ovulation predictions are projected into upcoming cycles, and stale-cycle warning text is shown when baseline dates are outdated.
 
 ## [0.1.0] - 2026-02-23
 
