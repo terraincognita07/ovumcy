@@ -44,4 +44,10 @@ func TestProfileUpdateHTMXStatusMarkupIsNonTransient(t *testing.T) {
 	if strings.Contains(rendered, "status-transient") {
 		t.Fatalf("did not expect transient status class in htmx success markup, got %q", rendered)
 	}
+	if !strings.Contains(rendered, "data-dismiss-status") {
+		t.Fatalf("expected dismiss button marker in htmx success markup, got %q", rendered)
+	}
+	if !strings.Contains(rendered, "toast-close") {
+		t.Fatalf("expected dismiss close button class in htmx success markup, got %q", rendered)
+	}
 }

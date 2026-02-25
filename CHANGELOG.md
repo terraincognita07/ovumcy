@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Language switch active state now uses explicit `aria-current` styling and hard color values to avoid mobile active-pill label disappearance.
 - HTMX save-status success banners are now dismissible (`×`) and no longer rely on `status-transient` 2s fade behavior.
 - Stats page current-phase card now follows stale-cycle detection used on dashboard (shows `Unknown` with stale-phase hint when baseline is outdated).
+- Save-status dismiss behavior is now guaranteed even without timing-sensitive HTMX hooks by rendering close controls server-side and adding `afterSettle` fallback handling in app JS.
 
 ## [0.1.0] - 2026-02-23
 

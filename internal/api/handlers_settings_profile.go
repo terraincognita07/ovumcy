@@ -1,9 +1,6 @@
 package api
 
 import (
-	"fmt"
-	"html/template"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
 )
@@ -45,7 +42,7 @@ func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
 		if message == "" || message == messageKey {
 			message = "Profile updated successfully."
 		}
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
+		return c.SendString(htmxDismissibleSuccessStatusMarkup(currentMessages(c), message))
 	}
 	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: status})
 	return redirectOrJSON(c, "/settings")

@@ -50,6 +50,9 @@ func TestDashboardTodaySavePersistsPeriodToggleAndNotes(t *testing.T) {
 	if !strings.Contains(string(saveBody), "status-ok") {
 		t.Fatalf("expected save status success markup, got %q", string(saveBody))
 	}
+	if !strings.Contains(string(saveBody), "data-dismiss-status") {
+		t.Fatalf("expected dismiss button marker in save status markup, got %q", string(saveBody))
+	}
 
 	parsedDay, err := parseDayParam(todayRaw, time.UTC)
 	if err != nil {

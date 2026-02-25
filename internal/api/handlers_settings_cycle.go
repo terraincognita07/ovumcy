@@ -1,9 +1,6 @@
 package api
 
 import (
-	"fmt"
-	"html/template"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -32,7 +29,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		if message == "settings.success.cycle_updated" {
 			message = "Cycle settings updated successfully."
 		}
-		return c.SendString(fmt.Sprintf("<div class=\"status-ok\">%s</div>", template.HTMLEscapeString(message)))
+		return c.SendString(htmxDismissibleSuccessStatusMarkup(currentMessages(c), message))
 	}
 
 	handler.setFlashCookie(c, FlashPayload{SettingsSuccess: "cycle_updated"})

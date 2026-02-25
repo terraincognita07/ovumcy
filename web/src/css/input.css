@@ -1051,7 +1051,7 @@
   }
 
   .status-transient {
-    animation: status-fade 380ms ease-out 2s forwards;
+    animation: none;
   }
 
   .toast-stack {

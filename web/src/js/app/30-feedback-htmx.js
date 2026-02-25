@@ -14,6 +14,7 @@
   }
 
   var dayEditorAutoSaveTimers = new WeakMap();
+  var successStatusClearTimers = new WeakMap();
 
   function initToastAPI() {
     var stack = null;
@@ -134,11 +135,8 @@
     closeButton.type = "button";
     closeButton.className = "toast-close";
     closeButton.setAttribute("aria-label", closeLabelText());
+    closeButton.setAttribute("data-dismiss-status", "true");
     closeButton.textContent = "×";
-    closeButton.addEventListener("click", function () {
-      successNode.remove();
-      clearStatusTargetIfEmpty(target);
-    });
     body.appendChild(closeButton);
 
     successNode.appendChild(body);
@@ -151,8 +149,15 @@
       return;
     }
 
-    window.setTimeout(function () {
+    var existingTimer = successStatusClearTimers.get(successNode);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+      successStatusClearTimers.delete(successNode);
+    }
+
+    var timer = window.setTimeout(function () {
       if (!target.contains(successNode)) {
+        successStatusClearTimers.delete(successNode);
         clearStatusTargetIfEmpty(target);
         return;
       }
@@ -162,9 +167,11 @@
         if (target.contains(successNode)) {
           successNode.remove();
         }
+        successStatusClearTimers.delete(successNode);
         clearStatusTargetIfEmpty(target);
       }, TOAST_EXIT_MS);
     }, TOAST_VISIBLE_MS);
+    successStatusClearTimers.set(successNode, timer);
   }
 
   function maybeRefreshDayEditor(target) {
@@ -276,6 +283,30 @@
 
       maybeRefreshDayEditor(target);
       scheduleClearSuccessStatus(target);
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function (event) {
+      var target = event && event.detail ? event.detail.target : null;
+      if (!target || !target.classList || !target.classList.contains("save-status")) {
+        return;
+      }
+      scheduleClearSuccessStatus(target);
+    });
+
+    document.body.addEventListener("click", function (event) {
+      var dismissButton = closestFromEvent(event, "button[data-dismiss-status]");
+      if (!dismissButton) {
+        return;
+      }
+
+      var statusNode = dismissButton.closest(".status-ok, .status-error");
+      if (!statusNode) {
+        return;
+      }
+
+      var parent = statusNode.parentElement;
+      statusNode.remove();
+      clearStatusTargetIfEmpty(parent);
     });
 
     document.body.addEventListener("change", function (event) {
