@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,11 +57,16 @@ func TestStatsChartExcludesCycleEndingToday(t *testing.T) {
 		t.Fatalf("read stats body: %v", err)
 	}
 
-	chartPayload, err := extractStatsChartPayload(string(body))
-	if err != nil {
-		t.Fatalf("extract chart payload: %v", err)
+	rendered := string(body)
+	chartPayload, err := extractStatsChartPayload(rendered)
+	if err == nil {
+		if len(chartPayload.Values) != 0 {
+			t.Fatalf("expected no completed cycle points when latest cycle starts today, got %v", chartPayload.Values)
+		}
+		return
 	}
-	if len(chartPayload.Values) != 0 {
-		t.Fatalf("expected no completed cycle points when latest cycle starts today, got %v", chartPayload.Values)
+
+	if !strings.Contains(rendered, "Not enough cycle data yet.") {
+		t.Fatalf("expected empty-state message when chart payload is skipped, got %q", rendered)
 	}
 }

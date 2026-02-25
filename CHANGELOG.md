@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stats symptom-frequency empty/partner states now use compact informative blocks and no longer visually waste a stretched half-screen card.
 - Save feedback toast/status now renders with an explicit success icon and separated close control (`✓ message [×]`) to prevent `message.×` visual merging.
 - Cache-busting versions were bumped to `20260225-1` for `app.js`, `tailwind.css`, and `settings-export.js`.
+- Mobile layout pass (screens `< 640px`) addressed five UX regressions without changing desktop breakpoints:
+  - symptom chips now render in a single-column list on mobile to avoid 2-line clipping/wrapping conflicts,
+  - dashboard flow-intensity controls now render as a compact `2x2` grid on mobile with reduced tile height,
+  - settings auto-period-fill toggle label was shortened (RU/EN) and toggle container behavior was hardened for narrow widths,
+  - calendar short badges were tightened for mobile cells (`today_short` uses dot marker, compact short period labels, smaller badge typography/padding),
+  - stats cycle chart no longer renders an empty fixed-height chart shell when trend data is missing (shows localized no-data text instead).
+- Frontend cache-busting in `base.html` was bumped again to `20260225-2` for `app.js` and `tailwind.css` so mobile CSS/markup fixes load immediately after deploy.
 
 ## [0.1.0] - 2026-02-23
 

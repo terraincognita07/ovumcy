@@ -54,6 +54,7 @@
         </span>
         {{end}}
       </div>
+      {{if .HasTrendData}}
       <div
         id="cycle-chart"
         data-chart='{{toJSON .ChartData}}'
@@ -62,6 +63,9 @@
         data-baseline-label='{{t .Messages "stats.legend.baseline"}}'
         class="chart-shell">
       </div>
+      {{else}}
+      <p class="journal-muted text-sm">{{t .Messages "stats.no_cycle_data"}}</p>
+      {{end}}
     </section>
 
     <section class="journal-card p-5 sm:p-6">

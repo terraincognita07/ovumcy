@@ -8,10 +8,10 @@
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260225-1">
+  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260225-2">
   <script defer src="/static/js/htmx.min.js?v=20260221-2"></script>
   <script defer src="/static/js/chart-lite.js?v=20260221-2"></script>
-  <script defer src="/static/js/app.js?v=20260225-1"></script>
+  <script defer src="/static/js/app.js?v=20260225-2"></script>
   <script defer src="/static/js/alpine.min.js?v=20260221-2"></script>
 </head>
 <body
@@ -161,7 +161,7 @@
 </label>
 {{end}}
 {{define "period_flow_options"}}
-<div class="{{if .Compact}}grid grid-cols-2 gap-2{{else}}grid gap-2 sm:grid-cols-4{{end}}">
+<div class="{{if .Compact}}grid grid-cols-2 gap-2{{else}}grid grid-cols-2 gap-2 sm:grid-cols-4{{end}}">
   {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "none" "Icon" "🌫️" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
   {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "light" "Icon" "🌷" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
   {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "medium" "Icon" "🌺" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
