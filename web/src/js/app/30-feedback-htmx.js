@@ -36,7 +36,6 @@
     body.appendChild(messageWrap);
   }
 
-  var dayEditorAutoSaveTimers = new WeakMap();
   var successStatusClearTimers = new WeakMap();
 
   function initToastAPI() {
@@ -207,58 +206,6 @@
     }
   }
 
-  function dayEditorAutosaveFieldName(target) {
-    if (!target || typeof target.getAttribute !== "function") {
-      return "";
-    }
-    var name = String(target.getAttribute("name") || "").trim();
-    if (name === "is_period" || name === "flow" || name === "symptom_ids" || name === "notes") {
-      return name;
-    }
-    return "";
-  }
-
-  function submitDayEditorForm(form) {
-    if (!form || !document.body.contains(form)) {
-      return;
-    }
-    if (window.htmx && typeof window.htmx.trigger === "function") {
-      window.htmx.trigger(form, "submit");
-      return;
-    }
-    if (typeof form.requestSubmit === "function") {
-      form.requestSubmit();
-      return;
-    }
-    form.submit();
-  }
-
-  function queueDayEditorAutosave(form, delayMs) {
-    if (!form) {
-      return;
-    }
-
-    var wait = Number(delayMs);
-    if (!Number.isFinite(wait) || wait < 0) {
-      wait = 0;
-    }
-
-    var existingTimer = dayEditorAutoSaveTimers.get(form);
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-    }
-
-    var timer = window.setTimeout(function () {
-      dayEditorAutoSaveTimers.delete(form);
-      if (form.classList.contains("htmx-request")) {
-        queueDayEditorAutosave(form, 120);
-        return;
-      }
-      submitDayEditorForm(form);
-    }, wait);
-    dayEditorAutoSaveTimers.set(form, timer);
-  }
-
   function initHTMXHooks() {
     document.body.addEventListener("htmx:configRequest", function (event) {
       var tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -322,43 +269,6 @@
       var parent = statusNode.parentElement;
       statusNode.remove();
       clearStatusTargetIfEmpty(parent);
-    });
-
-    document.body.addEventListener("change", function (event) {
-      var target = getEventTarget(event);
-      if (!target || !target.closest) {
-        return;
-      }
-      var fieldName = dayEditorAutosaveFieldName(target);
-      if (!fieldName) {
-        return;
-      }
-      var form = target.closest("form[data-day-editor-autosave]");
-      if (!form) {
-        return;
-      }
-      var delayMs = 0;
-      if (fieldName === "symptom_ids") {
-        delayMs = 120;
-      } else if (fieldName === "notes") {
-        delayMs = 220;
-      }
-      queueDayEditorAutosave(form, delayMs);
-    });
-
-    document.body.addEventListener("input", function (event) {
-      var target = getEventTarget(event);
-      if (!target || !target.closest || target.tagName !== "TEXTAREA") {
-        return;
-      }
-      if (dayEditorAutosaveFieldName(target) !== "notes") {
-        return;
-      }
-      var form = target.closest("form[data-day-editor-autosave]");
-      if (!form) {
-        return;
-      }
-      queueDayEditorAutosave(form, 700);
     });
 
     document.body.addEventListener("htmx:responseError", function (event) {

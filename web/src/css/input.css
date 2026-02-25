@@ -703,6 +703,30 @@
     line-height: 1.18;
   }
 
+  .symptom-groups {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .symptom-group-panel {
+    border-radius: 0.9rem;
+    border: 1px solid var(--line-soft);
+    background: rgba(255, 248, 240, 0.78);
+    padding: 0.62rem;
+  }
+
+  .symptom-group-title {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .symptom-group-panel .symptom-grid {
+    margin-top: 0.46rem;
+  }
+
   .symptom-grid {
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -1318,6 +1342,19 @@
       line-height: 1.2;
     }
 
+    .calendar-day-editor-form .radio-tile-sm {
+      min-height: 2.1rem;
+      flex-direction: row;
+      justify-content: center;
+      gap: 0.3rem;
+      padding: 0.28rem 0.4rem;
+      font-size: 0.75rem;
+    }
+
+    .calendar-day-editor-form .radio-tile-sm .radio-icon {
+      font-size: 0.9rem;
+    }
+
     .radio-tile:not(.radio-tile-sm) {
       flex-direction: row;
       justify-content: flex-start;
@@ -1355,8 +1392,7 @@
     }
 
     .calendar-badges {
-      justify-content: flex-start;
-      overflow: hidden;
+      display: none;
     }
 
     .calendar-cell {

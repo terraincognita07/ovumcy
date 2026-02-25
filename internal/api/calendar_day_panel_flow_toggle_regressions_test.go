@@ -43,8 +43,8 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	if !strings.Contains(rendered, `x-cloak x-show="isPeriod" :disabled="!isPeriod"`) {
 		t.Fatalf("expected flow fieldset to be shown/enabled only when period is selected")
 	}
-	if !strings.Contains(rendered, `data-day-editor-autosave="true"`) {
-		t.Fatalf("expected calendar day editor form to enable autosave hooks")
+	if strings.Contains(rendered, `data-day-editor-autosave=`) {
+		t.Fatalf("did not expect autosave hooks on calendar day editor form")
 	}
 	if strings.Count(rendered, `:disabled="!isPeriod"`) < 2 {
 		t.Fatalf("expected flow and symptom controls to depend on period toggle")
@@ -56,7 +56,7 @@ func TestCalendarDayPanelFlowControlsDependOnPeriodToggle(t *testing.T) {
 	if !symptomDisablePattern.MatchString(rendered) {
 		t.Fatalf("expected symptoms to be disabled when period toggle is off")
 	}
-	if !strings.Contains(rendered, "All fields are auto-saved") {
-		t.Fatalf("expected autosave hint text in day editor panel")
+	if !strings.Contains(rendered, "saved only after pressing") {
+		t.Fatalf("expected manual save hint text in day editor panel")
 	}
 }

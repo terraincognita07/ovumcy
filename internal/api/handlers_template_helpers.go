@@ -14,6 +14,7 @@ func newTemplateFuncMap() template.FuncMap {
 		"phaseIcon":           templatePhaseIcon,
 		"flowLabel":           templateFlowLabel,
 		"symptomLabel":        templateSymptomLabel,
+		"symptomGroup":        templateSymptomGroup,
 		"roleLabel":           templateRoleLabel,
 		"userIdentity":        templateUserIdentity,
 		"hasDisplayName":      templateHasDisplayName,

@@ -8,10 +8,10 @@
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260225-2">
+  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260225-3">
   <script defer src="/static/js/htmx.min.js?v=20260221-2"></script>
   <script defer src="/static/js/chart-lite.js?v=20260221-2"></script>
-  <script defer src="/static/js/app.js?v=20260225-2"></script>
+  <script defer src="/static/js/app.js?v=20260225-3"></script>
   <script defer src="/static/js/alpine.min.js?v=20260221-2"></script>
 </head>
 <body
@@ -168,24 +168,116 @@
   {{template "period_flow_option" (dict "Messages" .Messages "SelectedFlow" .SelectedFlow "Value" "heavy" "Icon" "🔥" "Compact" .Compact "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
 </div>
 {{end}}
+{{define "symptom_option_item"}}
+{{$label := symptomLabel .Messages .Symptom.Name}}
+<label class="choice-option">
+  <input
+    type="checkbox"
+    name="symptom_ids"
+    value="{{.Symptom.ID}}"
+    class="choice-input"
+    {{if .DisableWhenNotPeriod}}:disabled="!isPeriod"{{end}}
+    {{if .IncludePreviewHooks}}data-symptom-label="{{$label}}" @change="syncSymptoms"{{end}}
+    {{if hasSymptom .SelectedSymptomID .Symptom.ID}}checked{{end}}>
+  <span class="{{if .Compact}}check-chip check-chip-sm{{else}}check-chip{{end}}">
+    <span class="symptom-icon">{{.Symptom.Icon}}</span>
+    <span class="symptom-label{{if and .Compact (eq .Lang "en")}} symptom-label-nowrap{{end}}">{{$label}}</span>
+  </span>
+</label>
+{{end}}
+{{define "symptom_group_panel"}}
+<section class="symptom-group-panel">
+  <p class="symptom-group-title">{{.Title}}</p>
+  <div class="{{if .Compact}}symptom-grid symptom-grid-compact{{else}}symptom-grid{{end}}">
+    {{range .Symptoms}}
+    {{if eq (symptomGroup .Name) $.GroupKey}}
+    {{template "symptom_option_item" (dict
+      "Messages" $.Messages
+      "Symptom" .
+      "SelectedSymptomID" $.SelectedSymptomID
+      "Lang" $.Lang
+      "Compact" $.Compact
+      "IncludePreviewHooks" $.IncludePreviewHooks
+      "DisableWhenNotPeriod" $.DisableWhenNotPeriod)}}
+    {{end}}
+    {{end}}
+  </div>
+</section>
+{{end}}
 {{define "symptom_options"}}
-<div class="{{if .Compact}}symptom-grid symptom-grid-compact{{else}}symptom-grid{{end}}">
-  {{range .Symptoms}}
-  {{$label := symptomLabel $.Messages .Name}}
-  <label class="choice-option">
-    <input
-      type="checkbox"
-      name="symptom_ids"
-      value="{{.ID}}"
-      class="choice-input"
-      {{if $.DisableWhenNotPeriod}}:disabled="!isPeriod"{{end}}
-      {{if $.IncludePreviewHooks}}data-symptom-label="{{$label}}" @change="syncSymptoms"{{end}}
-      {{if hasSymptom $.SelectedSymptomID .ID}}checked{{end}}>
-    <span class="{{if $.Compact}}check-chip check-chip-sm{{else}}check-chip{{end}}">
-      <span class="symptom-icon">{{.Icon}}</span>
-      <span class="symptom-label{{if and $.Compact (eq $.Lang "en")}} symptom-label-nowrap{{end}}">{{$label}}</span>
-    </span>
-  </label>
+{{$hasPain := false}}
+{{$hasMood := false}}
+{{$hasDigestion := false}}
+{{$hasSkin := false}}
+{{$hasOther := false}}
+{{range .Symptoms}}
+{{$group := symptomGroup .Name}}
+{{if eq $group "pain"}}{{$hasPain = true}}{{end}}
+{{if eq $group "mood"}}{{$hasMood = true}}{{end}}
+{{if eq $group "digestion"}}{{$hasDigestion = true}}{{end}}
+{{if eq $group "skin"}}{{$hasSkin = true}}{{end}}
+{{if eq $group "other"}}{{$hasOther = true}}{{end}}
+{{end}}
+<div class="symptom-groups">
+  {{if $hasPain}}
+  {{template "symptom_group_panel" (dict
+    "Messages" .Messages
+    "Title" (t .Messages "symptoms.group.pain")
+    "GroupKey" "pain"
+    "Symptoms" .Symptoms
+    "SelectedSymptomID" .SelectedSymptomID
+    "Lang" .Lang
+    "Compact" .Compact
+    "IncludePreviewHooks" .IncludePreviewHooks
+    "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{end}}
+  {{if $hasMood}}
+  {{template "symptom_group_panel" (dict
+    "Messages" .Messages
+    "Title" (t .Messages "symptoms.group.mood")
+    "GroupKey" "mood"
+    "Symptoms" .Symptoms
+    "SelectedSymptomID" .SelectedSymptomID
+    "Lang" .Lang
+    "Compact" .Compact
+    "IncludePreviewHooks" .IncludePreviewHooks
+    "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{end}}
+  {{if $hasDigestion}}
+  {{template "symptom_group_panel" (dict
+    "Messages" .Messages
+    "Title" (t .Messages "symptoms.group.digestion")
+    "GroupKey" "digestion"
+    "Symptoms" .Symptoms
+    "SelectedSymptomID" .SelectedSymptomID
+    "Lang" .Lang
+    "Compact" .Compact
+    "IncludePreviewHooks" .IncludePreviewHooks
+    "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{end}}
+  {{if $hasSkin}}
+  {{template "symptom_group_panel" (dict
+    "Messages" .Messages
+    "Title" (t .Messages "symptoms.group.skin")
+    "GroupKey" "skin"
+    "Symptoms" .Symptoms
+    "SelectedSymptomID" .SelectedSymptomID
+    "Lang" .Lang
+    "Compact" .Compact
+    "IncludePreviewHooks" .IncludePreviewHooks
+    "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
+  {{end}}
+  {{if $hasOther}}
+  {{template "symptom_group_panel" (dict
+    "Messages" .Messages
+    "Title" (t .Messages "symptoms.group.other")
+    "GroupKey" "other"
+    "Symptoms" .Symptoms
+    "SelectedSymptomID" .SelectedSymptomID
+    "Lang" .Lang
+    "Compact" .Compact
+    "IncludePreviewHooks" .IncludePreviewHooks
+    "DisableWhenNotPeriod" .DisableWhenNotPeriod)}}
   {{end}}
 </div>
 {{end}}

@@ -56,6 +56,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - calendar short badges were tightened for mobile cells (`today_short` uses dot marker, compact short period labels, smaller badge typography/padding),
   - stats cycle chart no longer renders an empty fixed-height chart shell when trend data is missing (shows localized no-data text instead).
 - Frontend cache-busting in `base.html` was bumped again to `20260225-2` for `app.js` and `tailwind.css` so mobile CSS/markup fixes load immediately after deploy.
+- Calendar mobile cells now rely on color-only state cues (without in-cell text badges) to avoid clipped/overlapping labels on narrow screens.
+- Calendar day-editor flow controls were tightened for mobile (`radio-tile-sm`) to reduce vertical footprint in the daily form.
+- Day editor no longer auto-saves on field changes; save now requires explicit `Save` action and hint copy was updated accordingly.
+- Symptoms are now rendered in logical grouped panels (pain, mood, digestion, skin, other) across dashboard/day-editor layouts for both mobile and desktop.
+- Frontend cache-busting in `base.html` was bumped to `20260225-3` for `app.js` and `tailwind.css` after manual-save and grouped-symptom UI updates.
 
 ## [0.1.0] - 2026-02-23
 
