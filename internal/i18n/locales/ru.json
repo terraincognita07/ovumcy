@@ -141,6 +141,7 @@
   "settings.profile.title": "Профиль",
   "settings.profile.subtitle": "Укажите имя, которое будет видно в навигации и шапке аккаунта.",
   "settings.profile.display_name": "Имя профиля",
+  "settings.profile.display_name_placeholder": "Например, Катя",
   "settings.profile.display_name_hint": "Необязательно. До 64 символов.",
   "settings.profile.email": "Email аккаунта",
   "settings.profile.submit": "Сохранить профиль",

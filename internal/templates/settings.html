@@ -36,6 +36,7 @@
         type="text"
         name="display_name"
         value="{{.CurrentUser.DisplayName}}"
+        placeholder="{{t .Messages "settings.profile.display_name_placeholder"}}"
         maxlength="64"
         autocomplete="nickname"
         class="input-field">
@@ -350,7 +351,7 @@
   </section>
 </section>
 {{if eq .CurrentUser.Role "owner"}}
-<script src="/static/js/settings-export.js?v=20260224-4"></script>
+<script src="/static/js/settings-export.js?v=20260225-1"></script>
 {{end}}
 {{end}}
 

@@ -8,10 +8,10 @@
   <meta name="csrf-token" content="{{.CSRFToken}}">
   <title>{{.Title}}</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260224-4">
+  <link rel="stylesheet" href="/static/css/tailwind.css?v=20260225-1">
   <script defer src="/static/js/htmx.min.js?v=20260221-2"></script>
   <script defer src="/static/js/chart-lite.js?v=20260221-2"></script>
-  <script defer src="/static/js/app.js?v=20260224-4"></script>
+  <script defer src="/static/js/app.js?v=20260225-1"></script>
   <script defer src="/static/js/alpine.min.js?v=20260221-2"></script>
 </head>
 <body
@@ -49,30 +49,28 @@
           <a href="/stats" class="nav-link {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
 
-          <span
-            class="role-chip role-chip-identity"
-            aria-label="{{t .Messages "nav.current_user"}}"
-            title="{{userIdentity .CurrentUser}}">{{userIdentity .CurrentUser}}</span>
-          {{if not (hasDisplayName .CurrentUser)}}
-          <a href="/settings#settings-display-name" class="journal-muted text-xs nav-profile-hint">{{t .Messages "nav.profile_name_hint"}}</a>
-          {{end}}
+          <div class="nav-meta">
+            <span class="nav-user-label">{{t .Messages "nav.current_user"}}:</span>
+            <span
+              class="role-chip role-chip-identity nav-user-chip"
+              aria-label="{{t .Messages "nav.current_user"}}"
+              title="{{userIdentity .CurrentUser}}">{{userIdentity .CurrentUser}}</span>
+          </div>
+          <span class="nav-divider" aria-hidden="true"></span>
 
-          <form action="/api/auth/logout" method="get" class="ml-1" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
-            <button type="submit" class="nav-link">{{t .Messages "nav.logout"}}</button>
+          <form action="/api/auth/logout" method="get" class="nav-logout-form" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
+            <button type="submit" class="nav-link nav-link-logout">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
 
         <nav x-show="mobileMenu" x-transition class="mt-2 space-y-2 sm:hidden">
           <p class="journal-muted px-3 pt-1 text-xs">{{t .Messages "nav.current_user"}}: {{userIdentity .CurrentUser}}</p>
-          {{if not (hasDisplayName .CurrentUser)}}
-          <a href="/settings#settings-display-name" class="nav-link block text-xs">{{t .Messages "nav.profile_name_hint"}}</a>
-          {{end}}
           <a href="/dashboard" class="nav-link block {{if isActiveRoute .CurrentPath "/dashboard"}}nav-link-active{{else if isActiveRoute .CurrentPath "/"}}nav-link-active{{end}}">{{t .Messages "nav.dashboard"}}</a>
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link block {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
           <form action="/api/auth/logout" method="get" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
-            <button type="submit" class="nav-link w-full text-left">{{t .Messages "nav.logout"}}</button>
+            <button type="submit" class="nav-link nav-link-logout w-full text-left">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
       </div>

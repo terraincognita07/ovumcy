@@ -141,6 +141,7 @@
   "settings.profile.title": "Profile",
   "settings.profile.subtitle": "Set the name shown in navigation and account header.",
   "settings.profile.display_name": "Profile name",
+  "settings.profile.display_name_placeholder": "For example, Kate",
   "settings.profile.display_name_hint": "Optional. Up to 64 characters.",
   "settings.profile.email": "Account email",
   "settings.profile.submit": "Save profile",

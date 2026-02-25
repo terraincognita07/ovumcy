@@ -462,6 +462,29 @@
     return stack;
   }
 
+  function appendToastMessage(body, message, kind) {
+    var messageWrap = document.createElement("span");
+    messageWrap.className = "toast-message-wrap";
+
+    var icon = document.createElement("span");
+    icon.className = "toast-icon";
+    icon.setAttribute("aria-hidden", "true");
+    if (kind === "error") {
+      icon.classList.add("toast-icon-error");
+      icon.textContent = "⚠";
+    } else {
+      icon.textContent = "✓";
+    }
+    messageWrap.appendChild(icon);
+
+    var text = document.createElement("span");
+    text.className = "toast-message";
+    text.textContent = message;
+    messageWrap.appendChild(text);
+
+    body.appendChild(messageWrap);
+  }
+
   var dayEditorAutoSaveTimers = new WeakMap();
   var successStatusClearTimers = new WeakMap();
 
@@ -486,11 +509,7 @@
       toast.className = (kind === "error" ? "status-error" : "status-ok") + " reveal";
       var body = document.createElement("div");
       body.className = "toast-body";
-
-      var text = document.createElement("span");
-      text.className = "toast-message";
-      text.textContent = message;
-      body.appendChild(text);
+      appendToastMessage(body, message, kind === "error" ? "error" : "ok");
 
       var closeButton = document.createElement("button");
       closeButton.type = "button";
@@ -574,11 +593,7 @@
 
     var body = document.createElement("div");
     body.className = "toast-body";
-
-    var text = document.createElement("span");
-    text.className = "toast-message";
-    text.textContent = message;
-    body.appendChild(text);
+    appendToastMessage(body, message, "ok");
 
     var closeButton = document.createElement("button");
     closeButton.type = "button";

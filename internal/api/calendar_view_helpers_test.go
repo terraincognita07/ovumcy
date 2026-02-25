@@ -59,6 +59,22 @@ func TestResolveCalendarMonthAndSelectedDateIgnoresInvalidSelectedDay(t *testing
 	}
 }
 
+func TestResolveCalendarMonthAndSelectedDateDefaultsToTodayWhenEmpty(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.February, 21, 10, 30, 0, 0, time.UTC)
+	month, selectedDate, err := resolveCalendarMonthAndSelectedDate("", "", now, time.UTC)
+	if err != nil {
+		t.Fatalf("resolveCalendarMonthAndSelectedDate returned error: %v", err)
+	}
+	if selectedDate != "2026-02-21" {
+		t.Fatalf("expected selected date 2026-02-21, got %q", selectedDate)
+	}
+	if month.Format("2006-01") != "2026-02" {
+		t.Fatalf("expected month 2026-02, got %s", month.Format("2006-01"))
+	}
+}
+
 func TestCalendarHelpersRangeAndAdjacentMonths(t *testing.T) {
 	t.Parallel()
 

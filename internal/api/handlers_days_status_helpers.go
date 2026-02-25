@@ -15,7 +15,7 @@ func htmxDismissibleSuccessStatusMarkup(messages map[string]string, message stri
 	}
 
 	return fmt.Sprintf(
-		"<div class=\"status-ok\"><div class=\"toast-body\"><span class=\"toast-message\">%s</span><button type=\"button\" class=\"toast-close\" data-dismiss-status aria-label=\"%s\">×</button></div></div>",
+		"<div class=\"status-ok\"><div class=\"toast-body\"><span class=\"toast-message-wrap\"><span class=\"toast-icon\" aria-hidden=\"true\">✓</span><span class=\"toast-message\">%s</span></span><button type=\"button\" class=\"toast-close\" data-dismiss-status aria-label=\"%s\">×</button></div></div>",
 		template.HTMLEscapeString(message),
 		template.HTMLEscapeString(closeLabel),
 	)

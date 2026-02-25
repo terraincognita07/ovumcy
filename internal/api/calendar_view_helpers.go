@@ -22,6 +22,9 @@ func resolveCalendarMonthAndSelectedDate(monthQueryRaw string, selectedDayRaw st
 			}
 		}
 	}
+	if selectedDate == "" && monthQuery == "" {
+		selectedDate = dateAtLocation(now, location).Format("2006-01-02")
+	}
 
 	return activeMonth, selectedDate, nil
 }

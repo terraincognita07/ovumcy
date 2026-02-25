@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTMX save-status success banners are now dismissible (`×`) and no longer rely on `status-transient` 2s fade behavior.
 - Stats page current-phase card now follows stale-cycle detection used on dashboard (shows `Unknown` with stale-phase hint when baseline is outdated).
 - Save-status dismiss behavior is now guaranteed even without timing-sensitive HTMX hooks by rendering close controls server-side and adding `afterSettle` fallback handling in app JS.
+- Desktop nav user block no longer mimics active tabs:
+  - user identity is grouped as metadata, not as a tab-like action,
+  - intrusive `Add profile name` nav hint is removed from header flow,
+  - `Logout` now has distinct destructive styling and visual separation.
+- Settings profile name field now includes localized placeholder text (RU/EN) to clarify expected input.
+- Calendar now auto-opens today's day editor when `/calendar` is opened without `day`/`month` query params (no empty right-side panel on first load).
+- Stats symptom-frequency empty/partner states now use compact informative blocks and no longer visually waste a stretched half-screen card.
+- Save feedback toast/status now renders with an explicit success icon and separated close control (`✓ message [×]`) to prevent `message.×` visual merging.
+- Cache-busting versions were bumped to `20260225-1` for `app.js`, `tailwind.css`, and `settings-export.js`.
 
 ## [0.1.0] - 2026-02-23
 

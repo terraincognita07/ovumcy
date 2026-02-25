@@ -36,7 +36,7 @@
     </article>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+  <div class="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
     <section class="journal-card p-5 sm:p-6">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h2 class="journal-subtitle">{{t .Messages "stats.cycle_trend"}}</h2>
@@ -81,10 +81,16 @@
           {{end}}
         </ul>
         {{else}}
-        <p class="mt-4 journal-muted text-sm">{{t .Messages "stats.no_symptom_data"}}</p>
+        <div class="stats-empty-state">
+          <span class="stats-empty-icon" aria-hidden="true">🧾</span>
+          <p class="journal-muted text-sm">{{t .Messages "stats.no_symptom_data"}}</p>
+        </div>
         {{end}}
       {{else}}
-      <p class="mt-4 journal-muted text-sm">{{t .Messages "stats.hidden_for_partner"}}</p>
+      <div class="stats-empty-state">
+        <span class="stats-empty-icon" aria-hidden="true">🔒</span>
+        <p class="journal-muted text-sm">{{t .Messages "stats.hidden_for_partner"}}</p>
+      </div>
       {{end}}
     </section>
   </div>
