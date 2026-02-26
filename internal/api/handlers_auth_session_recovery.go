@@ -68,7 +68,8 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 	user.PasswordHash = string(passwordHash)
 	user.RecoveryCodeHash = recoveryHash
 	user.MustChangePassword = false
-	if err := handler.db.Save(user).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.authService.SaveUser(user); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to reset password")
 	}
 

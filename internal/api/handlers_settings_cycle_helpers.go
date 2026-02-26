@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInput, string) {
@@ -65,23 +66,23 @@ func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInpu
 }
 
 func (handler *Handler) saveCycleSettings(userID uint, input cycleSettingsInput) error {
-	updates := map[string]any{
-		"cycle_length":     input.CycleLength,
-		"period_length":    input.PeriodLength,
-		"auto_period_fill": input.AutoPeriodFill,
+	handler.ensureDependencies()
+
+	update := services.CycleSettingsUpdate{
+		CycleLength:        input.CycleLength,
+		PeriodLength:       input.PeriodLength,
+		AutoPeriodFill:     input.AutoPeriodFill,
+		LastPeriodStartSet: input.LastPeriodStartSet,
 	}
-	if input.LastPeriodStartSet {
-		if input.LastPeriodStart == "" {
-			updates["last_period_start"] = nil
-		} else {
-			parsedDay, err := parseDayParam(input.LastPeriodStart, handler.location)
-			if err != nil {
-				return err
-			}
-			updates["last_period_start"] = parsedDay
+	if input.LastPeriodStartSet && input.LastPeriodStart != "" {
+		parsedDay, err := parseDayParam(input.LastPeriodStart, handler.location)
+		if err != nil {
+			return err
 		}
+		update.LastPeriodStart = &parsedDay
 	}
-	return handler.db.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error
+
+	return handler.settingsService.SaveCycleSettings(userID, update)
 }
 
 func applyCycleSettings(user *models.User, input cycleSettingsInput, location *time.Location) {

@@ -57,7 +57,8 @@ func (handler *Handler) CreateSymptom(c *fiber.Ctx) error {
 		IsBuiltin: false,
 	}
 
-	if err := handler.db.Create(&symptom).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.symptomService.CreateUserSymptom(&symptom); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create symptom")
 	}
 	return c.Status(fiber.StatusCreated).JSON(symptom)
@@ -74,15 +75,16 @@ func (handler *Handler) DeleteSymptom(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid symptom id")
 	}
 
-	var symptom models.SymptomType
-	if err := handler.db.Where("id = ? AND user_id = ?", id, user.ID).First(&symptom).Error; err != nil {
+	handler.ensureDependencies()
+	symptom, err := handler.symptomService.FindSymptomForUser(uint(id), user.ID)
+	if err != nil {
 		return apiError(c, fiber.StatusNotFound, "symptom not found")
 	}
 	if symptom.IsBuiltin {
 		return apiError(c, fiber.StatusBadRequest, "built-in symptom cannot be deleted")
 	}
 
-	if err := handler.db.Delete(&symptom).Error; err != nil {
+	if err := handler.symptomService.DeleteSymptom(&symptom); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to delete symptom")
 	}
 

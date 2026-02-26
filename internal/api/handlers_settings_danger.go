@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
@@ -15,17 +14,8 @@ func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	if err := handler.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("user_id = ?", user.ID).Delete(&models.DailyLog{}).Error; err != nil {
-			return err
-		}
-		return tx.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-			"cycle_length":      models.DefaultCycleLength,
-			"period_length":     models.DefaultPeriodLength,
-			"auto_period_fill":  true,
-			"last_period_start": nil,
-		}).Error
-	}); err != nil {
+	handler.ensureDependencies()
+	if err := handler.settingsService.ClearAllData(user.ID); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to clear data")
 	}
 
@@ -64,18 +54,8 @@ func (handler *Handler) DeleteAccount(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusUnauthorized, "invalid password")
 	}
 
-	if err := handler.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("user_id = ?", user.ID).Delete(&models.DailyLog{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ?", user.ID).Delete(&models.SymptomType{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Delete(&models.User{}, user.ID).Error; err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
+	handler.ensureDependencies()
+	if err := handler.settingsService.DeleteAccount(user.ID); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to delete account")
 	}
 

@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
@@ -16,7 +15,8 @@ func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
 	}
 
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Update("recovery_code_hash", recoveryHash).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.settingsService.UpdateRecoveryCodeHash(user.ID, recoveryHash); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update recovery code")
 	}
 

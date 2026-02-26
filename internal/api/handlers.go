@@ -28,7 +28,7 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		return nil, err
 	}
 
-	return &Handler{
+	handler := &Handler{
 		db:              database,
 		secretKey:       []byte(secret),
 		location:        location,
@@ -37,5 +37,6 @@ func NewHandler(database *gorm.DB, secret string, templateDir string, location *
 		templates:       templates,
 		partials:        partials,
 		recoveryLimiter: newAttemptLimiter(),
-	}, nil
+	}
+	return handler.withDependencies(database), nil
 }

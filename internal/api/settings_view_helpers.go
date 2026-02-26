@@ -60,8 +60,9 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 		errorKey, changePasswordErrorKey = classifySettingsErrorSource(settingsErrorSourceFromFlashOrQuery(c, flash))
 	}
 
-	persisted := models.User{}
-	if err := handler.db.Select("cycle_length", "period_length", "auto_period_fill", "last_period_start").First(&persisted, user.ID).Error; err != nil {
+	handler.ensureDependencies()
+	persisted, err := handler.settingsService.LoadSettings(user.ID)
+	if err != nil {
 		return nil, err
 	}
 

@@ -5,11 +5,15 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/terraincognita07/ovumcy/internal/db"
 	"github.com/terraincognita07/ovumcy/internal/i18n"
+	"github.com/terraincognita07/ovumcy/internal/services"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
+	// db is kept for backward compatibility in tests that still construct
+	// Handler literals directly. Runtime logic uses repositories/services.
 	db              *gorm.DB
 	secretKey       []byte
 	location        *time.Location
@@ -18,6 +22,13 @@ type Handler struct {
 	templates       map[string]*template.Template
 	partials        map[string]*template.Template
 	recoveryLimiter *attemptLimiter
+	repositories    *db.Repositories
+	authService     *services.AuthService
+	dayService      *services.DayService
+	symptomService  *services.SymptomService
+	settingsService *services.SettingsService
+	onboardingSvc   *services.OnboardingService
+	setupService    *services.SetupService
 }
 
 type CalendarDay struct {

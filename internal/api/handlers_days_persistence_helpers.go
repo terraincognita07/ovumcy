@@ -1,68 +1,31 @@
 package api
 
 import (
-	"errors"
 	"time"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"gorm.io/gorm"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 var (
-	errDayEntryLoadFailed   = errors.New("load day entry failed")
-	errDayEntryCreateFailed = errors.New("create day entry failed")
-	errDayEntryUpdateFailed = errors.New("update day entry failed")
-	errDeleteDayFailed      = errors.New("delete day failed")
-	errSyncLastPeriodFailed = errors.New("sync last period failed")
+	errDayEntryLoadFailed   = services.ErrDayEntryLoadFailed
+	errDayEntryCreateFailed = services.ErrDayEntryCreateFailed
+	errDayEntryUpdateFailed = services.ErrDayEntryUpdateFailed
+	errDeleteDayFailed      = services.ErrDeleteDayFailed
+	errSyncLastPeriodFailed = services.ErrSyncLastPeriodFailed
 )
 
 func (handler *Handler) upsertDayEntry(userID uint, dayStart time.Time, payload dayPayload, cleanIDs []uint) (models.DailyLog, bool, error) {
-	dayRangeStart, dayRangeEnd := dayRange(dayStart, handler.location)
-
-	wasPeriod := false
-	var entry models.DailyLog
-	result := handler.db.
-		Where("user_id = ? AND date >= ? AND date < ?", userID, dayRangeStart, dayRangeEnd).
-		Order("date DESC, id DESC").
-		First(&entry)
-	if result.Error == nil {
-		wasPeriod = entry.IsPeriod
-	}
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		entry = models.DailyLog{
-			UserID:   userID,
-			Date:     dayStart,
-			IsPeriod: payload.IsPeriod,
-			Flow:     payload.Flow,
-			Notes:    payload.Notes,
-		}
-		entry.SymptomIDs = cleanIDs
-		if err := handler.db.Create(&entry).Error; err != nil {
-			return models.DailyLog{}, false, errDayEntryCreateFailed
-		}
-		return entry, wasPeriod, nil
-	}
-	if result.Error != nil {
-		return models.DailyLog{}, false, errDayEntryLoadFailed
-	}
-
-	entry.IsPeriod = payload.IsPeriod
-	entry.Flow = payload.Flow
-	entry.SymptomIDs = cleanIDs
-	entry.Notes = payload.Notes
-	if err := handler.db.Save(&entry).Error; err != nil {
-		return models.DailyLog{}, false, errDayEntryUpdateFailed
-	}
-	return entry, wasPeriod, nil
+	handler.ensureDependencies()
+	return handler.dayService.UpsertDayEntry(userID, dayStart, services.DayEntryInput{
+		IsPeriod:   payload.IsPeriod,
+		Flow:       payload.Flow,
+		Notes:      payload.Notes,
+		SymptomIDs: cleanIDs,
+	}, handler.location)
 }
 
 func (handler *Handler) deleteDayAndRefreshLastPeriod(userID uint, day time.Time) error {
-	if err := handler.deleteDailyLogByDate(userID, day); err != nil {
-		return errDeleteDayFailed
-	}
-	if err := handler.refreshUserLastPeriodStart(userID); err != nil {
-		return errSyncLastPeriodFailed
-	}
-	return nil
+	handler.ensureDependencies()
+	return handler.dayService.DeleteDayAndRefreshLastPeriod(userID, day, handler.location)
 }

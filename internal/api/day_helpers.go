@@ -1,23 +1,14 @@
 package api
 
 import (
-	"strings"
 	"time"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func dayHasData(entry models.DailyLog) bool {
-	if entry.IsPeriod {
-		return true
-	}
-	if len(entry.SymptomIDs) > 0 {
-		return true
-	}
-	if strings.TrimSpace(entry.Notes) != "" {
-		return true
-	}
-	return strings.TrimSpace(entry.Flow) != "" && entry.Flow != models.FlowNone
+	return services.DayHasData(entry)
 }
 
 func sameCalendarDay(a time.Time, b time.Time) bool {
@@ -38,14 +29,11 @@ func sanitizeLogForPartner(entry models.DailyLog) models.DailyLog {
 }
 
 func dateAtLocation(value time.Time, location *time.Location) time.Time {
-	localized := value.In(location)
-	year, month, day := localized.Date()
-	return time.Date(year, month, day, 0, 0, 0, 0, location)
+	return services.DateAtLocation(value, location)
 }
 
 func dayRange(value time.Time, location *time.Location) (time.Time, time.Time) {
-	start := dateAtLocation(value, location)
-	return start, start.AddDate(0, 0, 1)
+	return services.DayRange(value, location)
 }
 
 func symptomIDSet(ids []uint) map[uint]bool {
@@ -57,11 +45,5 @@ func symptomIDSet(ids []uint) map[uint]bool {
 }
 
 func removeUint(values []uint, needle uint) []uint {
-	filtered := make([]uint, 0, len(values))
-	for _, value := range values {
-		if value != needle {
-			filtered = append(filtered, value)
-		}
-	}
-	return filtered
+	return services.RemoveUint(values, needle)
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
@@ -21,7 +20,8 @@ func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Update("display_name", displayName).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.settingsService.UpdateDisplayName(user.ID, displayName); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update profile")
 	}
 

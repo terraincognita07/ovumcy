@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) parseOnboardingStep1Values(c *fiber.Ctx, today time.Time) (onboardingStep1Values, string) {
@@ -66,35 +67,13 @@ func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 }
 
 func sanitizeOnboardingCycleAndPeriod(cycleLength int, periodLength int) (int, int) {
-	safeCycleLength := clampOnboardingCycleLength(cycleLength)
-	safePeriodLength := clampOnboardingPeriodLength(periodLength)
-
-	if safeCycleLength-safePeriodLength < 8 {
-		safePeriodLength = safeCycleLength - 8
-		if safePeriodLength < 1 {
-			safePeriodLength = 1
-		}
-	}
-
-	return safeCycleLength, safePeriodLength
+	return services.SanitizeOnboardingCycleAndPeriod(cycleLength, periodLength)
 }
 
 func clampOnboardingCycleLength(value int) int {
-	if value < 15 {
-		return 15
-	}
-	if value > 90 {
-		return 90
-	}
-	return value
+	return services.ClampOnboardingCycleLength(value)
 }
 
 func clampOnboardingPeriodLength(value int) int {
-	if value < 1 {
-		return 1
-	}
-	if value > 14 {
-		return 14
-	}
-	return value
+	return services.ClampOnboardingPeriodLength(value)
 }

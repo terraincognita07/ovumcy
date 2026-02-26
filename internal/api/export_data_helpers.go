@@ -7,9 +7,9 @@ import (
 )
 
 func (handler *Handler) fetchExportData(userID uint, from *time.Time, to *time.Time) ([]models.DailyLog, map[uint]string, error) {
-	logs := make([]models.DailyLog, 0)
-	query := handler.dailyLogRangeQueryForUser(userID, from, to)
-	if err := query.Order("date ASC").Find(&logs).Error; err != nil {
+	handler.ensureDependencies()
+	logs, err := handler.dayService.FetchLogsForOptionalRange(userID, from, to, handler.location)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -31,32 +31,28 @@ func (handler *Handler) fetchExportSummary(userID uint) (int64, string, string, 
 }
 
 func (handler *Handler) fetchExportSummaryForRange(userID uint, from *time.Time, to *time.Time) (int64, string, string, error) {
-	var aggregate struct {
-		Total     int64  `gorm:"column:total"`
-		FirstDate string `gorm:"column:first_date"`
-		LastDate  string `gorm:"column:last_date"`
-	}
-
-	if err := handler.dailyLogRangeQueryForUser(userID, from, to).
-		Select("COUNT(*) AS total, MIN(date) AS first_date, MAX(date) AS last_date").
-		Scan(&aggregate).Error; err != nil {
+	handler.ensureDependencies()
+	logs, err := handler.dayService.FetchLogsForOptionalRange(userID, from, to, handler.location)
+	if err != nil {
 		return 0, "", "", err
 	}
-	if aggregate.Total == 0 || aggregate.FirstDate == "" || aggregate.LastDate == "" {
+	if len(logs) == 0 {
 		return 0, "", "", nil
 	}
 
-	firstDate := aggregate.FirstDate
-	if len(firstDate) > 10 {
-		firstDate = firstDate[:10]
-	}
-	lastDate := aggregate.LastDate
-	if len(lastDate) > 10 {
-		lastDate = lastDate[:10]
+	first := logs[0].Date
+	last := logs[0].Date
+	for _, logEntry := range logs[1:] {
+		if logEntry.Date.Before(first) {
+			first = logEntry.Date
+		}
+		if logEntry.Date.After(last) {
+			last = logEntry.Date
+		}
 	}
 
-	return aggregate.Total,
-		firstDate,
-		lastDate,
+	return int64(len(logs)),
+		dateAtLocation(first, handler.location).Format("2006-01-02"),
+		dateAtLocation(last, handler.location).Format("2006-01-02"),
 		nil
 }

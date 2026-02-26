@@ -79,8 +79,9 @@ func (handler *Handler) lookupUserByResetToken(token string) (*models.User, erro
 		return nil, errors.New("invalid reset token")
 	}
 
-	var user models.User
-	if err := handler.db.First(&user, userID).Error; err != nil {
+	handler.ensureDependencies()
+	user, err := handler.authService.FindByID(userID)
+	if err != nil {
 		return nil, errors.New("invalid reset token")
 	}
 	return &user, nil

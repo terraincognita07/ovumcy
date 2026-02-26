@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/ovumcy/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,10 +26,8 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
 	}
 
-	if err := handler.db.Model(&models.User{}).Where("id = ?", user.ID).Updates(map[string]any{
-		"password_hash":        string(passwordHash),
-		"must_change_password": false,
-	}).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.settingsService.UpdatePassword(user.ID, string(passwordHash), false); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update password")
 	}
 

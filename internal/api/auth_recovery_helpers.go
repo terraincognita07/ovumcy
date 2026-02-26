@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func normalizeLoginEmail(raw string) string {
@@ -21,19 +21,13 @@ func normalizeLoginEmail(raw string) string {
 }
 
 func (handler *Handler) findUserByRecoveryCode(code string) (*models.User, error) {
-	users := make([]models.User, 0)
-	if err := handler.db.Where("recovery_code_hash <> ''").Find(&users).Error; err != nil {
+	handler.ensureDependencies()
+	user, err := handler.authService.FindUserByRecoveryCode(code)
+	if err != nil {
+		if errors.Is(err, services.ErrRecoveryCodeNotFound) {
+			return nil, errors.New("recovery code not found")
+		}
 		return nil, err
 	}
-
-	for index := range users {
-		hash := strings.TrimSpace(users[index].RecoveryCodeHash)
-		if hash == "" {
-			continue
-		}
-		if bcrypt.CompareHashAndPassword([]byte(hash), []byte(code)) == nil {
-			return &users[index], nil
-		}
-	}
-	return nil, errors.New("recovery code not found")
+	return user, nil
 }

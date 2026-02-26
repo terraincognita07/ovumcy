@@ -45,7 +45,8 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		AutoPeriodFill:   true,
 		CreatedAt:        time.Now().In(handler.location),
 	}
-	if err := handler.db.Create(&user).Error; err != nil {
+	handler.ensureDependencies()
+	if err := handler.authService.CreateUser(&user); err != nil {
 		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
 	}
 
@@ -66,8 +67,9 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
 	}
 
-	var user models.User
-	if err := handler.db.Where("lower(trim(email)) = ?", credentials.Email).First(&user).Error; err != nil {
+	handler.ensureDependencies()
+	user, err := handler.authService.FindByNormalizedEmail(credentials.Email)
+	if err != nil {
 		return handler.respondAuthError(c, fiber.StatusUnauthorized, "invalid credentials")
 	}
 

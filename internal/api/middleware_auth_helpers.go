@@ -37,8 +37,9 @@ func (handler *Handler) authenticateRequest(c *fiber.Ctx) (*models.User, error) 
 		return nil, errors.New("token expired")
 	}
 
-	var user models.User
-	if err := handler.db.First(&user, claims.UserID).Error; err != nil {
+	handler.ensureDependencies()
+	user, err := handler.authService.FindByID(claims.UserID)
+	if err != nil {
 		return nil, err
 	}
 
