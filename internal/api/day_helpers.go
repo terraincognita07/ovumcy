@@ -43,7 +43,3 @@ func symptomIDSet(ids []uint) map[uint]bool {
 	}
 	return set
 }
-
-func removeUint(values []uint, needle uint) []uint {
-	return services.RemoveUint(values, needle)
-}
