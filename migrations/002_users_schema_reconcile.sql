@@ -1,0 +1,8 @@
+ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN onboarding_completed BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN cycle_length INTEGER NOT NULL DEFAULT 28;
+ALTER TABLE users ADD COLUMN period_length INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE users ADD COLUMN auto_period_fill BOOLEAN NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN last_period_start DATE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_normalized ON users(lower(trim(email)));
