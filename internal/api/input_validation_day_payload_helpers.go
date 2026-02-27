@@ -39,15 +39,6 @@ func parseDayPayload(c *fiber.Ctx) (dayPayload, error) {
 	return payload, nil
 }
 
-func isValidFlow(flow string) bool {
-	switch flow {
-	case models.FlowNone, models.FlowLight, models.FlowMedium, models.FlowHeavy:
-		return true
-	default:
-		return false
-	}
-}
-
 func parseBoolValue(value string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	return normalized == "1" || normalized == "true" || normalized == "on" || normalized == "yes"

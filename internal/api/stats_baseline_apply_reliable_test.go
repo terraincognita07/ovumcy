@@ -9,10 +9,6 @@ import (
 )
 
 func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
-	handler := &Handler{
-		location: time.UTC,
-	}
-
 	userLastPeriod := mustParseBaselineDay(t, "2025-03-27")
 	user := &models.User{
 		Role:            models.RoleOwner,
@@ -35,7 +31,7 @@ func TestApplyUserCycleBaseline_DoesNotOverrideReliableCycleData(t *testing.T) {
 
 	now := mustParseBaselineDay(t, "2025-03-05")
 	stats := services.BuildCycleStats(logs, now)
-	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
+	stats = services.ApplyUserCycleBaseline(user, logs, stats, now, time.UTC)
 
 	if stats.AverageCycleLength != 28 {
 		t.Fatalf("expected reliable average cycle length 28, got %.2f", stats.AverageCycleLength)

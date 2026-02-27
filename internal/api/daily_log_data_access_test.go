@@ -59,8 +59,9 @@ func TestRefreshUserLastPeriodStart(t *testing.T) {
 		t.Fatalf("create period logs: %v", err)
 	}
 
-	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
-		t.Fatalf("refreshUserLastPeriodStart returned error: %v", err)
+	handler.ensureDependencies()
+	if err := handler.dayService.RefreshUserLastPeriodStart(user.ID, handler.location); err != nil {
+		t.Fatalf("RefreshUserLastPeriodStart returned error: %v", err)
 	}
 
 	updated := models.User{}
@@ -77,8 +78,8 @@ func TestRefreshUserLastPeriodStart(t *testing.T) {
 	if err := database.Where("user_id = ?", user.ID).Delete(&models.DailyLog{}).Error; err != nil {
 		t.Fatalf("delete logs: %v", err)
 	}
-	if err := handler.refreshUserLastPeriodStart(user.ID); err != nil {
-		t.Fatalf("refreshUserLastPeriodStart second call returned error: %v", err)
+	if err := handler.dayService.RefreshUserLastPeriodStart(user.ID, handler.location); err != nil {
+		t.Fatalf("RefreshUserLastPeriodStart second call returned error: %v", err)
 	}
 
 	updated = models.User{}

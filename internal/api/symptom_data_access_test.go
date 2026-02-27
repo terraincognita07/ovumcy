@@ -63,8 +63,9 @@ func TestRemoveSymptomFromLogsUpdatesEntries(t *testing.T) {
 		t.Fatalf("create log: %v", err)
 	}
 
-	if err := handler.removeSymptomFromLogs(user.ID, symptoms[0].ID); err != nil {
-		t.Fatalf("removeSymptomFromLogs returned error: %v", err)
+	handler.ensureDependencies()
+	if err := handler.symptomService.RemoveSymptomFromLogs(user.ID, symptoms[0].ID); err != nil {
+		t.Fatalf("RemoveSymptomFromLogs returned error: %v", err)
 	}
 
 	updated := models.DailyLog{}

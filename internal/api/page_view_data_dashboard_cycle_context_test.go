@@ -138,12 +138,12 @@ func TestDashboardCycleStaleAnchorPrefersStoredUserBaseline(t *testing.T) {
 	user := &models.User{LastPeriodStart: &userBaseline}
 	stats := services.CycleStats{LastPeriodStart: statsBaseline}
 
-	anchor := dashboardCycleStaleAnchor(user, stats, time.UTC)
+	anchor := services.DashboardCycleStaleAnchor(user, stats, time.UTC)
 	if !sameCalendarDay(anchor, userBaseline) {
 		t.Fatalf("expected stale anchor to use stored user baseline date, got %s", anchor.Format("2006-01-02"))
 	}
 
-	anchorFallback := dashboardCycleStaleAnchor(&models.User{}, stats, time.UTC)
+	anchorFallback := services.DashboardCycleStaleAnchor(&models.User{}, stats, time.UTC)
 	if !sameCalendarDay(anchorFallback, statsBaseline) {
 		t.Fatalf("expected stale anchor fallback to stats baseline date, got %s", anchorFallback.Format("2006-01-02"))
 	}

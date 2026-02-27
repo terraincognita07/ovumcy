@@ -14,6 +14,6 @@ func (handler *Handler) buildCycleStatsForRange(user *models.User, from time.Tim
 	}
 
 	stats := services.BuildCycleStats(logs, now)
-	stats = handler.applyUserCycleBaseline(user, logs, stats, now)
+	stats = services.ApplyUserCycleBaseline(user, logs, stats, now, handler.location)
 	return stats, logs, nil
 }

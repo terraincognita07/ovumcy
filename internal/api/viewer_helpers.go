@@ -4,34 +4,23 @@ import (
 	"time"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func isOwnerUser(user *models.User) bool {
-	return user != nil && user.Role == models.RoleOwner
-}
-
-func isPartnerUser(user *models.User) bool {
-	return user != nil && user.Role == models.RolePartner
+	return services.IsOwnerUser(user)
 }
 
 func sanitizeLogForViewer(user *models.User, entry models.DailyLog) models.DailyLog {
-	if isPartnerUser(user) {
-		return sanitizeLogForPartner(entry)
-	}
-	return entry
+	return services.SanitizeLogForViewer(user, entry)
 }
 
 func sanitizeLogsForViewer(user *models.User, logs []models.DailyLog) {
-	if !isPartnerUser(user) {
-		return
-	}
-	for index := range logs {
-		logs[index] = sanitizeLogForPartner(logs[index])
-	}
+	services.SanitizeLogsForViewer(user, logs)
 }
 
 func (handler *Handler) fetchSymptomsForViewer(user *models.User) ([]models.SymptomType, error) {
-	if !isOwnerUser(user) {
+	if !services.ShouldExposeSymptomsForViewer(user) {
 		return []models.SymptomType{}, nil
 	}
 	return handler.fetchSymptoms(user.ID)
@@ -48,5 +37,5 @@ func (handler *Handler) fetchDayLogForViewer(user *models.User, day time.Time) (
 		return models.DailyLog{}, nil, err
 	}
 
-	return sanitizeLogForViewer(user, logEntry), symptoms, nil
+	return services.SanitizeLogForViewer(user, logEntry), symptoms, nil
 }

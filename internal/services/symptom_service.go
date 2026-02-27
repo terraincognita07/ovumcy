@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -9,6 +11,23 @@ import (
 )
 
 var ErrInvalidSymptomID = errors.New("invalid symptom id")
+
+var (
+	ErrInvalidSymptomName            = errors.New("invalid symptom name")
+	ErrInvalidSymptomColor           = errors.New("invalid symptom color")
+	ErrSymptomNotFound               = errors.New("symptom not found")
+	ErrBuiltinSymptomDeleteForbidden = errors.New("built-in symptom cannot be deleted")
+	ErrCreateSymptomFailed           = errors.New("create symptom failed")
+	ErrDeleteSymptomFailed           = errors.New("delete symptom failed")
+	ErrCleanSymptomLogsFailed        = errors.New("clean symptom logs failed")
+)
+
+const (
+	maxSymptomNameLength = 80
+	defaultSymptomIcon   = "✨"
+)
+
+var hexSymptomColorPattern = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
 
 type SymptomRepository interface {
 	CountBuiltinByUser(userID uint) (int64, error)
@@ -30,6 +49,13 @@ type SymptomService struct {
 	logs     SymptomLogRepository
 }
 
+type SymptomFrequency struct {
+	Name      string
+	Icon      string
+	Count     int
+	TotalDays int
+}
+
 func NewSymptomService(symptoms SymptomRepository, logs SymptomLogRepository) *SymptomService {
 	return &SymptomService{
 		symptoms: symptoms,
@@ -41,12 +67,107 @@ func (service *SymptomService) CreateUserSymptom(symptom *models.SymptomType) er
 	return service.symptoms.Create(symptom)
 }
 
+func (service *SymptomService) CreateSymptomForUser(userID uint, name string, icon string, color string) (models.SymptomType, error) {
+	name = strings.TrimSpace(name)
+	icon = strings.TrimSpace(icon)
+	color = strings.TrimSpace(color)
+
+	if name == "" || len(name) > maxSymptomNameLength {
+		return models.SymptomType{}, ErrInvalidSymptomName
+	}
+	if icon == "" {
+		icon = defaultSymptomIcon
+	}
+	if !hexSymptomColorPattern.MatchString(color) {
+		return models.SymptomType{}, ErrInvalidSymptomColor
+	}
+
+	symptom := models.SymptomType{
+		UserID:    userID,
+		Name:      name,
+		Icon:      icon,
+		Color:     color,
+		IsBuiltin: false,
+	}
+	if err := service.symptoms.Create(&symptom); err != nil {
+		return models.SymptomType{}, fmt.Errorf("%w: %v", ErrCreateSymptomFailed, err)
+	}
+	return symptom, nil
+}
+
 func (service *SymptomService) FindSymptomForUser(symptomID uint, userID uint) (models.SymptomType, error) {
 	return service.symptoms.FindByIDForUser(symptomID, userID)
 }
 
 func (service *SymptomService) DeleteSymptom(symptom *models.SymptomType) error {
 	return service.symptoms.Delete(symptom)
+}
+
+func (service *SymptomService) DeleteSymptomForUser(userID uint, symptomID uint) error {
+	symptom, err := service.symptoms.FindByIDForUser(symptomID, userID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrSymptomNotFound, err)
+	}
+	if symptom.IsBuiltin {
+		return ErrBuiltinSymptomDeleteForbidden
+	}
+
+	if err := service.symptoms.Delete(&symptom); err != nil {
+		return fmt.Errorf("%w: %v", ErrDeleteSymptomFailed, err)
+	}
+
+	if err := service.RemoveSymptomFromLogs(userID, symptom.ID); err != nil {
+		return fmt.Errorf("%w: %v", ErrCleanSymptomLogsFailed, err)
+	}
+	return nil
+}
+
+func (service *SymptomService) CalculateFrequencies(userID uint, logs []models.DailyLog) ([]SymptomFrequency, error) {
+	if len(logs) == 0 {
+		return []SymptomFrequency{}, nil
+	}
+	totalDays := len(logs)
+
+	counts := make(map[uint]int)
+	for _, logEntry := range logs {
+		for _, id := range logEntry.SymptomIDs {
+			counts[id]++
+		}
+	}
+	if len(counts) == 0 {
+		return []SymptomFrequency{}, nil
+	}
+
+	symptoms, err := service.FetchSymptoms(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	symptomByID := make(map[uint]models.SymptomType, len(symptoms))
+	for _, symptom := range symptoms {
+		symptomByID[symptom.ID] = symptom
+	}
+
+	result := make([]SymptomFrequency, 0, len(counts))
+	for id, count := range counts {
+		if symptom, ok := symptomByID[id]; ok {
+			result = append(result, SymptomFrequency{
+				Name:      symptom.Name,
+				Icon:      symptom.Icon,
+				Count:     count,
+				TotalDays: totalDays,
+			})
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Count == result[j].Count {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].Count > result[j].Count
+	})
+
+	return result, nil
 }
 
 func (service *SymptomService) SeedBuiltinSymptoms(userID uint) error {

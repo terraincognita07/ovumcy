@@ -17,8 +17,3 @@ func (handler *Handler) validateSymptomIDs(userID uint, ids []uint) ([]uint, err
 	}
 	return filtered, nil
 }
-
-func (handler *Handler) removeSymptomFromLogs(userID uint, symptomID uint) error {
-	handler.ensureDependencies()
-	return handler.symptomService.RemoveSymptomFromLogs(userID, symptomID)
-}

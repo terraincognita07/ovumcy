@@ -29,32 +29,12 @@ func buildStatsChartData(messages map[string]string, lengths []int, baselineCycl
 }
 
 func (handler *Handler) buildStatsTrendView(user *models.User, logs []models.DailyLog, now time.Time, messages map[string]string) (fiber.Map, int, int) {
-	lengths := handler.completedCycleTrendLengths(logs, now)
+	lengths := services.CompletedCycleTrendLengths(logs, now, handler.location)
 	lengths = trimTrailingCycleTrendLengths(lengths, maxStatsTrendPoints)
 
 	baselineCycleLength := ownerBaselineCycleLength(user)
 	chartPayload := buildStatsChartData(messages, lengths, baselineCycleLength)
 	return chartPayload, baselineCycleLength, len(lengths)
-}
-
-func (handler *Handler) completedCycleTrendLengths(logs []models.DailyLog, now time.Time) []int {
-	starts := services.DetectCycleStarts(logs)
-	if len(starts) < 2 {
-		return nil
-	}
-
-	today := dateAtLocation(now, handler.location)
-	lengths := make([]int, 0, len(starts)-1)
-	for index := 1; index < len(starts); index++ {
-		previousStart := dateAtLocation(starts[index-1], handler.location)
-		currentStart := dateAtLocation(starts[index], handler.location)
-		if !currentStart.Before(today) {
-			break
-		}
-		lengths = append(lengths, int(currentStart.Sub(previousStart).Hours()/24))
-	}
-
-	return lengths
 }
 
 func (handler *Handler) buildStatsSymptomCounts(user *models.User, language string) ([]SymptomCount, string, error) {
@@ -85,9 +65,9 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 	observedCycleCount := len(services.CycleLengths(logs))
 	hasReliableTrend := trendPointCount >= 3
 	today := dateAtLocation(now, handler.location)
-	cycleDayReference := dashboardCycleReferenceLength(user, stats)
-	cycleStaleAnchor := dashboardCycleStaleAnchor(user, stats, handler.location)
-	cycleDataStale := dashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
+	cycleDayReference := services.DashboardCycleReferenceLength(user, stats)
+	cycleStaleAnchor := services.DashboardCycleStaleAnchor(user, stats, handler.location)
+	cycleDataStale := services.DashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
 	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
 	if err != nil {
 		return nil, symptomErrorMessage, err

@@ -21,11 +21,11 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 		return nil, "failed to load today log", err
 	}
 
-	cycleDayReference := dashboardCycleReferenceLength(user, stats)
-	cycleDayWarning := dashboardCycleDayLooksLong(stats.CurrentCycleDay, cycleDayReference)
-	cycleStaleAnchor := dashboardCycleStaleAnchor(user, stats, handler.location)
-	cycleDataStale := dashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
-	displayNextPeriodStart, displayOvulationDate, displayOvulationExact, displayOvulationImpossible := dashboardUpcomingPredictions(stats, user, today, cycleDayReference)
+	cycleDayReference := services.DashboardCycleReferenceLength(user, stats)
+	cycleDayWarning := services.DashboardCycleDayLooksLong(stats.CurrentCycleDay, cycleDayReference)
+	cycleStaleAnchor := services.DashboardCycleStaleAnchor(user, stats, handler.location)
+	cycleDataStale := services.DashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
+	displayNextPeriodStart, displayOvulationDate, displayOvulationExact, displayOvulationImpossible := services.DashboardUpcomingPredictions(stats, user, today, cycleDayReference)
 	nextPeriodInPast := !displayNextPeriodStart.IsZero() && displayNextPeriodStart.Before(today)
 	ovulationInPast := !displayOvulationImpossible && !displayOvulationDate.IsZero() && displayOvulationDate.Before(today)
 
@@ -52,92 +52,6 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 		"IsOwner":                    isOwnerUser(user),
 	}
 	return data, "", nil
-}
-
-func dashboardCycleReferenceLength(user *models.User, stats services.CycleStats) int {
-	if user != nil && isValidOnboardingCycleLength(user.CycleLength) {
-		return user.CycleLength
-	}
-	if stats.MedianCycleLength > 0 {
-		return stats.MedianCycleLength
-	}
-	if stats.AverageCycleLength > 0 {
-		return int(stats.AverageCycleLength + 0.5)
-	}
-	return models.DefaultCycleLength
-}
-
-func dashboardCycleDayLooksLong(currentDay int, referenceLength int) bool {
-	if currentDay <= 0 || referenceLength <= 0 {
-		return false
-	}
-	return currentDay > referenceLength+7
-}
-
-func dashboardCycleDataLooksStale(lastPeriodStart time.Time, today time.Time, referenceLength int) bool {
-	if lastPeriodStart.IsZero() || referenceLength <= 0 || today.Before(lastPeriodStart) {
-		return false
-	}
-	rawCycleDay := int(today.Sub(lastPeriodStart).Hours()/24) + 1
-	return rawCycleDay > referenceLength
-}
-
-func dashboardCycleStaleAnchor(user *models.User, stats services.CycleStats, location *time.Location) time.Time {
-	if user == nil || user.LastPeriodStart == nil || user.LastPeriodStart.IsZero() {
-		return stats.LastPeriodStart
-	}
-	if location == nil {
-		location = time.UTC
-	}
-	return dateAtLocation(*user.LastPeriodStart, location)
-}
-
-func dashboardUpcomingPredictions(stats services.CycleStats, user *models.User, today time.Time, cycleLength int) (time.Time, time.Time, bool, bool) {
-	nextPeriodStart := stats.NextPeriodStart
-	ovulationDate := stats.OvulationDate
-	ovulationExact := stats.OvulationExact
-	ovulationImpossible := stats.OvulationImpossible
-
-	if stats.LastPeriodStart.IsZero() || cycleLength <= 0 {
-		return nextPeriodStart, ovulationDate, ovulationExact, ovulationImpossible
-	}
-
-	cycleStart, _, projectionOK := projectCycleStart(stats.LastPeriodStart, cycleLength, today)
-	if !projectionOK {
-		return nextPeriodStart, ovulationDate, ovulationExact, ovulationImpossible
-	}
-
-	nextPeriodStart = dateAtLocation(cycleStart.AddDate(0, 0, cycleLength), today.Location())
-	predictedPeriodLength := dashboardPredictedPeriodLength(user, stats)
-	ovulationDate, _, _, ovulationExact, ovulationCalculable := services.PredictCycleWindow(
-		cycleStart,
-		cycleLength,
-		predictedPeriodLength,
-	)
-	if ovulationCalculable && ovulationDate.Before(today) {
-		cycleStart = shiftCycleStartToFutureOvulation(cycleStart, ovulationDate, cycleLength, today)
-		nextPeriodStart = dateAtLocation(cycleStart.AddDate(0, 0, cycleLength), today.Location())
-		ovulationDate, _, _, ovulationExact, ovulationCalculable = services.PredictCycleWindow(
-			cycleStart,
-			cycleLength,
-			predictedPeriodLength,
-		)
-	}
-	if !ovulationCalculable {
-		return nextPeriodStart, time.Time{}, false, true
-	}
-	return nextPeriodStart, ovulationDate, ovulationExact, false
-}
-
-func dashboardPredictedPeriodLength(user *models.User, stats services.CycleStats) int {
-	if user != nil && isValidOnboardingPeriodLength(user.PeriodLength) {
-		return user.PeriodLength
-	}
-	predictedPeriodLength := int(stats.AveragePeriodLength + 0.5)
-	if predictedPeriodLength > 0 {
-		return predictedPeriodLength
-	}
-	return models.DefaultPeriodLength
 }
 
 func (handler *Handler) buildDayEditorPartialData(user *models.User, language string, messages map[string]string, day time.Time, now time.Time) (fiber.Map, string, error) {

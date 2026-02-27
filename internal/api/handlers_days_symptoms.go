@@ -1,11 +1,12 @@
 package api
 
 import (
+	"errors"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) GetSymptoms(c *fiber.Ctx) error {
@@ -35,31 +36,19 @@ func (handler *Handler) CreateSymptom(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusBadRequest, "invalid payload")
 	}
 
-	payload.Name = strings.TrimSpace(payload.Name)
-	payload.Icon = strings.TrimSpace(payload.Icon)
-	payload.Color = strings.TrimSpace(payload.Color)
-
-	if payload.Name == "" || len(payload.Name) > 80 {
-		return apiError(c, fiber.StatusBadRequest, "invalid symptom name")
-	}
-	if payload.Icon == "" {
-		payload.Icon = "✨"
-	}
-	if !hexColorRegex.MatchString(payload.Color) {
-		return apiError(c, fiber.StatusBadRequest, "invalid symptom color")
-	}
-
-	symptom := models.SymptomType{
-		UserID:    user.ID,
-		Name:      payload.Name,
-		Icon:      payload.Icon,
-		Color:     payload.Color,
-		IsBuiltin: false,
-	}
-
 	handler.ensureDependencies()
-	if err := handler.symptomService.CreateUserSymptom(&symptom); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to create symptom")
+	symptom, err := handler.symptomService.CreateSymptomForUser(user.ID, payload.Name, payload.Icon, payload.Color)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidSymptomName):
+			return apiError(c, fiber.StatusBadRequest, "invalid symptom name")
+		case errors.Is(err, services.ErrInvalidSymptomColor):
+			return apiError(c, fiber.StatusBadRequest, "invalid symptom color")
+		case errors.Is(err, services.ErrCreateSymptomFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to create symptom")
+		default:
+			return apiError(c, fiber.StatusInternalServerError, "failed to create symptom")
+		}
 	}
 	return c.Status(fiber.StatusCreated).JSON(symptom)
 }
@@ -76,20 +65,19 @@ func (handler *Handler) DeleteSymptom(c *fiber.Ctx) error {
 	}
 
 	handler.ensureDependencies()
-	symptom, err := handler.symptomService.FindSymptomForUser(uint(id), user.ID)
-	if err != nil {
-		return apiError(c, fiber.StatusNotFound, "symptom not found")
-	}
-	if symptom.IsBuiltin {
-		return apiError(c, fiber.StatusBadRequest, "built-in symptom cannot be deleted")
-	}
-
-	if err := handler.symptomService.DeleteSymptom(&symptom); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to delete symptom")
-	}
-
-	if err := handler.removeSymptomFromLogs(user.ID, symptom.ID); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to clean symptom logs")
+	if err := handler.symptomService.DeleteSymptomForUser(user.ID, uint(id)); err != nil {
+		switch {
+		case errors.Is(err, services.ErrSymptomNotFound):
+			return apiError(c, fiber.StatusNotFound, "symptom not found")
+		case errors.Is(err, services.ErrBuiltinSymptomDeleteForbidden):
+			return apiError(c, fiber.StatusBadRequest, "built-in symptom cannot be deleted")
+		case errors.Is(err, services.ErrDeleteSymptomFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete symptom")
+		case errors.Is(err, services.ErrCleanSymptomLogsFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to clean symptom logs")
+		default:
+			return apiError(c, fiber.StatusInternalServerError, "failed to delete symptom")
+		}
 	}
 
 	return c.JSON(fiber.Map{"ok": true})

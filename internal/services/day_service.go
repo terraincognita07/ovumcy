@@ -2,17 +2,21 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 var (
-	ErrDayEntryLoadFailed   = errors.New("load day entry failed")
-	ErrDayEntryCreateFailed = errors.New("create day entry failed")
-	ErrDayEntryUpdateFailed = errors.New("update day entry failed")
-	ErrDeleteDayFailed      = errors.New("delete day failed")
-	ErrSyncLastPeriodFailed = errors.New("sync last period failed")
+	ErrDayEntryLoadFailed     = errors.New("load day entry failed")
+	ErrDayEntryCreateFailed   = errors.New("create day entry failed")
+	ErrDayEntryUpdateFailed   = errors.New("update day entry failed")
+	ErrDayAutoFillLoadFailed  = errors.New("load day autofill settings failed")
+	ErrDayAutoFillCheckFailed = errors.New("check day autofill failed")
+	ErrDayAutoFillApplyFailed = errors.New("apply day autofill failed")
+	ErrDeleteDayFailed        = errors.New("delete day failed")
+	ErrSyncLastPeriodFailed   = errors.New("sync last period failed")
 )
 
 type DayEntryInput struct {
@@ -137,6 +141,47 @@ func (service *DayService) UpsertDayEntry(userID uint, dayStart time.Time, paylo
 		return models.DailyLog{}, false, ErrDayEntryCreateFailed
 	}
 	return entry, false, nil
+}
+
+func (service *DayService) UpsertDayEntryWithAutoFill(userID uint, day time.Time, payload DayEntryInput, location *time.Location) (models.DailyLog, error) {
+	normalized, err := NormalizeDayEntryInput(payload)
+	if err != nil {
+		return models.DailyLog{}, err
+	}
+
+	dayStart, _ := DayRange(day, location)
+	autoPeriodFillEnabled := false
+	periodLength := models.DefaultPeriodLength
+
+	if normalized.IsPeriod {
+		periodLength, autoPeriodFillEnabled, err = service.LoadAutoFillSettings(userID)
+		if err != nil {
+			return models.DailyLog{}, fmt.Errorf("%w: %v", ErrDayAutoFillLoadFailed, err)
+		}
+	}
+
+	entry, wasPeriod, err := service.UpsertDayEntry(userID, dayStart, normalized, location)
+	if err != nil {
+		return models.DailyLog{}, err
+	}
+
+	if normalized.IsPeriod {
+		shouldAutoFill, err := service.ShouldAutoFillPeriodDays(userID, dayStart, wasPeriod, autoPeriodFillEnabled, periodLength, location)
+		if err != nil {
+			return models.DailyLog{}, fmt.Errorf("%w: %v", ErrDayAutoFillCheckFailed, err)
+		}
+		if shouldAutoFill {
+			if err := service.AutoFillFollowingPeriodDays(userID, dayStart, periodLength, normalized.Flow, location); err != nil {
+				return models.DailyLog{}, fmt.Errorf("%w: %v", ErrDayAutoFillApplyFailed, err)
+			}
+		}
+	}
+
+	if err := service.RefreshUserLastPeriodStart(userID, location); err != nil {
+		return models.DailyLog{}, fmt.Errorf("%w: %v", ErrSyncLastPeriodFailed, err)
+	}
+
+	return entry, nil
 }
 
 func (service *DayService) DeleteDayAndRefreshLastPeriod(userID uint, day time.Time, location *time.Location) error {

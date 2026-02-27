@@ -23,9 +23,7 @@ func betweenCalendarDaysInclusive(day time.Time, start time.Time, end time.Time)
 }
 
 func sanitizeLogForPartner(entry models.DailyLog) models.DailyLog {
-	entry.Notes = ""
-	entry.SymptomIDs = []uint{}
-	return entry
+	return services.SanitizeLogForPartner(entry)
 }
 
 func dateAtLocation(value time.Time, location *time.Location) time.Time {
