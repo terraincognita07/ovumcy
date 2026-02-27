@@ -70,7 +70,8 @@ const (
 )
 
 type passwordResetClaims struct {
-	UserID  uint   `json:"uid"`
-	Purpose string `json:"purpose"`
+	UserID        uint   `json:"uid"`
+	Purpose       string `json:"purpose"`
+	PasswordState string `json:"password_state"`
 	jwt.RegisteredClaims
 }

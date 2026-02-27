@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -41,10 +40,9 @@ func parseResetPasswordInput(c *fiber.Ctx) (resetPasswordInput, string) {
 		return resetPasswordInput{}, "invalid input"
 	}
 
-	input.Token = strings.TrimSpace(input.Token)
 	input.Password = strings.TrimSpace(input.Password)
 	input.ConfirmPassword = strings.TrimSpace(input.ConfirmPassword)
-	if input.Token == "" || input.Password == "" || input.ConfirmPassword == "" {
+	if input.Password == "" || input.ConfirmPassword == "" {
 		return resetPasswordInput{}, "invalid input"
 	}
 	if input.Password != input.ConfirmPassword {
@@ -57,12 +55,8 @@ func parseResetPasswordInput(c *fiber.Ctx) (resetPasswordInput, string) {
 	return input, ""
 }
 
-func buildResetPasswordPath(token string, forced bool) string {
-	path := "/reset-password?token=" + url.QueryEscape(token)
-	if forced {
-		return path + "&forced=1"
-	}
-	return path
+func buildResetPasswordPath() string {
+	return "/reset-password"
 }
 
 func redirectToPath(c *fiber.Ctx, path string) error {
@@ -74,14 +68,17 @@ func redirectToPath(c *fiber.Ctx, path string) error {
 }
 
 func (handler *Handler) lookupUserByResetToken(token string) (*models.User, error) {
-	userID, err := handler.parsePasswordResetToken(token)
+	claims, err := handler.parsePasswordResetToken(token)
 	if err != nil {
 		return nil, errors.New("invalid reset token")
 	}
 
 	handler.ensureDependencies()
-	user, err := handler.authService.FindByID(userID)
+	user, err := handler.authService.FindByID(claims.UserID)
 	if err != nil {
+		return nil, errors.New("invalid reset token")
+	}
+	if !isPasswordStateFingerprintMatch(claims.PasswordState, user.PasswordHash) {
 		return nil, errors.New("invalid reset token")
 	}
 	return &user, nil

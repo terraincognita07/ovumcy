@@ -3,20 +3,23 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 )
 
-func TestAuthLogoutSupportsGetRequest(t *testing.T) {
+func TestAuthLogoutSupportsPostRequest(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "logout-get@example.com", "StrongPass1", true)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
-	request := httptest.NewRequest(http.MethodGet, "/api/auth/logout", nil)
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", strings.NewReader(url.Values{}.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Cookie", authCookie)
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("logout GET request failed: %v", err)
+		t.Fatalf("logout POST request failed: %v", err)
 	}
 	defer response.Body.Close()
 
@@ -28,17 +31,18 @@ func TestAuthLogoutSupportsGetRequest(t *testing.T) {
 	}
 }
 
-func TestLogoutPageRouteRedirectsToLogin(t *testing.T) {
+func TestLogoutPageRoutePostRedirectsToLoginAndClearsAuthCookies(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
 	user := createOnboardingTestUser(t, database, "logout-page-route@example.com", "StrongPass1", true)
 	authCookie := loginAndExtractAuthCookie(t, app, user.Email, "StrongPass1")
 
-	request := httptest.NewRequest(http.MethodGet, "/logout", nil)
-	request.Header.Set("Cookie", authCookie)
+	request := httptest.NewRequest(http.MethodPost, "/logout", strings.NewReader(url.Values{}.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Cookie", authCookie+"; "+recoveryCodeCookieName+"=temporary-recovery")
 
 	response, err := app.Test(request, -1)
 	if err != nil {
-		t.Fatalf("logout page route request failed: %v", err)
+		t.Fatalf("logout page route POST request failed: %v", err)
 	}
 	defer response.Body.Close()
 
@@ -55,5 +59,13 @@ func TestLogoutPageRouteRedirectsToLogin(t *testing.T) {
 	}
 	if authCookieAfterLogout.Value != "" {
 		t.Fatalf("expected cleared auth cookie value, got %q", authCookieAfterLogout.Value)
+	}
+
+	recoveryCookieAfterLogout := responseCookie(response.Cookies(), recoveryCodeCookieName)
+	if recoveryCookieAfterLogout == nil {
+		t.Fatalf("expected logout response to clear recovery code cookie")
+	}
+	if recoveryCookieAfterLogout.Value != "" {
+		t.Fatalf("expected cleared recovery code cookie value, got %q", recoveryCookieAfterLogout.Value)
 	}
 }

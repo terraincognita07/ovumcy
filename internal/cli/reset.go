@@ -1,19 +1,27 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/mail"
+	"os"
 	"strings"
 
 	"github.com/terraincognita07/ovumcy/internal/db"
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"github.com/terraincognita07/ovumcy/internal/security"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 func RunResetPasswordCommand(dbPath string, email string) error {
+	return runResetPasswordCommand(dbPath, email, promptNewPassword, os.Stdout)
+}
+
+type passwordPromptFunc func() ([]byte, error)
+
+func runResetPasswordCommand(dbPath string, email string, prompt passwordPromptFunc, output io.Writer) error {
 	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
 	if normalizedEmail == "" {
 		return errors.New("email is required")
@@ -26,6 +34,13 @@ func RunResetPasswordCommand(dbPath string, email string) error {
 	if err != nil {
 		return fmt.Errorf("database init failed: %w", err)
 	}
+	sqlDB, err := database.DB()
+	if err != nil {
+		return fmt.Errorf("database init failed: %w", err)
+	}
+	defer func() {
+		_ = sqlDB.Close()
+	}()
 
 	var user models.User
 	if err := database.Where("email = ?", normalizedEmail).First(&user).Error; err != nil {
@@ -35,14 +50,22 @@ func RunResetPasswordCommand(dbPath string, email string) error {
 		return fmt.Errorf("load user: %w", err)
 	}
 
-	temporaryPassword, err := generateTemporaryPassword(12)
-	if err != nil {
-		return fmt.Errorf("generate temporary password: %w", err)
+	if prompt == nil {
+		return errors.New("password prompt is required")
 	}
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(temporaryPassword), bcrypt.DefaultCost)
+	newPassword, err := prompt()
 	if err != nil {
-		return fmt.Errorf("hash temporary password: %w", err)
+		return fmt.Errorf("read new password: %w", err)
+	}
+	defer clear(newPassword)
+	if len(newPassword) == 0 {
+		return errors.New("password is required")
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword(newPassword, bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
 	}
 
 	user.PasswordHash = string(passwordHash)
@@ -51,18 +74,49 @@ func RunResetPasswordCommand(dbPath string, email string) error {
 		return fmt.Errorf("update user password: %w", err)
 	}
 
-	fmt.Println("✅ Password reset successful")
-	fmt.Printf("Temporary password: %s\n", temporaryPassword)
-	fmt.Println("User must change password on next login.")
+	if output == nil {
+		output = os.Stdout
+	}
+	fmt.Fprintln(output, "✅ Password reset successful")
+	fmt.Fprintln(output, "User must change password on next login.")
 
 	return nil
 }
 
-func generateTemporaryPassword(length int) (string, error) {
-	if length < 8 {
-		length = 8
+func promptNewPassword() ([]byte, error) {
+	password, err := readPasswordFromTerminal("Enter new password: ")
+	if err != nil {
+		return nil, err
+	}
+	defer clear(password)
+
+	confirm, err := readPasswordFromTerminal("Confirm new password: ")
+	if err != nil {
+		return nil, err
+	}
+	defer clear(confirm)
+
+	if len(bytes.TrimSpace(password)) == 0 || len(bytes.TrimSpace(confirm)) == 0 {
+		return nil, errors.New("password is required")
+	}
+	if !bytes.Equal(password, confirm) {
+		return nil, errors.New("password confirmation does not match")
 	}
 
-	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-	return security.RandomString(length, alphabet)
+	result := make([]byte, len(password))
+	copy(result, password)
+	return result, nil
+}
+
+func readPasswordFromTerminal(prompt string) ([]byte, error) {
+	if strings.TrimSpace(prompt) != "" {
+		fmt.Fprint(os.Stdout, prompt)
+	}
+
+	password, err := readPasswordNoEcho(os.Stdin)
+	fmt.Fprintln(os.Stdout)
+	if err != nil {
+		return nil, errors.New("secure password prompt requires an interactive terminal")
+	}
+	return password, nil
 }

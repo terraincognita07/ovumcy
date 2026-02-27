@@ -6,13 +6,14 @@ import (
 )
 
 const (
-	authCookieName         = "ovumcy_auth"
-	languageCookieName     = "ovumcy_lang"
-	flashCookieName        = "ovumcy_flash"
-	recoveryCodeCookieName = "ovumcy_recovery_code"
-	contextUserKey         = "current_user"
-	contextLanguageKey     = "current_language"
-	contextMessagesKey     = "current_messages"
+	authCookieName          = "ovumcy_auth"
+	languageCookieName      = "ovumcy_lang"
+	flashCookieName         = "ovumcy_flash"
+	recoveryCodeCookieName  = "ovumcy_recovery_code"
+	resetPasswordCookieName = "ovumcy_reset_password"
+	contextUserKey          = "current_user"
+	contextLanguageKey      = "current_language"
+	contextMessagesKey      = "current_messages"
 )
 
 func currentUser(c *fiber.Ctx) (*models.User, bool) {

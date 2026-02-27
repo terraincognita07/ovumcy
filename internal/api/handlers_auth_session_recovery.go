@@ -29,20 +29,20 @@ func (handler *Handler) ForgotPassword(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid recovery code")
 	}
 
-	token, err := handler.buildPasswordResetToken(user.ID, 30*time.Minute)
+	token, err := handler.buildPasswordResetToken(user.ID, user.PasswordHash, 30*time.Minute)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create reset token")
 	}
+	handler.setResetPasswordCookie(c, token, false)
 	handler.recoveryLimiter.reset(limiterKey)
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{
-			"ok":          true,
-			"reset_token": token,
+			"ok": true,
 		})
 	}
 
-	return redirectToPath(c, buildResetPasswordPath(token, false))
+	return redirectToPath(c, buildResetPasswordPath())
 }
 
 func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
@@ -51,8 +51,15 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, parseError)
 	}
 
-	user, err := handler.lookupUserByResetToken(input.Token)
+	token, _ := handler.readResetPasswordCookie(c)
+	if token == "" {
+		handler.clearResetPasswordCookie(c)
+		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
+	}
+
+	user, err := handler.lookupUserByResetToken(token)
 	if err != nil {
+		handler.clearResetPasswordCookie(c)
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
 	}
 
@@ -76,6 +83,7 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 	if err := handler.setAuthCookie(c, user, true); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to create session")
 	}
+	handler.clearResetPasswordCookie(c)
 
 	return handler.renderRecoveryCodeResponse(c, user, recoveryCode, fiber.StatusOK)
 }

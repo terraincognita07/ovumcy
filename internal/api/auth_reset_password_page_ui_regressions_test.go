@@ -39,11 +39,16 @@ func TestResetPasswordPageShowsPasswordTogglesAndBackToLoginLink(t *testing.T) {
 		t.Fatalf("expected forgot-password status 303, got %d", forgotResponse.StatusCode)
 	}
 	location := forgotResponse.Header.Get("Location")
-	if !strings.HasPrefix(location, "/reset-password?token=") {
-		t.Fatalf("expected redirect to reset password page with token, got %q", location)
+	if location != "/reset-password" {
+		t.Fatalf("expected redirect to /reset-password, got %q", location)
+	}
+	resetCookie := responseCookieValue(forgotResponse.Cookies(), resetPasswordCookieName)
+	if strings.TrimSpace(resetCookie) == "" {
+		t.Fatalf("expected reset-password cookie in forgot-password response")
 	}
 
 	resetRequest := httptest.NewRequest(http.MethodGet, location, nil)
+	resetRequest.Header.Set("Cookie", resetPasswordCookieName+"="+resetCookie)
 	resetResponse, err := app.Test(resetRequest, -1)
 	if err != nil {
 		t.Fatalf("reset-password page request failed: %v", err)
@@ -61,6 +66,9 @@ func TestResetPasswordPageShowsPasswordTogglesAndBackToLoginLink(t *testing.T) {
 	rendered := string(body)
 	if strings.Count(rendered, `data-password-toggle`) < 2 {
 		t.Fatalf("expected password toggle buttons on both reset password fields")
+	}
+	if strings.Contains(rendered, `name="token"`) {
+		t.Fatalf("did not expect hidden reset token field in reset-password page")
 	}
 	if !strings.Contains(rendered, `href="/login"`) {
 		t.Fatalf("expected back-to-login link on reset password page")

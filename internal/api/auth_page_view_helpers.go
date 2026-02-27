@@ -48,17 +48,17 @@ func buildForgotPasswordPageData(c *fiber.Ctx, messages map[string]string, flash
 }
 
 func (handler *Handler) buildResetPasswordPageData(c *fiber.Ctx, messages map[string]string, flash FlashPayload) fiber.Map {
-	token := strings.TrimSpace(c.Query("token"))
+	token, forcedReset := handler.readResetPasswordCookie(c)
 	invalidToken := false
 	if _, err := handler.parsePasswordResetToken(token); err != nil {
 		invalidToken = true
+		handler.clearResetPasswordCookie(c)
 	}
 
 	return fiber.Map{
 		"Title":        localizedPageTitle(messages, "meta.title.reset_password", "Ovumcy | Reset Password"),
-		"Token":        token,
 		"InvalidToken": invalidToken,
-		"ForcedReset":  parseBoolValue(c.Query("forced")),
+		"ForcedReset":  forcedReset,
 		"ErrorKey":     authErrorKeyFromFlashOrQuery(c, flash.AuthError),
 	}
 }

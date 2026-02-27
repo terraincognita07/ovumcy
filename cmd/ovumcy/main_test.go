@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/terraincognita07/ovumcy/internal/api"
 )
 
@@ -160,4 +163,132 @@ func testResponseCookie(cookies []*http.Cookie, name string) *http.Cookie {
 		}
 	}
 	return nil
+}
+
+func TestDefaultRequestLoggerDoesNotLogQueryPII(t *testing.T) {
+	var output bytes.Buffer
+	app := fiber.New()
+	app.Use(logger.New(logger.Config{
+		Output: &output,
+	}))
+	app.Get("/reset-password", func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusNoContent)
+	})
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/reset-password?token=plain-reset-token&email=user@example.com",
+		nil,
+	)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", response.StatusCode)
+	}
+
+	logLine := output.String()
+	if !strings.Contains(logLine, "/reset-password") {
+		t.Fatalf("expected request path in logs, got %q", logLine)
+	}
+	if strings.Contains(logLine, "plain-reset-token") {
+		t.Fatalf("did not expect reset token in request logs: %q", logLine)
+	}
+	if strings.Contains(logLine, "user@example.com") {
+		t.Fatalf("did not expect email in request logs: %q", logLine)
+	}
+}
+
+func TestDefaultRequestLoggerDoesNotLogFormSecrets(t *testing.T) {
+	const plaintextPassword = "PlaintextPassword123!"
+	const plaintextToken = "plain-reset-token"
+
+	var output bytes.Buffer
+	app := fiber.New()
+	app.Use(logger.New(logger.Config{
+		Output: &output,
+	}))
+	app.Post("/api/auth/reset-password", func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusNoContent)
+	})
+
+	form := "password=PlaintextPassword123%21&confirm_password=PlaintextPassword123%21&token=plain-reset-token"
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/auth/reset-password",
+		strings.NewReader(form),
+	)
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", response.StatusCode)
+	}
+
+	logLine := output.String()
+	if !strings.Contains(logLine, "/api/auth/reset-password") {
+		t.Fatalf("expected request path in logs, got %q", logLine)
+	}
+	if strings.Contains(logLine, plaintextPassword) {
+		t.Fatalf("did not expect plaintext password in request logs: %q", logLine)
+	}
+	if strings.Contains(logLine, plaintextToken) {
+		t.Fatalf("did not expect reset token in request logs: %q", logLine)
+	}
+}
+
+func TestRateLimitLogDoesNotLogQueryPII(t *testing.T) {
+	originalWriter := log.Writer()
+	defer log.SetOutput(originalWriter)
+
+	var output bytes.Buffer
+	log.SetOutput(&output)
+
+	const plaintextPassword = "PlaintextPassword123!"
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		logRateLimitHit(c)
+		return c.SendStatus(http.StatusTooManyRequests)
+	})
+
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/auth/forgot-password?token=plain-reset-token&email=user@example.com",
+		strings.NewReader("email=user@example.com&password=PlaintextPassword123%21&token=plain-reset-token"),
+	)
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("rate limit request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected status 429, got %d", response.StatusCode)
+	}
+
+	logLine := output.String()
+	if !strings.Contains(logLine, "path=/api/auth/forgot-password") {
+		t.Fatalf("expected path without query string in rate-limit logs, got %q", logLine)
+	}
+	if strings.Contains(logLine, "plain-reset-token") {
+		t.Fatalf("did not expect reset token in rate-limit logs: %q", logLine)
+	}
+	if strings.Contains(logLine, "user@example.com") {
+		t.Fatalf("did not expect email in rate-limit logs: %q", logLine)
+	}
+	if strings.Contains(logLine, plaintextPassword) {
+		t.Fatalf("did not expect plaintext password in rate-limit logs: %q", logLine)
+	}
 }

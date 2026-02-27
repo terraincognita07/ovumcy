@@ -1,6 +1,9 @@
 package api
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -10,15 +13,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (handler *Handler) buildPasswordResetToken(userID uint, ttl time.Duration) (string, error) {
+func (handler *Handler) buildPasswordResetToken(userID uint, passwordHash string, ttl time.Duration) (string, error) {
 	if ttl <= 0 {
 		ttl = 30 * time.Minute
+	}
+	passwordState := passwordStateFingerprint(passwordHash)
+	if passwordState == "" {
+		return "", errors.New("invalid password state")
 	}
 
 	now := time.Now()
 	claims := passwordResetClaims{
-		UserID:  userID,
-		Purpose: "password_reset",
+		UserID:        userID,
+		Purpose:       "password_reset",
+		PasswordState: passwordState,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.FormatUint(uint64(userID), 10),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
@@ -30,9 +38,9 @@ func (handler *Handler) buildPasswordResetToken(userID uint, ttl time.Duration) 
 	return token.SignedString(handler.secretKey)
 }
 
-func (handler *Handler) parsePasswordResetToken(rawToken string) (uint, error) {
+func (handler *Handler) parsePasswordResetToken(rawToken string) (*passwordResetClaims, error) {
 	if strings.TrimSpace(rawToken) == "" {
-		return 0, errors.New("missing token")
+		return nil, errors.New("missing token")
 	}
 
 	claims := &passwordResetClaims{}
@@ -43,16 +51,37 @@ func (handler *Handler) parsePasswordResetToken(rawToken string) (uint, error) {
 		return handler.secretKey, nil
 	})
 	if err != nil || !token.Valid {
-		return 0, errors.New("invalid token")
+		return nil, errors.New("invalid token")
 	}
 	if claims.Purpose != "password_reset" {
-		return 0, errors.New("invalid token purpose")
+		return nil, errors.New("invalid token purpose")
 	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
-		return 0, errors.New("token expired")
+		return nil, errors.New("token expired")
 	}
 	if claims.UserID == 0 {
-		return 0, errors.New("invalid user id")
+		return nil, errors.New("invalid user id")
 	}
-	return claims.UserID, nil
+	if strings.TrimSpace(claims.PasswordState) == "" {
+		return nil, errors.New("invalid password state")
+	}
+	return claims, nil
+}
+
+func passwordStateFingerprint(passwordHash string) string {
+	normalizedHash := strings.TrimSpace(passwordHash)
+	if normalizedHash == "" {
+		return ""
+	}
+
+	sum := sha256.Sum256([]byte("ovumcy.reset.password-state.v1:" + normalizedHash))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+func isPasswordStateFingerprintMatch(expected string, passwordHash string) bool {
+	actual := passwordStateFingerprint(passwordHash)
+	if strings.TrimSpace(expected) == "" || strings.TrimSpace(actual) == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(actual)) == 1
 }

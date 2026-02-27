@@ -58,7 +58,8 @@
           </div>
           <span class="nav-divider" aria-hidden="true"></span>
 
-          <form action="/api/auth/logout" method="get" class="nav-logout-form" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
+          <form action="/api/auth/logout" method="post" class="nav-logout-form" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit" class="nav-link nav-link-logout">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
@@ -69,7 +70,8 @@
           <a href="/calendar" class="nav-link block {{if isActiveRoute .CurrentPath "/calendar"}}nav-link-active{{end}}">{{t .Messages "nav.calendar"}}</a>
           <a href="/stats" class="nav-link block {{if isActiveRoute .CurrentPath "/stats"}}nav-link-active{{end}}">{{t .Messages "nav.stats"}}</a>
           <a href="/settings" class="nav-link block {{if isActiveRoute .CurrentPath "/settings"}}nav-link-active{{end}}">{{t .Messages "nav.settings"}}</a>
-          <form action="/api/auth/logout" method="get" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
+          <form action="/api/auth/logout" method="post" data-confirm="{{t .Messages "auth.confirm_logout"}}" data-confirm-accept="{{t .Messages "nav.logout"}}">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit" class="nav-link nav-link-logout w-full text-left">{{t .Messages "nav.logout"}}</button>
           </form>
         </nav>
@@ -281,7 +283,6 @@
   {{end}}
 </div>
 {{end}}
-
 
 
 

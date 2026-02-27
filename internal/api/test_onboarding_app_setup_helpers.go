@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/terraincognita07/ovumcy/internal/db"
 	"github.com/terraincognita07/ovumcy/internal/i18n"
 	"gorm.io/gorm"
@@ -14,10 +15,20 @@ import (
 
 func newOnboardingTestApp(t *testing.T) (*fiber.App, *gorm.DB) {
 	t.Helper()
-	return newOnboardingTestAppWithCookieSecure(t, false)
+	return newOnboardingTestAppWithCookieSecureAndCSRF(t, false, false)
 }
 
 func newOnboardingTestAppWithCookieSecure(t *testing.T, cookieSecure bool) (*fiber.App, *gorm.DB) {
+	t.Helper()
+	return newOnboardingTestAppWithCookieSecureAndCSRF(t, cookieSecure, false)
+}
+
+func newOnboardingTestAppWithCSRF(t *testing.T) (*fiber.App, *gorm.DB) {
+	t.Helper()
+	return newOnboardingTestAppWithCookieSecureAndCSRF(t, false, true)
+}
+
+func newOnboardingTestAppWithCookieSecureAndCSRF(t *testing.T, cookieSecure bool, enableCSRF bool) (*fiber.App, *gorm.DB) {
 	t.Helper()
 
 	_, testFile, _, ok := runtime.Caller(0)
@@ -55,7 +66,21 @@ func newOnboardingTestAppWithCookieSecure(t *testing.T, cookieSecure bool) (*fib
 
 	app := fiber.New()
 	app.Use(handler.LanguageMiddleware)
+	if enableCSRF {
+		app.Use(csrf.New(testCSRFMiddlewareConfig(cookieSecure)))
+	}
 	RegisterRoutes(app, handler)
 	app.Use(handler.NotFound)
 	return app, database
+}
+
+func testCSRFMiddlewareConfig(cookieSecure bool) csrf.Config {
+	return csrf.Config{
+		KeyLookup:      "form:csrf_token",
+		CookieName:     "ovumcy_csrf",
+		CookieSameSite: "Lax",
+		CookieHTTPOnly: true,
+		CookieSecure:   cookieSecure,
+		ContextKey:     "csrf",
+	}
 }

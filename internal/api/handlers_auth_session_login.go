@@ -78,18 +78,17 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 	}
 
 	if user.MustChangePassword {
-		token, err := handler.buildPasswordResetToken(user.ID, 30*time.Minute)
+		token, err := handler.buildPasswordResetToken(user.ID, user.PasswordHash, 30*time.Minute)
 		if err != nil {
 			return apiError(c, fiber.StatusInternalServerError, "failed to create reset token")
 		}
-		path := buildResetPasswordPath(token, true)
+		handler.setResetPasswordCookie(c, token, true)
 		if acceptsJSON(c) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error":       "password change required",
-				"reset_token": token,
+				"error": "password change required",
 			})
 		}
-		return redirectToPath(c, path)
+		return redirectToPath(c, buildResetPasswordPath())
 	}
 
 	if err := handler.setAuthCookie(c, &user, credentials.RememberMe); err != nil {
@@ -102,6 +101,7 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 func (handler *Handler) Logout(c *fiber.Ctx) error {
 	handler.clearAuthCookie(c)
 	handler.clearRecoveryCodePageCookie(c)
+	handler.clearResetPasswordCookie(c)
 	if isHTMX(c) {
 		c.Set("HX-Redirect", "/login")
 		return c.SendStatus(fiber.StatusOK)

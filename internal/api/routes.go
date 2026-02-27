@@ -17,7 +17,7 @@ func registerPageRoutes(app *fiber.App, handler *Handler) {
 	app.Get("/recovery-code", handler.ShowRecoveryCodePage)
 	app.Get("/forgot-password", handler.ShowForgotPasswordPage)
 	app.Get("/reset-password", handler.ShowResetPasswordPage)
-	app.Get("/logout", handler.Logout)
+	app.Post("/logout", handler.AuthRequired, handler.Logout)
 	app.Get("/privacy", handler.ShowPrivacyPage)
 	app.Get("/onboarding", handler.AuthRequired, handler.ShowOnboarding)
 	app.Post("/onboarding/step1", handler.AuthRequired, handler.OnboardingStep1)
@@ -37,7 +37,7 @@ func registerAPIRoutes(app *fiber.App, handler *Handler) {
 
 	auth := api.Group("/auth")
 	auth.Get("/setup-status", handler.SetupStatus)
-	auth.Get("/logout", handler.AuthRequired, handler.Logout)
+	auth.Post("/logout", handler.AuthRequired, handler.Logout)
 	auth.Post("/register", handler.Register)
 	auth.Post("/login", handler.Login)
 	auth.Post("/forgot-password", handler.ForgotPassword)

@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,13 +18,21 @@ type authClaims struct {
 }
 
 func (handler *Handler) authenticateRequest(c *fiber.Ctx) (*models.User, error) {
-	rawToken := c.Cookies(authCookieName)
+	rawToken := strings.TrimSpace(c.Cookies(authCookieName))
 	if rawToken == "" {
 		return nil, errors.New("missing auth cookie")
 	}
+	tokenValue := rawToken
+	if strings.HasPrefix(rawToken, secureCookieVersion+".") {
+		decodedToken, err := handler.decodeSealedAuthCookieToken(rawToken)
+		if err != nil {
+			return nil, errors.New("invalid token")
+		}
+		tokenValue = decodedToken
+	}
 
 	claims := &authClaims{}
-	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenValue, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}

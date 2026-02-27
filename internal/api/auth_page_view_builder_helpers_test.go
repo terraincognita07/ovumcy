@@ -12,6 +12,11 @@ import (
 
 func evaluateAuthPageBuilder(t *testing.T, query url.Values, handler fiber.Handler) map[string]any {
 	t.Helper()
+	return evaluateAuthPageBuilderWithCookie(t, query, "", handler)
+}
+
+func evaluateAuthPageBuilderWithCookie(t *testing.T, query url.Values, cookieHeader string, handler fiber.Handler) map[string]any {
+	t.Helper()
 
 	app := fiber.New()
 	app.Get("/", handler)
@@ -21,6 +26,9 @@ func evaluateAuthPageBuilder(t *testing.T, query url.Values, handler fiber.Handl
 		requestPath += "?" + encoded
 	}
 	request := httptest.NewRequest(http.MethodGet, requestPath, nil)
+	if cookieHeader != "" {
+		request.Header.Set("Cookie", cookieHeader)
+	}
 	response, err := app.Test(request)
 	if err != nil {
 		t.Fatalf("app test failed: %v", err)

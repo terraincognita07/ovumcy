@@ -35,8 +35,11 @@ func TestDashboardLogoutFormsRequireConfirmation(t *testing.T) {
 	if strings.Count(rendered, `action="/api/auth/logout"`) < 2 {
 		t.Fatalf("expected desktop and mobile logout forms")
 	}
-	if strings.Count(rendered, `action="/api/auth/logout" method="get"`) < 2 {
-		t.Fatalf("expected logout forms to use GET method to avoid CSRF-only POST failures")
+	if strings.Count(rendered, `action="/api/auth/logout" method="post"`) < 2 {
+		t.Fatalf("expected logout forms to use POST method")
+	}
+	if strings.Count(rendered, `name="csrf_token" value="`) < 2 {
+		t.Fatalf("expected csrf token hidden fields on both logout forms")
 	}
 	if strings.Count(rendered, `data-confirm="Log out of your account now?"`) < 2 {
 		t.Fatalf("expected confirmation attribute for both logout forms")

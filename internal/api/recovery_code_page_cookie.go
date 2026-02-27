@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"time"
@@ -34,7 +33,14 @@ func (handler *Handler) setRecoveryCodePageCookie(c *fiber.Ctx, userID uint, rec
 	if err != nil {
 		return
 	}
-	encoded := base64.RawURLEncoding.EncodeToString(serialized)
+	codec, err := newSecureCookieCodec(handler.secretKey)
+	if err != nil {
+		return
+	}
+	encoded, err := codec.seal(recoveryCodeCookieName, serialized)
+	if err != nil {
+		return
+	}
 
 	c.Cookie(&fiber.Cookie{
 		Name:     recoveryCodeCookieName,
@@ -54,7 +60,13 @@ func (handler *Handler) readRecoveryCodePageCookie(c *fiber.Ctx, userID uint, fa
 		return "", fallback
 	}
 
-	decoded, err := base64.RawURLEncoding.DecodeString(raw)
+	codec, err := newSecureCookieCodec(handler.secretKey)
+	if err != nil {
+		handler.clearRecoveryCodePageCookie(c)
+		return "", fallback
+	}
+
+	decoded, err := codec.open(recoveryCodeCookieName, raw)
 	if err != nil {
 		handler.clearRecoveryCodePageCookie(c)
 		return "", fallback

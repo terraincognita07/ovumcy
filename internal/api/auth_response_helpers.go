@@ -31,15 +31,8 @@ func (handler *Handler) respondAuthError(c *fiber.Ctx, status int, message strin
 			handler.setFlashCookie(c, flash)
 			return c.Redirect("/forgot-password", fiber.StatusSeeOther)
 		case "/api/auth/reset-password":
-			token := strings.TrimSpace(c.FormValue("token"))
-			if token == "" {
-				token = strings.TrimSpace(c.Query("token"))
-			}
 			handler.setFlashCookie(c, flash)
-			if token == "" {
-				return c.Redirect("/reset-password", fiber.StatusSeeOther)
-			}
-			return c.Redirect("/reset-password?token="+url.QueryEscape(token), fiber.StatusSeeOther)
+			return c.Redirect("/reset-password", fiber.StatusSeeOther)
 		default:
 			handler.setFlashCookie(c, flash)
 			return c.Redirect("/login", fiber.StatusSeeOther)

@@ -25,7 +25,6 @@ type forgotPasswordInput struct {
 }
 
 type resetPasswordInput struct {
-	Token           string `json:"token" form:"token"`
 	Password        string `json:"password" form:"password"`
 	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
 }

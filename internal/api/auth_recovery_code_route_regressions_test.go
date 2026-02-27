@@ -1,11 +1,13 @@
 package api
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func TestRecoveryCodePageRedirectsToDashboardWhenCookieMissing(t *testing.T) {
@@ -32,23 +34,21 @@ func TestRecoveryCodePageRedirectsToDashboardWhenCookieMissing(t *testing.T) {
 
 func TestRecoveryCodePageRejectsCookieFromDifferentUser(t *testing.T) {
 	app, database := newOnboardingTestApp(t)
-	userA := createOnboardingTestUser(t, database, "recovery-cookie-user-a@example.com", "StrongPass1", true)
 	userB := createOnboardingTestUser(t, database, "recovery-cookie-user-b@example.com", "StrongPass1", true)
 	authCookieUserB := loginAndExtractAuthCookie(t, app, userB.Email, "StrongPass1")
+	_, recoveryCookieUserA := registerAndExtractRecoveryCookies(
+		t,
+		app,
+		"recovery-cookie-user-a@example.com",
+		"StrongPass1",
+	)
 
-	payload := recoveryCodePagePayload{
-		UserID:       userA.ID,
-		RecoveryCode: "OVUM-TEST-CODE-1234",
-		ContinuePath: "/dashboard",
+	if recoveryCookieUserA == "" {
+		t.Fatalf("expected recovery cookie for user A")
 	}
-	serialized, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal recovery payload: %v", err)
-	}
-	encoded := base64.RawURLEncoding.EncodeToString(serialized)
 
 	request := httptest.NewRequest(http.MethodGet, "/recovery-code", nil)
-	request.Header.Set("Cookie", authCookieUserB+"; "+recoveryCodeCookieName+"="+encoded)
+	request.Header.Set("Cookie", authCookieUserB+"; "+recoveryCodeCookieName+"="+recoveryCookieUserA)
 
 	response, err := app.Test(request, -1)
 	if err != nil {
@@ -70,4 +70,73 @@ func TestRecoveryCodePageRejectsCookieFromDifferentUser(t *testing.T) {
 	if cleared.Value != "" {
 		t.Fatalf("expected cleared recovery cookie value, got %q", cleared.Value)
 	}
+}
+
+func TestRecoveryCodePageRejectsTamperedRecoveryCookie(t *testing.T) {
+	app, _ := newOnboardingTestApp(t)
+	authCookie, recoveryCookie := registerAndExtractRecoveryCookies(
+		t,
+		app,
+		"recovery-cookie-tampered@example.com",
+		"StrongPass1",
+	)
+
+	if authCookie == "" || recoveryCookie == "" {
+		t.Fatalf("expected auth and recovery cookies in register response")
+	}
+
+	tampered := recoveryCookie[:len(recoveryCookie)-1] + "A"
+	if strings.HasSuffix(recoveryCookie, "A") {
+		tampered = recoveryCookie[:len(recoveryCookie)-1] + "B"
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/recovery-code", nil)
+	request.Header.Set("Cookie", authCookieName+"="+authCookie+"; "+recoveryCodeCookieName+"="+tampered)
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("recovery-code request with tampered cookie failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected status 303, got %d", response.StatusCode)
+	}
+	if location := response.Header.Get("Location"); location != "/onboarding" {
+		t.Fatalf("expected redirect to /onboarding, got %q", location)
+	}
+
+	cleared := responseCookie(response.Cookies(), recoveryCodeCookieName)
+	if cleared == nil {
+		t.Fatalf("expected tampered recovery cookie to be cleared")
+	}
+	if cleared.Value != "" {
+		t.Fatalf("expected cleared recovery cookie value, got %q", cleared.Value)
+	}
+}
+
+func registerAndExtractRecoveryCookies(t *testing.T, app *fiber.App, email string, password string) (string, string) {
+	t.Helper()
+
+	form := url.Values{
+		"email":            {email},
+		"password":         {password},
+		"confirm_password": {password},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := app.Test(request, -1)
+	if err != nil {
+		t.Fatalf("register request failed: %v", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected register status 303, got %d", response.StatusCode)
+	}
+
+	authCookie := responseCookieValue(response.Cookies(), authCookieName)
+	recoveryCookie := responseCookieValue(response.Cookies(), recoveryCodeCookieName)
+	return authCookie, recoveryCookie
 }

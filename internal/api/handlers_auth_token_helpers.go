@@ -1,7 +1,9 @@
 package api
 
 import (
+	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,10 +21,14 @@ func (handler *Handler) setAuthCookie(c *fiber.Ctx, user *models.User, rememberM
 	if err != nil {
 		return err
 	}
+	encodedToken, err := handler.encodeAuthCookieToken(token)
+	if err != nil {
+		return err
+	}
 
 	cookie := &fiber.Cookie{
 		Name:     authCookieName,
-		Value:    token,
+		Value:    encodedToken,
 		Path:     "/",
 		HTTPOnly: true,
 		Secure:   handler.cookieSecure,
@@ -65,4 +71,35 @@ func (handler *Handler) buildToken(user *models.User, ttl time.Duration) (string
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(handler.secretKey)
+}
+
+func (handler *Handler) encodeAuthCookieToken(rawToken string) (string, error) {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return "", errors.New("auth token is required")
+	}
+
+	codec, err := newSecureCookieCodec(handler.secretKey)
+	if err != nil {
+		return "", err
+	}
+	return codec.seal(authCookieName, []byte(rawToken))
+}
+
+func (handler *Handler) decodeSealedAuthCookieToken(rawValue string) (string, error) {
+	codec, err := newSecureCookieCodec(handler.secretKey)
+	if err != nil {
+		return "", err
+	}
+
+	plaintext, err := codec.open(authCookieName, rawValue)
+	if err != nil {
+		return "", err
+	}
+
+	token := strings.TrimSpace(string(plaintext))
+	if token == "" {
+		return "", errors.New("auth token is required")
+	}
+	return token, nil
 }

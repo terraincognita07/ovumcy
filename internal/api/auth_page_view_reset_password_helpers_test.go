@@ -1,7 +1,7 @@
 package api
 
 import (
-	"net/url"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -12,25 +12,20 @@ func TestBuildResetPasswordPageDataValidTokenAndForcedFlag(t *testing.T) {
 	t.Parallel()
 
 	handler := &Handler{secretKey: []byte("test-reset-secret")}
-	token, err := handler.buildPasswordResetToken(42, 30*time.Minute)
+	token, err := handler.buildPasswordResetToken(42, "$2a$10$testhashvaluefortokenclaims", 30*time.Minute)
 	if err != nil {
 		t.Fatalf("buildPasswordResetToken returned error: %v", err)
 	}
-
-	query := url.Values{
-		"token":  {token},
-		"forced": {"1"},
-		"error":  {"weak password"},
-	}
+	cookieHeader := mustBuildResetCookieHeader(t, handler.secretKey, resetPasswordCookiePayload{
+		Token:  token,
+		Forced: true,
+	})
 	flash := FlashPayload{AuthError: "invalid credentials"}
 
-	payload := evaluateAuthPageBuilder(t, query, func(c *fiber.Ctx) error {
+	payload := evaluateAuthPageBuilderWithCookie(t, nil, cookieHeader, func(c *fiber.Ctx) error {
 		return c.JSON(handler.buildResetPasswordPageData(c, map[string]string{}, flash))
 	})
 
-	if payload["Token"] != token {
-		t.Fatalf("expected token in payload, got %#v", payload["Token"])
-	}
 	if payload["InvalidToken"] != false {
 		t.Fatalf("expected InvalidToken=false, got %#v", payload["InvalidToken"])
 	}
@@ -46,15 +41,33 @@ func TestBuildResetPasswordPageDataMarksInvalidToken(t *testing.T) {
 	t.Parallel()
 
 	handler := &Handler{secretKey: []byte("test-reset-secret")}
-	query := url.Values{
-		"token": {"invalid-token"},
-	}
+	cookieHeader := mustBuildResetCookieHeader(t, handler.secretKey, resetPasswordCookiePayload{
+		Token: "invalid-token",
+	})
 
-	payload := evaluateAuthPageBuilder(t, query, func(c *fiber.Ctx) error {
+	payload := evaluateAuthPageBuilderWithCookie(t, nil, cookieHeader, func(c *fiber.Ctx) error {
 		return c.JSON(handler.buildResetPasswordPageData(c, map[string]string{}, FlashPayload{}))
 	})
 
 	if payload["InvalidToken"] != true {
 		t.Fatalf("expected InvalidToken=true, got %#v", payload["InvalidToken"])
 	}
+}
+
+func mustBuildResetCookieHeader(t *testing.T, secret []byte, payload resetPasswordCookiePayload) string {
+	t.Helper()
+
+	serialized, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal reset cookie payload: %v", err)
+	}
+	codec, err := newSecureCookieCodec(secret)
+	if err != nil {
+		t.Fatalf("new secure cookie codec: %v", err)
+	}
+	encoded, err := codec.seal(resetPasswordCookieName, serialized)
+	if err != nil {
+		t.Fatalf("seal reset cookie payload: %v", err)
+	}
+	return resetPasswordCookieName + "=" + encoded
 }
