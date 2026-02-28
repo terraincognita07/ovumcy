@@ -1,7 +1,10 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,9 +19,27 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, parseError)
 	}
 
-	validationStatus, validationError := validateChangePasswordInput(input, user)
-	if validationStatus != 0 {
-		return handler.respondSettingsError(c, validationStatus, validationError)
+	handler.ensureDependencies()
+	if err := handler.settingsService.ValidatePasswordChange(
+		user.PasswordHash,
+		input.CurrentPassword,
+		input.NewPassword,
+		input.ConfirmPassword,
+	); err != nil {
+		switch {
+		case errors.Is(err, services.ErrSettingsPasswordChangeInvalidInput):
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid settings input")
+		case errors.Is(err, services.ErrSettingsPasswordMismatch):
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "password mismatch")
+		case errors.Is(err, services.ErrSettingsInvalidCurrentPassword):
+			return handler.respondSettingsError(c, fiber.StatusUnauthorized, "invalid current password")
+		case errors.Is(err, services.ErrSettingsNewPasswordMustDiffer):
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "new password must differ")
+		case errors.Is(err, services.ErrSettingsWeakPassword):
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "weak password")
+		default:
+			return apiError(c, fiber.StatusInternalServerError, "failed to validate password")
+		}
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
@@ -26,7 +47,6 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
 	}
 
-	handler.ensureDependencies()
 	if err := handler.settingsService.UpdatePassword(user.ID, string(passwordHash), false); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update password")
 	}

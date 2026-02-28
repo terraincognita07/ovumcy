@@ -28,16 +28,3 @@ func parseCredentials(c *fiber.Ctx) (credentialsInput, error) {
 
 	return credentials, nil
 }
-
-func validatePasswordStrength(password string) error {
-	if !passwordLengthRegex.MatchString(password) {
-		return errors.New("password too short")
-	}
-
-	if passwordUpperRegex.MatchString(password) &&
-		passwordLowerRegex.MatchString(password) &&
-		passwordDigitRegex.MatchString(password) {
-		return nil
-	}
-	return errors.New("weak password")
-}

@@ -9,8 +9,3 @@ func isValidOnboardingCycleLength(value int) bool {
 func isValidOnboardingPeriodLength(value int) bool {
 	return services.IsValidOnboardingPeriodLength(value)
 }
-
-func canEstimateOvulation(cycleLength int, periodLength int) bool {
-	day, _ := services.CalcOvulationDay(cycleLength, periodLength)
-	return day > 0
-}

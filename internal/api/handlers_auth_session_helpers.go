@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func validateRegistrationCredentials(credentials credentialsInput) string {
@@ -15,7 +16,7 @@ func validateRegistrationCredentials(credentials credentialsInput) string {
 	if credentials.Password != credentials.ConfirmPassword {
 		return "password mismatch"
 	}
-	if err := validatePasswordStrength(credentials.Password); err != nil {
+	if err := services.ValidatePasswordStrength(credentials.Password); err != nil {
 		return "weak password"
 	}
 	return ""
@@ -48,7 +49,7 @@ func parseResetPasswordInput(c *fiber.Ctx) (resetPasswordInput, string) {
 	if input.Password != input.ConfirmPassword {
 		return resetPasswordInput{}, "password mismatch"
 	}
-	if err := validatePasswordStrength(input.Password); err != nil {
+	if err := services.ValidatePasswordStrength(input.Password); err != nil {
 		return resetPasswordInput{}, "weak password"
 	}
 

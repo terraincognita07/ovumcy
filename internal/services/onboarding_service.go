@@ -7,7 +7,11 @@ import (
 	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
-var ErrOnboardingStepsRequired = errors.New("complete onboarding steps first")
+var (
+	ErrOnboardingStepsRequired       = errors.New("complete onboarding steps first")
+	ErrOnboardingStartDateRequired   = errors.New("onboarding start date is required")
+	ErrOnboardingStartDateOutOfRange = errors.New("onboarding start date out of range")
+)
 
 type OnboardingUserRepository interface {
 	FindByID(userID uint) (models.User, error)
@@ -26,6 +30,20 @@ func NewOnboardingService(users OnboardingUserRepository) *OnboardingService {
 
 func (service *OnboardingService) SaveStep1(userID uint, valuesStart time.Time) error {
 	return service.users.SaveOnboardingStep1(userID, valuesStart)
+}
+
+func (service *OnboardingService) ValidateStep1StartDate(start time.Time, now time.Time, location *time.Location) error {
+	if start.IsZero() {
+		return ErrOnboardingStartDateRequired
+	}
+
+	minDate, maxDate := OnboardingDateBounds(now, location)
+	day := DateAtLocation(start, location)
+	if day.Before(minDate) || day.After(maxDate) {
+		return ErrOnboardingStartDateOutOfRange
+	}
+
+	return nil
 }
 
 func (service *OnboardingService) SaveStep2(userID uint, cycleLength int, periodLength int, autoPeriodFill bool) (int, int, error) {
@@ -93,4 +111,18 @@ func IsValidOnboardingCycleLength(value int) bool {
 
 func IsValidOnboardingPeriodLength(value int) bool {
 	return value >= 1 && value <= 14
+}
+
+func OnboardingDateBounds(now time.Time, location *time.Location) (time.Time, time.Time) {
+	if location == nil {
+		location = time.UTC
+	}
+
+	today := DateAtLocation(now.In(location), location)
+	minDate := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, location)
+	sixtyDaysAgo := today.AddDate(0, 0, -60)
+	if sixtyDaysAgo.After(minDate) {
+		minDate = sixtyDaysAgo
+	}
+	return minDate, today
 }

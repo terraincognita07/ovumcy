@@ -1,22 +1,22 @@
 package api
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/ovumcy/internal/models"
 	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
-func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInput, string) {
+func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (services.CycleSettingsUpdate, string) {
 	input := cycleSettingsInput{}
 
 	contentType := strings.ToLower(c.Get("Content-Type"))
 	if strings.Contains(contentType, "application/json") {
 		if err := c.BodyParser(&input); err != nil {
-			return cycleSettingsInput{}, "invalid settings input"
+			return services.CycleSettingsUpdate{}, "invalid settings input"
 		}
 		input.LastPeriodStart = strings.TrimSpace(input.LastPeriodStart)
 		if input.LastPeriodStart != "" {
@@ -25,11 +25,11 @@ func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInpu
 	} else {
 		cycleLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("cycle_length")))
 		if err != nil {
-			return cycleSettingsInput{}, "invalid settings input"
+			return services.CycleSettingsUpdate{}, "invalid settings input"
 		}
 		periodLength, err := strconv.Atoi(strings.TrimSpace(c.FormValue("period_length")))
 		if err != nil {
-			return cycleSettingsInput{}, "invalid settings input"
+			return services.CycleSettingsUpdate{}, "invalid settings input"
 		}
 		input = cycleSettingsInput{
 			CycleLength:        cycleLength,
@@ -40,65 +40,33 @@ func (handler *Handler) parseCycleSettingsInput(c *fiber.Ctx) (cycleSettingsInpu
 		}
 	}
 
-	if !isValidOnboardingCycleLength(input.CycleLength) {
-		return cycleSettingsInput{}, "cycle length must be between 15 and 90"
-	}
-	if !isValidOnboardingPeriodLength(input.PeriodLength) {
-		return cycleSettingsInput{}, "period length must be between 1 and 14"
-	}
-	if !canEstimateOvulation(input.CycleLength, input.PeriodLength) {
-		return cycleSettingsInput{}, "period length is incompatible with cycle length"
-	}
-
-	if input.LastPeriodStartSet && input.LastPeriodStart != "" {
-		parsedDay, err := parseDayParam(input.LastPeriodStart, handler.location)
-		if err != nil {
-			return cycleSettingsInput{}, "invalid cycle start date"
-		}
-		minCycleStart, today := currentYearDateBounds(time.Now().In(handler.location), handler.location)
-		if parsedDay.Before(minCycleStart) || parsedDay.After(today) {
-			return cycleSettingsInput{}, "invalid cycle start date"
-		}
-		input.LastPeriodStart = parsedDay.Format("2006-01-02")
-	}
-
-	return input, ""
-}
-
-func (handler *Handler) saveCycleSettings(userID uint, input cycleSettingsInput) error {
 	handler.ensureDependencies()
-
-	update := services.CycleSettingsUpdate{
+	update, err := handler.settingsService.ValidateCycleSettings(services.CycleSettingsValidationInput{
 		CycleLength:        input.CycleLength,
 		PeriodLength:       input.PeriodLength,
 		AutoPeriodFill:     input.AutoPeriodFill,
+		LastPeriodStartRaw: input.LastPeriodStart,
 		LastPeriodStartSet: input.LastPeriodStartSet,
-	}
-	if input.LastPeriodStartSet && input.LastPeriodStart != "" {
-		parsedDay, err := parseDayParam(input.LastPeriodStart, handler.location)
-		if err != nil {
-			return err
+	}, time.Now().In(handler.location), handler.location)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrSettingsCycleLengthOutOfRange):
+			return services.CycleSettingsUpdate{}, "cycle length must be between 15 and 90"
+		case errors.Is(err, services.ErrSettingsPeriodLengthOutOfRange):
+			return services.CycleSettingsUpdate{}, "period length must be between 1 and 14"
+		case errors.Is(err, services.ErrSettingsPeriodLengthIncompatible):
+			return services.CycleSettingsUpdate{}, "period length is incompatible with cycle length"
+		case errors.Is(err, services.ErrSettingsCycleStartDateInvalid):
+			return services.CycleSettingsUpdate{}, "invalid cycle start date"
+		default:
+			return services.CycleSettingsUpdate{}, "invalid settings input"
 		}
-		update.LastPeriodStart = &parsedDay
 	}
 
-	return handler.settingsService.SaveCycleSettings(userID, update)
+	return update, ""
 }
 
-func applyCycleSettings(user *models.User, input cycleSettingsInput, location *time.Location) {
-	user.CycleLength = input.CycleLength
-	user.PeriodLength = input.PeriodLength
-	user.AutoPeriodFill = input.AutoPeriodFill
-	if !input.LastPeriodStartSet {
-		return
-	}
-	if input.LastPeriodStart == "" {
-		user.LastPeriodStart = nil
-		return
-	}
-	parsedDay, err := parseDayParam(input.LastPeriodStart, location)
-	if err != nil {
-		return
-	}
-	user.LastPeriodStart = &parsedDay
+func (handler *Handler) saveCycleSettings(userID uint, update services.CycleSettingsUpdate) error {
+	handler.ensureDependencies()
+	return handler.settingsService.SaveCycleSettings(userID, update)
 }

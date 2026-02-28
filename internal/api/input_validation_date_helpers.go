@@ -33,12 +33,3 @@ func currentYearDateBounds(now time.Time, location *time.Location) (time.Time, t
 	minDate := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, location)
 	return minDate, today
 }
-
-func onboardingDateBounds(now time.Time, location *time.Location) (time.Time, time.Time) {
-	minDate, today := currentYearDateBounds(now, location)
-	sixtyDaysAgo := today.AddDate(0, 0, -60)
-	if sixtyDaysAgo.After(minDate) {
-		minDate = sixtyDaysAgo
-	}
-	return minDate, today
-}

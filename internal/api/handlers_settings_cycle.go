@@ -19,7 +19,7 @@ func (handler *Handler) UpdateCycleSettings(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update cycle settings")
 	}
 
-	applyCycleSettings(user, input, handler.location)
+	handler.settingsService.ApplyCycleSettings(user, input)
 
 	if acceptsJSON(c) {
 		return c.JSON(fiber.Map{"ok": true})

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User, now time.Time) fiber.Map {
@@ -26,7 +27,7 @@ func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User,
 		periodLength = models.DefaultPeriodLength
 	}
 
-	minDate, maxDate := onboardingDateBounds(now, handler.location)
+	minDate, maxDate := services.OnboardingDateBounds(now, handler.location)
 
 	return fiber.Map{
 		"Title":           localizedPageTitle(messages, "meta.title.onboarding", "Ovumcy | Onboarding"),

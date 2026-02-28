@@ -59,7 +59,7 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	if persisted.LastPeriodStart != nil {
 		lastPeriodStart = dateAtLocation(*persisted.LastPeriodStart, handler.location).Format("2006-01-02")
 	}
-	minCycleStart, today := currentYearDateBounds(time.Now().In(handler.location), handler.location)
+	minCycleStart, today := services.SettingsCycleStartDateBounds(time.Now().In(handler.location), handler.location)
 
 	data := fiber.Map{
 		"Title":                  localizedPageTitle(messages, "meta.title.settings", "Ovumcy | Settings"),

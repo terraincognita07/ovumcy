@@ -1,7 +1,10 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
@@ -15,17 +18,20 @@ func (handler *Handler) UpdateProfile(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid profile input")
 	}
 
-	displayName, err := normalizeDisplayName(input.DisplayName)
+	handler.ensureDependencies()
+	displayName, err := handler.settingsService.NormalizeDisplayName(input.DisplayName)
 	if err != nil {
-		return handler.respondSettingsError(c, fiber.StatusBadRequest, err.Error())
+		if errors.Is(err, services.ErrSettingsDisplayNameTooLong) {
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "display name too long")
+		}
+		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid profile input")
 	}
 
-	handler.ensureDependencies()
 	if err := handler.settingsService.UpdateDisplayName(user.ID, displayName); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to update profile")
 	}
 
-	status := profileUpdateStatus(user.DisplayName, displayName)
+	status := handler.settingsService.ResolveProfileUpdateStatus(user.DisplayName, displayName)
 
 	user.DisplayName = displayName
 
