@@ -3,6 +3,8 @@ package api
 import (
 	"strings"
 	"testing"
+
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func TestNormalizeRecoveryCode(t *testing.T) {
@@ -51,9 +53,9 @@ func TestNormalizeRecoveryCode(t *testing.T) {
 func TestGenerateRecoveryCodeFormat(t *testing.T) {
 	t.Parallel()
 
-	code, err := generateRecoveryCode()
+	code, err := services.GenerateRecoveryCode()
 	if err != nil {
-		t.Fatalf("generateRecoveryCode returned error: %v", err)
+		t.Fatalf("GenerateRecoveryCode returned error: %v", err)
 	}
 
 	if !recoveryCodeRegex.MatchString(code) {

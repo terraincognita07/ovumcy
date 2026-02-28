@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
@@ -69,20 +70,12 @@ func redirectToPath(c *fiber.Ctx, path string) error {
 }
 
 func (handler *Handler) lookupUserByResetToken(token string) (*models.User, error) {
-	claims, err := handler.parsePasswordResetToken(token)
-	if err != nil {
-		return nil, errors.New("invalid reset token")
-	}
-
 	handler.ensureDependencies()
-	user, err := handler.authService.FindByID(claims.UserID)
+	user, err := handler.authService.ResolveUserByResetToken(handler.secretKey, token, time.Now())
 	if err != nil {
 		return nil, errors.New("invalid reset token")
 	}
-	if !isPasswordStateFingerprintMatch(claims.PasswordState, user.PasswordHash) {
-		return nil, errors.New("invalid reset token")
-	}
-	return &user, nil
+	return user, nil
 }
 
 func (handler *Handler) renderRecoveryCodeResponse(c *fiber.Ctx, user *models.User, recoveryCode string, status int) error {

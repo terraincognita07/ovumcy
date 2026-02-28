@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func (handler *Handler) ForgotPassword(c *fiber.Ctx) error {
@@ -63,20 +62,9 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
 	}
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
-	}
-	recoveryCode, recoveryHash, err := generateRecoveryCodeHash()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
-	}
-
-	user.PasswordHash = string(passwordHash)
-	user.RecoveryCodeHash = recoveryHash
-	user.MustChangePassword = false
 	handler.ensureDependencies()
-	if err := handler.authService.SaveUser(user); err != nil {
+	recoveryCode, err := handler.authService.ResetPasswordAndRotateRecoveryCode(user, input.Password)
+	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to reset password")
 	}
 

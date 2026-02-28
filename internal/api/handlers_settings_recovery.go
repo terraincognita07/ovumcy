@@ -1,7 +1,10 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
@@ -10,13 +13,12 @@ func (handler *Handler) RegenerateRecoveryCode(c *fiber.Ctx) error {
 		return apiError(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	recoveryCode, recoveryHash, err := generateRecoveryCodeHash()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
-	}
-
 	handler.ensureDependencies()
-	if err := handler.settingsService.UpdateRecoveryCodeHash(user.ID, recoveryHash); err != nil {
+	recoveryCode, err := handler.authService.RegenerateRecoveryCode(user.ID)
+	if err != nil {
+		if errors.Is(err, services.ErrRecoveryCodeGenerate) {
+			return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
+		}
 		return apiError(c, fiber.StatusInternalServerError, "failed to update recovery code")
 	}
 

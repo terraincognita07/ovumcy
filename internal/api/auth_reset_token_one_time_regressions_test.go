@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func TestResetPasswordTokenCannotBeReusedAfterSuccessfulReset(t *testing.T) {
@@ -97,10 +98,7 @@ func TestResetPasswordRejectsInvalidOrTamperedResetToken(t *testing.T) {
 	user := createOnboardingTestUser(t, database, "reset-invalid-token@example.com", "StrongPass1", true)
 
 	validToken := mustSignResetTokenForTest(t, user.ID, user.PasswordHash, time.Now().Add(10*time.Minute), time.Now())
-	tamperedToken := validToken[:len(validToken)-1] + "A"
-	if strings.HasSuffix(validToken, "A") {
-		tamperedToken = validToken[:len(validToken)-1] + "B"
-	}
+	tamperedToken := mustTamperResetTokenSignatureForTest(t, validToken)
 
 	testCases := []struct {
 		name       string
@@ -165,7 +163,7 @@ func mustSignResetTokenForTest(t *testing.T, userID uint, passwordHash string, e
 	claims := passwordResetClaims{
 		UserID:        userID,
 		Purpose:       "password_reset",
-		PasswordState: passwordStateFingerprint(passwordHash),
+		PasswordState: services.PasswordStateFingerprint(passwordHash),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.FormatUint(uint64(userID), 10),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -201,4 +199,25 @@ func mustSealResetCookieValueForTest(t *testing.T, secretKey []byte, token strin
 		t.Fatalf("seal reset cookie payload: %v", err)
 	}
 	return encoded
+}
+
+func mustTamperResetTokenSignatureForTest(t *testing.T, token string) string {
+	t.Helper()
+
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("expected signed jwt format, got %q", token)
+	}
+
+	signature := parts[2]
+	if signature == "" {
+		t.Fatalf("expected non-empty jwt signature")
+	}
+
+	mutatedFirst := "A"
+	if strings.HasPrefix(signature, "A") {
+		mutatedFirst = "B"
+	}
+	parts[2] = mutatedFirst + signature[1:]
+	return strings.Join(parts, ".")
 }
