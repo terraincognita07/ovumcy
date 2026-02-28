@@ -1,9 +1,17 @@
 package services
 
 import (
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrSettingsPasswordMissing = errors.New("settings password missing")
+	ErrSettingsPasswordInvalid = errors.New("settings password invalid")
 )
 
 type SettingsUserRepository interface {
@@ -42,6 +50,17 @@ func (service *SettingsService) UpdateRecoveryCodeHash(userID uint, recoveryHash
 
 func (service *SettingsService) UpdatePassword(userID uint, passwordHash string, mustChangePassword bool) error {
 	return service.users.UpdatePassword(userID, passwordHash, mustChangePassword)
+}
+
+func (service *SettingsService) ValidateDeleteAccountPassword(passwordHash string, rawPassword string) error {
+	password := strings.TrimSpace(rawPassword)
+	if password == "" {
+		return ErrSettingsPasswordMissing
+	}
+	if bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)) != nil {
+		return ErrSettingsPasswordInvalid
+	}
+	return nil
 }
 
 func (service *SettingsService) SaveCycleSettings(userID uint, settings CycleSettingsUpdate) error {

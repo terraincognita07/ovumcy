@@ -14,21 +14,22 @@ import (
 type Handler struct {
 	// db is kept for backward compatibility in tests that still construct
 	// Handler literals directly. Runtime logic uses repositories/services.
-	db              *gorm.DB
-	secretKey       []byte
-	location        *time.Location
-	cookieSecure    bool
-	i18n            *i18n.Manager
-	templates       map[string]*template.Template
-	partials        map[string]*template.Template
-	recoveryLimiter *attemptLimiter
-	repositories    *db.Repositories
-	authService     *services.AuthService
-	dayService      *services.DayService
-	symptomService  *services.SymptomService
-	settingsService *services.SettingsService
-	onboardingSvc   *services.OnboardingService
-	setupService    *services.SetupService
+	db                  *gorm.DB
+	secretKey           []byte
+	location            *time.Location
+	cookieSecure        bool
+	i18n                *i18n.Manager
+	templates           map[string]*template.Template
+	partials            map[string]*template.Template
+	recoveryLimiter     *attemptLimiter
+	repositories        *db.Repositories
+	authService         *services.AuthService
+	dayService          *services.DayService
+	symptomService      *services.SymptomService
+	settingsService     *services.SettingsService
+	notificationService *services.NotificationService
+	onboardingSvc       *services.OnboardingService
+	setupService        *services.SetupService
 }
 
 type CalendarDay struct {

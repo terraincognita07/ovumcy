@@ -1,11 +1,12 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) ClearAllData(c *fiber.Ctx) error {
@@ -50,11 +51,17 @@ func (handler *Handler) DeleteAccount(c *fiber.Ctx) error {
 		return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid password")
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
-		return handler.respondSettingsError(c, fiber.StatusUnauthorized, "invalid password")
+	handler.ensureDependencies()
+	if err := handler.settingsService.ValidateDeleteAccountPassword(user.PasswordHash, input.Password); err != nil {
+		if errors.Is(err, services.ErrSettingsPasswordMissing) {
+			return handler.respondSettingsError(c, fiber.StatusBadRequest, "invalid password")
+		}
+		if errors.Is(err, services.ErrSettingsPasswordInvalid) {
+			return handler.respondSettingsError(c, fiber.StatusUnauthorized, "invalid password")
+		}
+		return apiError(c, fiber.StatusInternalServerError, "failed to validate password")
 	}
 
-	handler.ensureDependencies()
 	if err := handler.settingsService.DeleteAccount(user.ID); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to delete account")
 	}

@@ -1,50 +1,19 @@
 package api
 
 import (
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
-func isChangePasswordErrorMessage(message string) bool {
-	switch strings.ToLower(strings.TrimSpace(message)) {
-	case "invalid settings input", "password mismatch", "invalid current password", "new password must differ", "weak password":
-		return true
-	default:
-		return false
-	}
-}
-
-func pickFirstNonEmpty(values ...string) string {
-	for _, value := range values {
-		trimmed := strings.TrimSpace(value)
-		if trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
-}
-
-func settingsStatusFromFlashOrQuery(c *fiber.Ctx, flash FlashPayload) string {
-	return pickFirstNonEmpty(
-		flash.SettingsSuccess,
-		c.Query("success"),
-		c.Query("status"),
-	)
-}
-
-func settingsErrorSourceFromFlashOrQuery(c *fiber.Ctx, flash FlashPayload) string {
-	return pickFirstNonEmpty(
-		flash.SettingsError,
-		c.Query("error"),
-	)
-}
-
-func classifySettingsErrorSource(errorSource string) (string, string) {
+func resolveSettingsErrorKeys(notificationService *services.NotificationService, errorSource string) (string, string) {
 	translatedErrorKey := authErrorTranslationKey(errorSource)
-	if isChangePasswordErrorMessage(errorSource) && translatedErrorKey != "" {
+	if translatedErrorKey == "" {
+		return "", ""
+	}
+	if notificationService.ClassifySettingsErrorSource(errorSource) == services.SettingsErrorTargetChangePassword {
 		return "", translatedErrorKey
 	}
 	return translatedErrorKey, ""
@@ -53,14 +22,20 @@ func classifySettingsErrorSource(errorSource string) (string, string) {
 func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, flash FlashPayload) (fiber.Map, error) {
 	messages := currentMessages(c)
 	language := currentLanguage(c)
-	status := settingsStatusFromFlashOrQuery(c, flash)
+	handler.ensureDependencies()
+
+	status := handler.notificationService.ResolveSettingsStatus(
+		flash.SettingsSuccess,
+		c.Query("success"),
+		c.Query("status"),
+	)
 	errorKey := ""
 	changePasswordErrorKey := ""
 	if status == "" {
-		errorKey, changePasswordErrorKey = classifySettingsErrorSource(settingsErrorSourceFromFlashOrQuery(c, flash))
+		errorSource := handler.notificationService.ResolveSettingsErrorSource(flash.SettingsError, c.Query("error"))
+		errorKey, changePasswordErrorKey = resolveSettingsErrorKeys(handler.notificationService, errorSource)
 	}
 
-	handler.ensureDependencies()
 	persisted, err := handler.settingsService.LoadSettings(user.ID)
 	if err != nil {
 		return nil, err
