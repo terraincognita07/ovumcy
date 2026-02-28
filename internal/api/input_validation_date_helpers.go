@@ -27,9 +27,3 @@ func parseMonthQuery(raw string, now time.Time, location *time.Location) (time.T
 	}
 	return time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, location), nil
 }
-
-func currentYearDateBounds(now time.Time, location *time.Location) (time.Time, time.Time) {
-	today := dateAtLocation(now.In(location), location)
-	minDate := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, location)
-	return minDate, today
-}

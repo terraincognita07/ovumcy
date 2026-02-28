@@ -3,6 +3,8 @@ package api
 import (
 	"strings"
 	"time"
+
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func resolveCalendarMonthAndSelectedDate(monthQueryRaw string, selectedDayRaw string, now time.Time, location *time.Location) (time.Time, string, error) {
@@ -30,8 +32,7 @@ func resolveCalendarMonthAndSelectedDate(monthQueryRaw string, selectedDayRaw st
 }
 
 func calendarLogRange(monthStart time.Time) (time.Time, time.Time) {
-	monthEnd := monthStart.AddDate(0, 1, -1)
-	return monthStart.AddDate(0, 0, -70), monthEnd.AddDate(0, 0, 70)
+	return services.CalendarLogRange(monthStart)
 }
 
 func calendarAdjacentMonthValues(monthStart time.Time) (string, string) {

@@ -19,6 +19,11 @@ type CalendarDayState struct {
 	HasData     bool
 }
 
+func CalendarLogRange(monthStart time.Time) (time.Time, time.Time) {
+	monthEnd := monthStart.AddDate(0, 1, -1)
+	return monthStart.AddDate(0, 0, -70), monthEnd.AddDate(0, 0, 70)
+}
+
 func BuildCalendarDayStates(monthStart time.Time, logs []models.DailyLog, stats CycleStats, now time.Time, location *time.Location) []CalendarDayState {
 	monthEnd := monthStart.AddDate(0, 1, -1)
 	gridStart := monthStart.AddDate(0, 0, -int(monthStart.Weekday()))

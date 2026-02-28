@@ -6,6 +6,18 @@ import (
 	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
+type DashboardCycleContext struct {
+	CycleDayReference          int
+	CycleDayWarning            bool
+	CycleDataStale             bool
+	DisplayNextPeriodStart     time.Time
+	DisplayOvulationDate       time.Time
+	DisplayOvulationExact      bool
+	DisplayOvulationImpossible bool
+	NextPeriodInPast           bool
+	OvulationInPast            bool
+}
+
 func DashboardCycleReferenceLength(user *models.User, stats CycleStats) int {
 	if user != nil && IsValidOnboardingCycleLength(user.CycleLength) {
 		return user.CycleLength
@@ -76,6 +88,31 @@ func DashboardUpcomingPredictions(stats CycleStats, user *models.User, today tim
 		return nextPeriodStart, time.Time{}, false, true
 	}
 	return nextPeriodStart, ovulationDate, ovulationExact, false
+}
+
+func BuildDashboardCycleContext(user *models.User, stats CycleStats, today time.Time, location *time.Location) DashboardCycleContext {
+	cycleDayReference := DashboardCycleReferenceLength(user, stats)
+	cycleDayWarning := DashboardCycleDayLooksLong(stats.CurrentCycleDay, cycleDayReference)
+	cycleStaleAnchor := DashboardCycleStaleAnchor(user, stats, location)
+	cycleDataStale := DashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
+	displayNextPeriodStart, displayOvulationDate, displayOvulationExact, displayOvulationImpossible := DashboardUpcomingPredictions(
+		stats,
+		user,
+		today,
+		cycleDayReference,
+	)
+
+	return DashboardCycleContext{
+		CycleDayReference:          cycleDayReference,
+		CycleDayWarning:            cycleDayWarning,
+		CycleDataStale:             cycleDataStale,
+		DisplayNextPeriodStart:     displayNextPeriodStart,
+		DisplayOvulationDate:       displayOvulationDate,
+		DisplayOvulationExact:      displayOvulationExact,
+		DisplayOvulationImpossible: displayOvulationImpossible,
+		NextPeriodInPast:           !displayNextPeriodStart.IsZero() && displayNextPeriodStart.Before(today),
+		OvulationInPast:            !displayOvulationImpossible && !displayOvulationDate.IsZero() && displayOvulationDate.Before(today),
+	}
 }
 
 func DashboardPredictedPeriodLength(user *models.User, stats CycleStats) int {

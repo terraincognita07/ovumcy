@@ -5,17 +5,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 const maxStatsTrendPoints = 12
-
-func trimTrailingCycleTrendLengths(lengths []int, maxPoints int) []int {
-	if maxPoints <= 0 || len(lengths) <= maxPoints {
-		return lengths
-	}
-	return lengths[len(lengths)-maxPoints:]
-}
 
 func buildStatsChartData(messages map[string]string, lengths []int, baselineCycleLength int) fiber.Map {
 	chartPayload := fiber.Map{
@@ -29,27 +21,27 @@ func buildStatsChartData(messages map[string]string, lengths []int, baselineCycl
 }
 
 func (handler *Handler) buildStatsTrendView(user *models.User, logs []models.DailyLog, now time.Time, messages map[string]string) (fiber.Map, int, int) {
-	lengths := services.CompletedCycleTrendLengths(logs, now, handler.location)
-	lengths = trimTrailingCycleTrendLengths(lengths, maxStatsTrendPoints)
-
-	baselineCycleLength := ownerBaselineCycleLength(user)
+	handler.ensureDependencies()
+	lengths, baselineCycleLength := handler.statsService.BuildTrend(user, logs, now, handler.location, maxStatsTrendPoints)
 	chartPayload := buildStatsChartData(messages, lengths, baselineCycleLength)
 	return chartPayload, baselineCycleLength, len(lengths)
 }
 
 func (handler *Handler) buildStatsSymptomCounts(user *models.User, language string) ([]SymptomCount, string, error) {
-	if !isOwnerUser(user) {
-		return []SymptomCount{}, "", nil
-	}
-
-	symptomLogs, err := handler.fetchAllLogsForUser(user.ID)
-	if err != nil {
-		return nil, "failed to load symptom logs", err
-	}
-
-	symptomCounts, err := handler.calculateSymptomFrequencies(user.ID, symptomLogs)
+	handler.ensureDependencies()
+	frequencies, err := handler.statsService.BuildSymptomFrequenciesForUser(user)
 	if err != nil {
 		return nil, "failed to load symptom stats", err
+	}
+
+	symptomCounts := make([]SymptomCount, 0, len(frequencies))
+	for _, item := range frequencies {
+		symptomCounts = append(symptomCounts, SymptomCount{
+			Name:      item.Name,
+			Icon:      item.Icon,
+			Count:     item.Count,
+			TotalDays: item.TotalDays,
+		})
 	}
 	localizeSymptomFrequencySummaries(language, symptomCounts)
 	return symptomCounts, "", nil
@@ -62,12 +54,8 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 	}
 
 	chartPayload, baselineCycleLength, trendPointCount := handler.buildStatsTrendView(user, logs, now, messages)
-	observedCycleCount := len(services.CycleLengths(logs))
-	hasReliableTrend := trendPointCount >= 3
-	today := dateAtLocation(now, handler.location)
-	cycleDayReference := services.DashboardCycleReferenceLength(user, stats)
-	cycleStaleAnchor := services.DashboardCycleStaleAnchor(user, stats, handler.location)
-	cycleDataStale := services.DashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
+	handler.ensureDependencies()
+	flags := handler.statsService.BuildFlags(user, logs, stats, now, handler.location, trendPointCount)
 	symptomCounts, symptomErrorMessage, err := handler.buildStatsSymptomCounts(user, language)
 	if err != nil {
 		return nil, symptomErrorMessage, err
@@ -80,10 +68,10 @@ func (handler *Handler) buildStatsPageData(user *models.User, language string, m
 		"ChartData":            chartPayload,
 		"ChartBaseline":        baselineCycleLength,
 		"TrendPointCount":      trendPointCount,
-		"HasObservedCycleData": observedCycleCount > 0,
-		"HasTrendData":         trendPointCount > 0,
-		"HasReliableTrend":     hasReliableTrend,
-		"CycleDataStale":       cycleDataStale,
+		"HasObservedCycleData": flags.HasObservedCycleData,
+		"HasTrendData":         flags.HasTrendData,
+		"HasReliableTrend":     flags.HasReliableTrend,
+		"CycleDataStale":       flags.CycleDataStale,
 		"SymptomCounts":        symptomCounts,
 		"IsOwner":              isOwnerUser(user),
 	}

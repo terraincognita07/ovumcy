@@ -21,27 +21,21 @@ func (handler *Handler) buildDashboardViewData(user *models.User, language strin
 		return nil, "failed to load today log", err
 	}
 
-	cycleDayReference := services.DashboardCycleReferenceLength(user, stats)
-	cycleDayWarning := services.DashboardCycleDayLooksLong(stats.CurrentCycleDay, cycleDayReference)
-	cycleStaleAnchor := services.DashboardCycleStaleAnchor(user, stats, handler.location)
-	cycleDataStale := services.DashboardCycleDataLooksStale(cycleStaleAnchor, today, cycleDayReference)
-	displayNextPeriodStart, displayOvulationDate, displayOvulationExact, displayOvulationImpossible := services.DashboardUpcomingPredictions(stats, user, today, cycleDayReference)
-	nextPeriodInPast := !displayNextPeriodStart.IsZero() && displayNextPeriodStart.Before(today)
-	ovulationInPast := !displayOvulationImpossible && !displayOvulationDate.IsZero() && displayOvulationDate.Before(today)
+	cycleContext := services.BuildDashboardCycleContext(user, stats, today, handler.location)
 
 	data := fiber.Map{
 		"Title":                      localizedPageTitle(messages, "meta.title.dashboard", "Ovumcy | Dashboard"),
 		"CurrentUser":                user,
 		"Stats":                      stats,
-		"CycleDayReference":          cycleDayReference,
-		"CycleDayWarning":            cycleDayWarning,
-		"CycleDataStale":             cycleDataStale,
-		"DisplayNextPeriodStart":     displayNextPeriodStart,
-		"DisplayOvulationDate":       displayOvulationDate,
-		"DisplayOvulationExact":      displayOvulationExact,
-		"DisplayOvulationImpossible": displayOvulationImpossible,
-		"NextPeriodInPast":           nextPeriodInPast,
-		"OvulationInPast":            ovulationInPast,
+		"CycleDayReference":          cycleContext.CycleDayReference,
+		"CycleDayWarning":            cycleContext.CycleDayWarning,
+		"CycleDataStale":             cycleContext.CycleDataStale,
+		"DisplayNextPeriodStart":     cycleContext.DisplayNextPeriodStart,
+		"DisplayOvulationDate":       cycleContext.DisplayOvulationDate,
+		"DisplayOvulationExact":      cycleContext.DisplayOvulationExact,
+		"DisplayOvulationImpossible": cycleContext.DisplayOvulationImpossible,
+		"NextPeriodInPast":           cycleContext.NextPeriodInPast,
+		"OvulationInPast":            cycleContext.OvulationInPast,
 		"Today":                      today.Format("2006-01-02"),
 		"FormattedDate":              localizedDashboardDate(language, today),
 		"TodayEntry":                 todayLog,

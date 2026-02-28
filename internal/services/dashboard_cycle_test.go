@@ -41,6 +41,38 @@ func TestCompletedCycleTrendLengths(t *testing.T) {
 	}
 }
 
+func TestBuildDashboardCycleContext(t *testing.T) {
+	userStart := mustParseDashboardDay(t, "2026-02-10")
+	user := &models.User{
+		CycleLength:     28,
+		PeriodLength:    5,
+		LastPeriodStart: &userStart,
+	}
+	stats := CycleStats{
+		CurrentCycleDay:     36,
+		LastPeriodStart:     mustParseDashboardDay(t, "2026-02-10"),
+		MedianCycleLength:   28,
+		AveragePeriodLength: 5,
+		NextPeriodStart:     mustParseDashboardDay(t, "2026-03-10"),
+		OvulationDate:       mustParseDashboardDay(t, "2026-02-24"),
+	}
+	today := mustParseDashboardDay(t, "2026-03-14")
+
+	context := BuildDashboardCycleContext(user, stats, today, time.UTC)
+	if context.CycleDayReference != 28 {
+		t.Fatalf("expected cycle day reference 28, got %d", context.CycleDayReference)
+	}
+	if !context.CycleDayWarning {
+		t.Fatalf("expected cycle day warning for long cycle day")
+	}
+	if !context.CycleDataStale {
+		t.Fatalf("expected stale cycle data flag")
+	}
+	if context.DisplayNextPeriodStart.IsZero() {
+		t.Fatalf("expected next period start prediction")
+	}
+}
+
 func mustParseDashboardDay(t *testing.T, raw string) time.Time {
 	t.Helper()
 	parsed, err := time.ParseInLocation("2006-01-02", raw, time.UTC)

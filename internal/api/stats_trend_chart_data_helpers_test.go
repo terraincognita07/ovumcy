@@ -1,25 +1,10 @@
 package api
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 )
-
-func TestTrimTrailingCycleTrendLengths(t *testing.T) {
-	t.Parallel()
-
-	source := []int{1, 2, 3, 4, 5}
-	if got := trimTrailingCycleTrendLengths(source, 10); !reflect.DeepEqual(got, source) {
-		t.Fatalf("expected unchanged lengths, got %#v", got)
-	}
-
-	expected := []int{3, 4, 5}
-	if got := trimTrailingCycleTrendLengths(source, 3); !reflect.DeepEqual(got, expected) {
-		t.Fatalf("expected last 3 lengths %#v, got %#v", expected, got)
-	}
-}
 
 func TestBuildStatsChartDataIncludesBaselineWhenPositive(t *testing.T) {
 	t.Parallel()

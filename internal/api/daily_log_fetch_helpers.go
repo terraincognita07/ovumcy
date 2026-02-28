@@ -11,11 +11,6 @@ func (handler *Handler) fetchLogsForUser(userID uint, from time.Time, to time.Ti
 	return handler.dayService.FetchLogsForUser(userID, from, to, handler.location)
 }
 
-func (handler *Handler) fetchAllLogsForUser(userID uint) ([]models.DailyLog, error) {
-	handler.ensureDependencies()
-	return handler.dayService.FetchAllLogsForUser(userID)
-}
-
 func (handler *Handler) fetchLogByDate(userID uint, day time.Time) (models.DailyLog, error) {
 	handler.ensureDependencies()
 	return handler.dayService.FetchLogByDate(userID, day, handler.location)

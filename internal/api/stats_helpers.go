@@ -8,12 +8,6 @@ import (
 )
 
 func (handler *Handler) buildCycleStatsForRange(user *models.User, from time.Time, to time.Time, now time.Time) (services.CycleStats, []models.DailyLog, error) {
-	logs, err := handler.fetchLogsForUser(user.ID, from, to)
-	if err != nil {
-		return services.CycleStats{}, nil, err
-	}
-
-	stats := services.BuildCycleStats(logs, now)
-	stats = services.ApplyUserCycleBaseline(user, logs, stats, now, handler.location)
-	return stats, logs, nil
+	handler.ensureDependencies()
+	return handler.statsService.BuildCycleStatsForRange(user, from, to, now, handler.location)
 }

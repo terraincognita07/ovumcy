@@ -51,6 +51,18 @@ func TestBuildCalendarDayStatesUsesLatestLogPerDateDeterministically(t *testing.
 	}
 }
 
+func TestCalendarLogRange(t *testing.T) {
+	monthStart := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+	from, to := CalendarLogRange(monthStart)
+
+	if from.Format("2006-01-02") != "2025-11-23" {
+		t.Fatalf("expected range start 2025-11-23, got %s", from.Format("2006-01-02"))
+	}
+	if to.Format("2006-01-02") != "2026-05-09" {
+		t.Fatalf("expected range end 2026-05-09, got %s", to.Format("2006-01-02"))
+	}
+}
+
 func TestBuildCalendarDayStatesProjectsOvulationIntoFutureCycles(t *testing.T) {
 	monthStart := time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC)
 	now := time.Date(2026, time.February, 23, 0, 0, 0, 0, time.UTC)

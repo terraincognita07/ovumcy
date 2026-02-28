@@ -2,16 +2,7 @@ package api
 
 import (
 	"fmt"
-
-	"github.com/terraincognita07/ovumcy/internal/models"
 )
-
-func ownerBaselineCycleLength(user *models.User) int {
-	if !isOwnerUser(user) || !isValidOnboardingCycleLength(user.CycleLength) {
-		return 0
-	}
-	return user.CycleLength
-}
 
 func buildCycleTrendLabels(messages map[string]string, pointCount int) []string {
 	if pointCount <= 0 {

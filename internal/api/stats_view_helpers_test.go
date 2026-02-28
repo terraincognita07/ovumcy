@@ -3,31 +3,7 @@ package api
 import (
 	"reflect"
 	"testing"
-
-	"github.com/terraincognita07/ovumcy/internal/models"
 )
-
-func TestOwnerBaselineCycleLength(t *testing.T) {
-	tests := []struct {
-		name string
-		user *models.User
-		want int
-	}{
-		{name: "nil user", user: nil, want: 0},
-		{name: "partner", user: &models.User{Role: models.RolePartner, CycleLength: 29}, want: 0},
-		{name: "owner invalid cycle", user: &models.User{Role: models.RoleOwner, CycleLength: 120}, want: 0},
-		{name: "owner valid cycle", user: &models.User{Role: models.RoleOwner, CycleLength: 28}, want: 28},
-	}
-
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			got := ownerBaselineCycleLength(testCase.user)
-			if got != testCase.want {
-				t.Fatalf("expected %d, got %d", testCase.want, got)
-			}
-		})
-	}
-}
 
 func TestBuildCycleTrendLabels(t *testing.T) {
 	if got := buildCycleTrendLabels(map[string]string{}, 0); len(got) != 0 {
