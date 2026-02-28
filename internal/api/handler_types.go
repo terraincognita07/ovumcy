@@ -27,6 +27,7 @@ type Handler struct {
 	dayService          *services.DayService
 	symptomService      *services.SymptomService
 	statsService        *services.StatsService
+	exportService       *services.ExportService
 	settingsService     *services.SettingsService
 	notificationService *services.NotificationService
 	onboardingSvc       *services.OnboardingService

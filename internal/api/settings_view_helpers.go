@@ -76,20 +76,20 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 	}
 
 	if user.Role == models.RoleOwner {
-		totalEntries, firstDate, lastDate, err := handler.fetchExportSummary(user.ID)
+		summary, err := handler.exportService.BuildSummary(user.ID, nil, nil, handler.location)
 		if err != nil {
 			return nil, err
 		}
-		data["ExportTotalEntries"] = int(totalEntries)
-		data["HasExportData"] = totalEntries > 0
-		data["ExportDateFrom"] = firstDate
-		data["ExportDateTo"] = lastDate
-		displayFrom := firstDate
-		if parsedFrom, parseErr := parseDayParam(firstDate, handler.location); parseErr == nil {
+		data["ExportTotalEntries"] = summary.TotalEntries
+		data["HasExportData"] = summary.HasData
+		data["ExportDateFrom"] = summary.DateFrom
+		data["ExportDateTo"] = summary.DateTo
+		displayFrom := summary.DateFrom
+		if parsedFrom, parseErr := parseDayParam(summary.DateFrom, handler.location); parseErr == nil {
 			displayFrom = localizedDateDisplay(language, parsedFrom)
 		}
-		displayTo := lastDate
-		if parsedTo, parseErr := parseDayParam(lastDate, handler.location); parseErr == nil {
+		displayTo := summary.DateTo
+		if parsedTo, parseErr := parseDayParam(summary.DateTo, handler.location); parseErr == nil {
 			displayTo = localizedDateDisplay(language, parsedTo)
 		}
 		data["ExportDateFromDisplay"] = displayFrom

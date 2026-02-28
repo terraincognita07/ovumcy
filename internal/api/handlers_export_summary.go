@@ -8,15 +8,16 @@ func (handler *Handler) ExportSummary(c *fiber.Ctx) error {
 		return apiError(c, status, message)
 	}
 
-	totalEntries, firstDate, lastDate, err := handler.fetchExportSummaryForRange(user.ID, from, to)
+	handler.ensureDependencies()
+	summary, err := handler.exportService.BuildSummary(user.ID, from, to, handler.location)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}
 
 	return c.JSON(fiber.Map{
-		"total_entries": int(totalEntries),
-		"has_data":      totalEntries > 0,
-		"date_from":     firstDate,
-		"date_to":       lastDate,
+		"total_entries": summary.TotalEntries,
+		"has_data":      summary.HasData,
+		"date_from":     summary.DateFrom,
+		"date_to":       summary.DateTo,
 	})
 }

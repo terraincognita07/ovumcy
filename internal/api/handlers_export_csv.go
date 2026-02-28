@@ -3,10 +3,10 @@ package api
 import (
 	"bytes"
 	"encoding/csv"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
@@ -15,7 +15,8 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 		return apiError(c, status, message)
 	}
 
-	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
+	handler.ensureDependencies()
+	rows, err := handler.exportService.BuildCSVRows(user.ID, from, to, handler.location)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}
@@ -23,34 +24,12 @@ func (handler *Handler) ExportCSV(c *fiber.Ctx) error {
 
 	var output bytes.Buffer
 	writer := csv.NewWriter(&output)
-	if err := writer.Write(exportCSVHeaders); err != nil {
+	if err := writer.Write(services.ExportCSVHeaders); err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to build export")
 	}
 
-	for _, logEntry := range logs {
-		flags, other := buildCSVSymptomColumns(logEntry.SymptomIDs, symptomNames)
-		if err := writer.Write([]string{
-			dateAtLocation(logEntry.Date, handler.location).Format("2006-01-02"),
-			csvYesNo(logEntry.IsPeriod),
-			csvFlowLabel(logEntry.Flow),
-			csvYesNo(flags.Cramps),
-			csvYesNo(flags.Headache),
-			csvYesNo(flags.Acne),
-			csvYesNo(flags.Mood),
-			csvYesNo(flags.Bloating),
-			csvYesNo(flags.Fatigue),
-			csvYesNo(flags.BreastTenderness),
-			csvYesNo(flags.BackPain),
-			csvYesNo(flags.Nausea),
-			csvYesNo(flags.Spotting),
-			csvYesNo(flags.Irritability),
-			csvYesNo(flags.Insomnia),
-			csvYesNo(flags.FoodCravings),
-			csvYesNo(flags.Diarrhea),
-			csvYesNo(flags.Constipation),
-			strings.Join(other, "; "),
-			logEntry.Notes,
-		}); err != nil {
+	for _, row := range rows {
+		if err := writer.Write(row.Columns()); err != nil {
 			return apiError(c, fiber.StatusInternalServerError, "failed to build export")
 		}
 	}

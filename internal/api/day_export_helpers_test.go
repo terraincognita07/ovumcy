@@ -49,20 +49,6 @@ func TestSanitizeLogForPartner(t *testing.T) {
 	}
 }
 
-func TestExportSymptomHelpers(t *testing.T) {
-	t.Parallel()
-
-	if got := exportSymptomColumn("Mood swings"); got != "mood" {
-		t.Fatalf("expected mood, got %q", got)
-	}
-	if got := csvYesNo(true); got != "Yes" {
-		t.Fatalf("expected Yes, got %q", got)
-	}
-	if got := normalizeExportFlow("unknown"); got != models.FlowNone {
-		t.Fatalf("expected flow none, got %q", got)
-	}
-}
-
 func TestDateHelpers(t *testing.T) {
 	t.Parallel()
 

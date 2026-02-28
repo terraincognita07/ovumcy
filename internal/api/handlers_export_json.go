@@ -13,13 +13,12 @@ func (handler *Handler) ExportJSON(c *fiber.Ctx) error {
 		return apiError(c, status, message)
 	}
 
-	logs, symptomNames, err := handler.fetchExportData(user.ID, from, to)
+	handler.ensureDependencies()
+	entries, err := handler.exportService.BuildJSONEntries(user.ID, from, to, handler.location)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to fetch logs")
 	}
 	now := time.Now().In(handler.location)
-
-	entries := buildExportJSONEntries(logs, symptomNames, handler.location)
 
 	payload := fiber.Map{
 		"exported_at": now.Format(time.RFC3339),
