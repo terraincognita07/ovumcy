@@ -16,6 +16,10 @@ var (
 	ErrAuthUserRequired     = errors.New("auth user is required")
 	ErrRecoveryCodeGenerate = errors.New("recovery code generation failed")
 	ErrRecoveryCodeUpdate   = errors.New("recovery code update failed")
+	ErrAuthRegisterInvalid  = errors.New("auth register invalid input")
+	ErrAuthPasswordMismatch = errors.New("auth register password mismatch")
+	ErrAuthWeakPassword     = errors.New("auth register weak password")
+	ErrAuthInvalidCreds     = errors.New("auth invalid credentials")
 )
 
 type AuthUserRepository interface {
@@ -54,6 +58,59 @@ func (service *AuthService) FindByID(userID uint) (models.User, error) {
 
 func (service *AuthService) SaveUser(user *models.User) error {
 	return service.users.Save(user)
+}
+
+func (service *AuthService) ValidateRegistrationCredentials(password string, confirmPassword string) error {
+	password = strings.TrimSpace(password)
+	confirmPassword = strings.TrimSpace(confirmPassword)
+
+	if password == "" || confirmPassword == "" {
+		return ErrAuthRegisterInvalid
+	}
+	if password != confirmPassword {
+		return ErrAuthPasswordMismatch
+	}
+	if err := ValidatePasswordStrength(password); err != nil {
+		return ErrAuthWeakPassword
+	}
+	return nil
+}
+
+func (service *AuthService) BuildOwnerUserWithRecovery(email string, rawPassword string, createdAt time.Time) (models.User, string, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(rawPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return models.User{}, "", err
+	}
+	recoveryCode, recoveryHash, err := GenerateRecoveryCodeHash()
+	if err != nil {
+		return models.User{}, "", err
+	}
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
+	}
+
+	user := models.User{
+		Email:            email,
+		PasswordHash:     string(passwordHash),
+		RecoveryCodeHash: recoveryHash,
+		Role:             models.RoleOwner,
+		CycleLength:      models.DefaultCycleLength,
+		PeriodLength:     models.DefaultPeriodLength,
+		AutoPeriodFill:   true,
+		CreatedAt:        createdAt,
+	}
+	return user, recoveryCode, nil
+}
+
+func (service *AuthService) AuthenticateCredentials(email string, password string) (models.User, error) {
+	user, err := service.users.FindByNormalizedEmail(email)
+	if err != nil {
+		return models.User{}, ErrAuthInvalidCreds
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) != nil {
+		return models.User{}, ErrAuthInvalidCreds
+	}
+	return user, nil
 }
 
 func (service *AuthService) FindUserByRecoveryCode(code string) (*models.User, error) {

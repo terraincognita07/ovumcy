@@ -10,19 +10,6 @@ import (
 	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
-func validateRegistrationCredentials(credentials credentialsInput) string {
-	if credentials.ConfirmPassword == "" {
-		return "invalid input"
-	}
-	if credentials.Password != credentials.ConfirmPassword {
-		return "password mismatch"
-	}
-	if err := services.ValidatePasswordStrength(credentials.Password); err != nil {
-		return "weak password"
-	}
-	return ""
-}
-
 func parseForgotPasswordCode(c *fiber.Ctx) (string, string) {
 	input := forgotPasswordInput{}
 	if err := c.BodyParser(&input); err != nil {

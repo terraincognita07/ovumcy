@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"regexp"
 	"testing"
 	"time"
 
@@ -10,21 +11,34 @@ import (
 )
 
 type stubAuthUserRepo struct {
+	existsByEmail         bool
+	existsByEmailErr      error
+	findByEmailUser       models.User
+	findByEmailErr        error
 	user                  models.User
 	findByIDErr           error
+	createErr             error
 	saveErr               error
 	updateRecoveryCodeErr error
+	listErr               error
+	listUsers             []models.User
 	updatedUserID         uint
 	updatedRecoveryHash   string
 	saveCalled            bool
 }
 
 func (stub *stubAuthUserRepo) ExistsByNormalizedEmail(string) (bool, error) {
-	return false, nil
+	if stub.existsByEmailErr != nil {
+		return false, stub.existsByEmailErr
+	}
+	return stub.existsByEmail, nil
 }
 
 func (stub *stubAuthUserRepo) FindByNormalizedEmail(string) (models.User, error) {
-	return models.User{}, errors.New("not implemented")
+	if stub.findByEmailErr != nil {
+		return models.User{}, stub.findByEmailErr
+	}
+	return stub.findByEmailUser, nil
 }
 
 func (stub *stubAuthUserRepo) FindByID(uint) (models.User, error) {
@@ -35,7 +49,10 @@ func (stub *stubAuthUserRepo) FindByID(uint) (models.User, error) {
 }
 
 func (stub *stubAuthUserRepo) Create(*models.User) error {
-	return errors.New("not implemented")
+	if stub.createErr != nil {
+		return stub.createErr
+	}
+	return nil
 }
 
 func (stub *stubAuthUserRepo) Save(user *models.User) error {
@@ -57,7 +74,99 @@ func (stub *stubAuthUserRepo) UpdateRecoveryCodeHash(userID uint, recoveryHash s
 }
 
 func (stub *stubAuthUserRepo) ListWithRecoveryCodeHash() ([]models.User, error) {
+	if stub.listErr != nil {
+		return nil, stub.listErr
+	}
+	if stub.listUsers != nil {
+		return stub.listUsers, nil
+	}
 	return []models.User{stub.user}, nil
+}
+
+var serviceRecoveryCodePattern = regexp.MustCompile(`^OVUM-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$`)
+
+func TestAuthServiceValidateRegistrationCredentials(t *testing.T) {
+	service := NewAuthService(&stubAuthUserRepo{})
+
+	if err := service.ValidateRegistrationCredentials("", ""); !errors.Is(err, ErrAuthRegisterInvalid) {
+		t.Fatalf("expected ErrAuthRegisterInvalid for empty passwords, got %v", err)
+	}
+	if err := service.ValidateRegistrationCredentials("StrongPass1", "AnotherPass2"); !errors.Is(err, ErrAuthPasswordMismatch) {
+		t.Fatalf("expected ErrAuthPasswordMismatch, got %v", err)
+	}
+	if err := service.ValidateRegistrationCredentials("12345678", "12345678"); !errors.Is(err, ErrAuthWeakPassword) {
+		t.Fatalf("expected ErrAuthWeakPassword, got %v", err)
+	}
+	if err := service.ValidateRegistrationCredentials("StrongPass1", "StrongPass1"); err != nil {
+		t.Fatalf("expected successful validation, got %v", err)
+	}
+}
+
+func TestAuthServiceBuildOwnerUserWithRecovery(t *testing.T) {
+	service := NewAuthService(&stubAuthUserRepo{})
+	createdAt := time.Date(2026, time.March, 2, 8, 0, 0, 0, time.UTC)
+
+	user, recoveryCode, err := service.BuildOwnerUserWithRecovery("owner@example.com", "StrongPass1", createdAt)
+	if err != nil {
+		t.Fatalf("BuildOwnerUserWithRecovery() unexpected error: %v", err)
+	}
+	if user.Email != "owner@example.com" {
+		t.Fatalf("expected email owner@example.com, got %q", user.Email)
+	}
+	if user.Role != models.RoleOwner {
+		t.Fatalf("expected owner role, got %q", user.Role)
+	}
+	if user.CycleLength != models.DefaultCycleLength || user.PeriodLength != models.DefaultPeriodLength {
+		t.Fatalf("expected default cycle/period lengths, got %d/%d", user.CycleLength, user.PeriodLength)
+	}
+	if !user.AutoPeriodFill {
+		t.Fatalf("expected AutoPeriodFill=true")
+	}
+	if !user.CreatedAt.Equal(createdAt) {
+		t.Fatalf("expected CreatedAt preserved, got %s", user.CreatedAt)
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte("StrongPass1")) != nil {
+		t.Fatalf("expected password hash for StrongPass1")
+	}
+	if !serviceRecoveryCodePattern.MatchString(recoveryCode) {
+		t.Fatalf("expected recovery code format, got %q", recoveryCode)
+	}
+	if user.RecoveryCodeHash == "" {
+		t.Fatalf("expected non-empty recovery hash")
+	}
+}
+
+func TestAuthServiceAuthenticateCredentials(t *testing.T) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("StrongPass1"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("hash password: %v", err)
+	}
+
+	repo := &stubAuthUserRepo{
+		findByEmailUser: models.User{
+			ID:           77,
+			Email:        "login@example.com",
+			PasswordHash: string(passwordHash),
+		},
+	}
+	service := NewAuthService(repo)
+
+	user, err := service.AuthenticateCredentials("login@example.com", "StrongPass1")
+	if err != nil {
+		t.Fatalf("AuthenticateCredentials() unexpected error: %v", err)
+	}
+	if user.ID != 77 {
+		t.Fatalf("expected user id 77, got %d", user.ID)
+	}
+
+	if _, err := service.AuthenticateCredentials("login@example.com", "WrongPass2"); !errors.Is(err, ErrAuthInvalidCreds) {
+		t.Fatalf("expected ErrAuthInvalidCreds for wrong password, got %v", err)
+	}
+
+	repo.findByEmailErr = errors.New("user not found")
+	if _, err := service.AuthenticateCredentials("missing@example.com", "StrongPass1"); !errors.Is(err, ErrAuthInvalidCreds) {
+		t.Fatalf("expected ErrAuthInvalidCreds for missing user, got %v", err)
+	}
 }
 
 func TestAuthServiceResolveUserByResetToken(t *testing.T) {

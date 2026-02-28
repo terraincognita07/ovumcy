@@ -1,11 +1,11 @@
 package api
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/terraincognita07/ovumcy/internal/models"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) Register(c *fiber.Ctx) error {
@@ -13,8 +13,17 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 	if err != nil {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
 	}
-	if validationError := validateRegistrationCredentials(credentials); validationError != "" {
-		return handler.respondAuthError(c, fiber.StatusBadRequest, validationError)
+
+	handler.ensureDependencies()
+	if err := handler.authService.ValidateRegistrationCredentials(credentials.Password, credentials.ConfirmPassword); err != nil {
+		switch {
+		case errors.Is(err, services.ErrAuthPasswordMismatch):
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "password mismatch")
+		case errors.Is(err, services.ErrAuthWeakPassword):
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "weak password")
+		default:
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+		}
 	}
 
 	exists, err := handler.registrationEmailExists(credentials.Email)
@@ -25,27 +34,10 @@ func (handler *Handler) Register(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
 	}
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
+	user, recoveryCode, err := handler.authService.BuildOwnerUserWithRecovery(credentials.Email, credentials.Password, time.Now().In(handler.location))
 	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
+		return apiError(c, fiber.StatusInternalServerError, "failed to create account")
 	}
-
-	recoveryCode, recoveryHash, err := generateRecoveryCodeHash()
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to create recovery code")
-	}
-
-	user := models.User{
-		Email:            credentials.Email,
-		PasswordHash:     string(passwordHash),
-		RecoveryCodeHash: recoveryHash,
-		Role:             models.RoleOwner,
-		CycleLength:      models.DefaultCycleLength,
-		PeriodLength:     models.DefaultPeriodLength,
-		AutoPeriodFill:   true,
-		CreatedAt:        time.Now().In(handler.location),
-	}
-	handler.ensureDependencies()
 	if err := handler.authService.CreateUser(&user); err != nil {
 		return handler.respondAuthError(c, fiber.StatusConflict, "email already exists")
 	}
@@ -68,12 +60,8 @@ func (handler *Handler) Login(c *fiber.Ctx) error {
 	}
 
 	handler.ensureDependencies()
-	user, err := handler.authService.FindByNormalizedEmail(credentials.Email)
+	user, err := handler.authService.AuthenticateCredentials(credentials.Email, credentials.Password)
 	if err != nil {
-		return handler.respondAuthError(c, fiber.StatusUnauthorized, "invalid credentials")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
 		return handler.respondAuthError(c, fiber.StatusUnauthorized, "invalid credentials")
 	}
 
