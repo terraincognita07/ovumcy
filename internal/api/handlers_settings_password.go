@@ -5,7 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/services"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
@@ -20,7 +19,8 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 	}
 
 	handler.ensureDependencies()
-	if err := handler.settingsService.ValidatePasswordChange(
+	if err := handler.settingsService.ChangePassword(
+		user.ID,
 		user.PasswordHash,
 		input.CurrentPassword,
 		input.NewPassword,
@@ -37,18 +37,13 @@ func (handler *Handler) ChangePassword(c *fiber.Ctx) error {
 			return handler.respondSettingsError(c, fiber.StatusBadRequest, "new password must differ")
 		case errors.Is(err, services.ErrSettingsWeakPassword):
 			return handler.respondSettingsError(c, fiber.StatusBadRequest, "weak password")
+		case errors.Is(err, services.ErrSettingsPasswordHashFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
+		case errors.Is(err, services.ErrSettingsPasswordUpdateFailed):
+			return apiError(c, fiber.StatusInternalServerError, "failed to update password")
 		default:
-			return apiError(c, fiber.StatusInternalServerError, "failed to validate password")
+			return apiError(c, fiber.StatusInternalServerError, "failed to update password")
 		}
-	}
-
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to secure password")
-	}
-
-	if err := handler.settingsService.UpdatePassword(user.ID, string(passwordHash), false); err != nil {
-		return apiError(c, fiber.StatusInternalServerError, "failed to update password")
 	}
 
 	if acceptsJSON(c) {
