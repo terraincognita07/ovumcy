@@ -19,13 +19,8 @@ func (handler *Handler) buildOnboardingViewData(c *fiber.Ctx, user *models.User,
 	}
 
 	cycleLength := user.CycleLength
-	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = models.DefaultCycleLength
-	}
 	periodLength := user.PeriodLength
-	if !isValidOnboardingPeriodLength(periodLength) {
-		periodLength = models.DefaultPeriodLength
-	}
+	cycleLength, periodLength = services.ResolveCycleAndPeriodDefaults(cycleLength, periodLength)
 
 	minDate, maxDate := services.OnboardingDateBounds(now, handler.location)
 

@@ -41,14 +41,7 @@ func (handler *Handler) buildSettingsViewData(c *fiber.Ctx, user *models.User, f
 		return nil, err
 	}
 
-	cycleLength := persisted.CycleLength
-	if !isValidOnboardingCycleLength(cycleLength) {
-		cycleLength = models.DefaultCycleLength
-	}
-	periodLength := persisted.PeriodLength
-	if !isValidOnboardingPeriodLength(periodLength) {
-		periodLength = models.DefaultPeriodLength
-	}
+	cycleLength, periodLength := services.ResolveCycleAndPeriodDefaults(persisted.CycleLength, persisted.PeriodLength)
 	autoPeriodFill := persisted.AutoPeriodFill
 	user.CycleLength = cycleLength
 	user.PeriodLength = periodLength

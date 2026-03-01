@@ -113,6 +113,20 @@ func IsValidOnboardingPeriodLength(value int) bool {
 	return value >= 1 && value <= 14
 }
 
+func ResolveCycleAndPeriodDefaults(cycleLength int, periodLength int) (int, int) {
+	resolvedCycleLength := cycleLength
+	if !IsValidOnboardingCycleLength(resolvedCycleLength) {
+		resolvedCycleLength = models.DefaultCycleLength
+	}
+
+	resolvedPeriodLength := periodLength
+	if !IsValidOnboardingPeriodLength(resolvedPeriodLength) {
+		resolvedPeriodLength = models.DefaultPeriodLength
+	}
+
+	return resolvedCycleLength, resolvedPeriodLength
+}
+
 func OnboardingDateBounds(now time.Time, location *time.Location) (time.Time, time.Time) {
 	if location == nil {
 		location = time.UTC

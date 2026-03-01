@@ -63,21 +63,7 @@ func parseOnboardingStep2Input(c *fiber.Ctx) (onboardingStep2Input, string) {
 		}
 	}
 
-	input.CycleLength = clampOnboardingCycleLength(input.CycleLength)
-	input.PeriodLength = clampOnboardingPeriodLength(input.PeriodLength)
-	_, input.PeriodLength = sanitizeOnboardingCycleAndPeriod(input.CycleLength, input.PeriodLength)
+	input.CycleLength, input.PeriodLength = services.SanitizeOnboardingCycleAndPeriod(input.CycleLength, input.PeriodLength)
 
 	return input, ""
-}
-
-func sanitizeOnboardingCycleAndPeriod(cycleLength int, periodLength int) (int, int) {
-	return services.SanitizeOnboardingCycleAndPeriod(cycleLength, periodLength)
-}
-
-func clampOnboardingCycleLength(value int) int {
-	return services.ClampOnboardingCycleLength(value)
-}
-
-func clampOnboardingPeriodLength(value int) int {
-	return services.ClampOnboardingPeriodLength(value)
 }

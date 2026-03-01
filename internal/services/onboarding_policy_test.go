@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/terraincognita07/ovumcy/internal/models"
 )
 
 func TestOnboardingDateBounds_UsesYearStartWhenWithinFirstSixtyDays(t *testing.T) {
@@ -84,4 +86,20 @@ func TestValidateStep1StartDate_AcceptsBoundaries(t *testing.T) {
 	if err := service.ValidateStep1StartDate(maxDate, now, location); err != nil {
 		t.Fatalf("expected nil error for max boundary, got %v", err)
 	}
+}
+
+func TestResolveCycleAndPeriodDefaults(t *testing.T) {
+	t.Run("keeps valid values", func(t *testing.T) {
+		cycleLength, periodLength := ResolveCycleAndPeriodDefaults(29, 6)
+		if cycleLength != 29 || periodLength != 6 {
+			t.Fatalf("expected 29/6, got %d/%d", cycleLength, periodLength)
+		}
+	})
+
+	t.Run("falls back for invalid values", func(t *testing.T) {
+		cycleLength, periodLength := ResolveCycleAndPeriodDefaults(120, 0)
+		if cycleLength != models.DefaultCycleLength || periodLength != models.DefaultPeriodLength {
+			t.Fatalf("expected defaults %d/%d, got %d/%d", models.DefaultCycleLength, models.DefaultPeriodLength, cycleLength, periodLength)
+		}
+	})
 }
