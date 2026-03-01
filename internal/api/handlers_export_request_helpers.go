@@ -1,38 +1,28 @@
 package api
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) parseExportRange(c *fiber.Ctx) (*time.Time, *time.Time, string) {
-	rawFrom := strings.TrimSpace(c.Query("from"))
-	rawTo := strings.TrimSpace(c.Query("to"))
-
-	var from *time.Time
-	if rawFrom != "" {
-		parsedFrom, err := parseDayParam(rawFrom, handler.location)
-		if err != nil {
+	from, to, err := services.ParseExportRange(c.Query("from"), c.Query("to"), handler.location)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrExportFromDateInvalid):
 			return nil, nil, "invalid from date"
-		}
-		from = &parsedFrom
-	}
-
-	var to *time.Time
-	if rawTo != "" {
-		parsedTo, err := parseDayParam(rawTo, handler.location)
-		if err != nil {
+		case errors.Is(err, services.ErrExportToDateInvalid):
 			return nil, nil, "invalid to date"
+		case errors.Is(err, services.ErrExportRangeInvalid):
+			return nil, nil, "invalid range"
+		default:
+			return nil, nil, "invalid range"
 		}
-		to = &parsedTo
-	}
-
-	if from != nil && to != nil && to.Before(*from) {
-		return nil, nil, "invalid range"
 	}
 
 	return from, to, ""
