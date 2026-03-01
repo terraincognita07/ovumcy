@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
-	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func parseForgotPasswordCode(c *fiber.Ctx) (string, string) {
@@ -33,12 +32,6 @@ func parseResetPasswordInput(c *fiber.Ctx) (resetPasswordInput, string) {
 	input.ConfirmPassword = strings.TrimSpace(input.ConfirmPassword)
 	if input.Password == "" || input.ConfirmPassword == "" {
 		return resetPasswordInput{}, "invalid input"
-	}
-	if input.Password != input.ConfirmPassword {
-		return resetPasswordInput{}, "password mismatch"
-	}
-	if err := services.ValidatePasswordStrength(input.Password); err != nil {
-		return resetPasswordInput{}, "weak password"
 	}
 
 	return input, ""

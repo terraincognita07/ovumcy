@@ -102,6 +102,23 @@ func TestAuthServiceValidateRegistrationCredentials(t *testing.T) {
 	}
 }
 
+func TestAuthServiceValidateResetPasswordInput(t *testing.T) {
+	service := NewAuthService(&stubAuthUserRepo{})
+
+	if err := service.ValidateResetPasswordInput("", ""); !errors.Is(err, ErrAuthResetInvalid) {
+		t.Fatalf("expected ErrAuthResetInvalid for empty input, got %v", err)
+	}
+	if err := service.ValidateResetPasswordInput("StrongPass1", "AnotherPass2"); !errors.Is(err, ErrAuthPasswordMismatch) {
+		t.Fatalf("expected ErrAuthPasswordMismatch, got %v", err)
+	}
+	if err := service.ValidateResetPasswordInput("12345678", "12345678"); !errors.Is(err, ErrAuthWeakPassword) {
+		t.Fatalf("expected ErrAuthWeakPassword, got %v", err)
+	}
+	if err := service.ValidateResetPasswordInput("StrongPass1", "StrongPass1"); err != nil {
+		t.Fatalf("expected valid reset password input, got %v", err)
+	}
+}
+
 func TestAuthServiceBuildOwnerUserWithRecovery(t *testing.T) {
 	service := NewAuthService(&stubAuthUserRepo{})
 	createdAt := time.Date(2026, time.March, 2, 8, 0, 0, 0, time.UTC)

@@ -20,6 +20,7 @@ var (
 	ErrAuthPasswordMismatch = errors.New("auth register password mismatch")
 	ErrAuthWeakPassword     = errors.New("auth register weak password")
 	ErrAuthInvalidCreds     = errors.New("auth invalid credentials")
+	ErrAuthResetInvalid     = errors.New("auth reset invalid input")
 )
 
 type AuthUserRepository interface {
@@ -66,6 +67,22 @@ func (service *AuthService) ValidateRegistrationCredentials(password string, con
 
 	if password == "" || confirmPassword == "" {
 		return ErrAuthRegisterInvalid
+	}
+	if password != confirmPassword {
+		return ErrAuthPasswordMismatch
+	}
+	if err := ValidatePasswordStrength(password); err != nil {
+		return ErrAuthWeakPassword
+	}
+	return nil
+}
+
+func (service *AuthService) ValidateResetPasswordInput(password string, confirmPassword string) error {
+	password = strings.TrimSpace(password)
+	confirmPassword = strings.TrimSpace(confirmPassword)
+
+	if password == "" || confirmPassword == "" {
+		return ErrAuthResetInvalid
 	}
 	if password != confirmPassword {
 		return ErrAuthPasswordMismatch

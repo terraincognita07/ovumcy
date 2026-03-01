@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func (handler *Handler) ForgotPassword(c *fiber.Ctx) error {
@@ -50,6 +52,18 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, parseError)
 	}
 
+	handler.ensureDependencies()
+	if err := handler.authService.ValidateResetPasswordInput(input.Password, input.ConfirmPassword); err != nil {
+		switch {
+		case errors.Is(err, services.ErrAuthPasswordMismatch):
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "password mismatch")
+		case errors.Is(err, services.ErrAuthWeakPassword):
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "weak password")
+		default:
+			return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid input")
+		}
+	}
+
 	token, _ := handler.readResetPasswordCookie(c)
 	if token == "" {
 		handler.clearResetPasswordCookie(c)
@@ -62,7 +76,6 @@ func (handler *Handler) ResetPassword(c *fiber.Ctx) error {
 		return handler.respondAuthError(c, fiber.StatusBadRequest, "invalid reset token")
 	}
 
-	handler.ensureDependencies()
 	recoveryCode, err := handler.authService.ResetPasswordAndRotateRecoveryCode(user, input.Password)
 	if err != nil {
 		return apiError(c, fiber.StatusInternalServerError, "failed to reset password")

@@ -105,3 +105,23 @@ func TestGenerateRecoveryCodeHash(t *testing.T) {
 		t.Fatalf("expected non-empty recovery hash")
 	}
 }
+
+func TestNormalizeRecoveryCode(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "normalizes mixed separators", raw: "  ovum-abcd-2345-efgh  ", want: "OVUM-ABCD-2345-EFGH"},
+		{name: "normalizes raw 12 chars", raw: "abcd2345efgh", want: "OVUM-ABCD-2345-EFGH"},
+		{name: "keeps invalid length as upper trimmed", raw: "abcd", want: "ABCD"},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := NormalizeRecoveryCode(testCase.raw); got != testCase.want {
+				t.Fatalf("NormalizeRecoveryCode(%q) = %q, want %q", testCase.raw, got, testCase.want)
+			}
+		})
+	}
+}
