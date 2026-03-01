@@ -58,8 +58,8 @@ func TestGenerateRecoveryCodeFormat(t *testing.T) {
 		t.Fatalf("GenerateRecoveryCode returned error: %v", err)
 	}
 
-	if !recoveryCodeRegex.MatchString(code) {
-		t.Fatalf("generated code %q does not match required format", code)
+	if err := services.ValidateRecoveryCodeFormat(code); err != nil {
+		t.Fatalf("generated code %q does not match required format: %v", code, err)
 	}
 
 	randomPart := strings.TrimPrefix(strings.ReplaceAll(code, "-", ""), recoveryCodePrefix)
@@ -76,8 +76,8 @@ func TestGenerateRecoveryCodeHash(t *testing.T) {
 		t.Fatalf("generateRecoveryCodeHash returned error: %v", err)
 	}
 
-	if !recoveryCodeRegex.MatchString(code) {
-		t.Fatalf("generated code %q does not match required format", code)
+	if err := services.ValidateRecoveryCodeFormat(code); err != nil {
+		t.Fatalf("generated code %q does not match required format: %v", code, err)
 	}
 	if strings.TrimSpace(hash) == "" {
 		t.Fatal("expected non-empty hash")

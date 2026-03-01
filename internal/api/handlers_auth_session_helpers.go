@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/terraincognita07/ovumcy/internal/models"
+	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func parseForgotPasswordCode(c *fiber.Ctx) (string, string) {
@@ -16,7 +17,7 @@ func parseForgotPasswordCode(c *fiber.Ctx) (string, string) {
 	}
 
 	code := normalizeRecoveryCode(input.RecoveryCode)
-	if !recoveryCodeRegex.MatchString(code) {
+	if err := services.ValidateRecoveryCodeFormat(code); err != nil {
 		return "", "invalid recovery code"
 	}
 	return code, ""

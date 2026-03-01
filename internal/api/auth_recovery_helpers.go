@@ -2,22 +2,13 @@ package api
 
 import (
 	"errors"
-	"net/mail"
-	"strings"
 
 	"github.com/terraincognita07/ovumcy/internal/models"
 	"github.com/terraincognita07/ovumcy/internal/services"
 )
 
 func normalizeLoginEmail(raw string) string {
-	email := strings.ToLower(strings.TrimSpace(raw))
-	if email == "" {
-		return ""
-	}
-	if _, err := mail.ParseAddress(email); err != nil {
-		return ""
-	}
-	return email
+	return services.NormalizeAuthEmail(raw)
 }
 
 func (handler *Handler) findUserByRecoveryCode(code string) (*models.User, error) {
