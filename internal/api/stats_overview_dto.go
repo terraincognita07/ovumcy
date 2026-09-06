@@ -68,16 +68,18 @@ type StatsOverviewSuppression struct {
 // ovulation_date carries the same additional resolution the calendar's solid
 // marker and the dashboard's ovulation line already apply, through
 // services.PublishedOverviewStats: once the owner's own BBT readings confirm
-// the current cycle's ovulation, the measured day outranks the model's
+// the current cycle's ovulation, the confirmed day outranks the model's
 // projection here too — this was the one surface still naming the superseded
-// projection after the other six had moved on to the measured day.
+// projection after the other six had moved on to the confirmed day. That day
+// is inferred from the owner's own temperature shift, never a measurement of
+// the ovulation itself.
 //
 // ovulation_confirmed names that substitution rather than folding it into
 // ovulation_exact. The two are independent on the dashboard
 // (DisplayOvulationExact vs DisplayOvulationConfirmed, dashboard_cycle.go): a
 // fallback-luteal account (ovulation_exact=false) can still have its current
 // cycle's ovulation CONFIRMED by a BBT shift, and a client that cannot see
-// both loses the "measured, not modeled" distinction the domain keeps.
+// both loses the "confirmed, not modeled" distinction the domain keeps.
 //
 // Every projected date is a pointer and is null when suppressed. Null rather
 // than omitted, and never a zero date: the field set stays constant across

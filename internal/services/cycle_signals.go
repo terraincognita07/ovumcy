@@ -150,11 +150,18 @@ func currentCycleDetectionBound(today time.Time, location *time.Location) time.T
 // that a surface which has already resolved it does not resolve a second,
 // possibly different one.
 func ConfirmedCurrentCycleOvulation(user *models.User, logs []models.DailyLog, stats CycleStats, today time.Time, location *time.Location) (time.Time, bool) {
-	// NextPeriodStart no longer bounds the series below, but it stays in the
-	// gate with the other two model dates: a projection the model withheld
-	// (no next period start) withholds the confirmation too, until the window
-	// itself follows the confirmed day rather than the projection.
-	if user == nil || !user.TrackBBT || stats.LastPeriodStart.IsZero() || stats.OvulationDate.IsZero() || stats.NextPeriodStart.IsZero() {
+	// The two PROJECTED dates used to stand in this gate beside the recorded
+	// anchor: a projection the model withheld (no ovulation date, no next period
+	// start) withheld the confirmation too — "until the window itself follows
+	// the confirmed day rather than the projection". It does now
+	// (ResolveConfirmedCycleStats), and a window derived from a recorded shift
+	// needs no projection to exist, so an account whose median cycle leaves the
+	// model no room to place an ovulation still gets the day its own
+	// temperatures name instead of a silence its data does not support.
+	//
+	// LastPeriodStart stays: it is a RECORDED cycle start and the detection
+	// series' own lower bound below, not a projection.
+	if user == nil || !user.TrackBBT || stats.LastPeriodStart.IsZero() {
 		return time.Time{}, false
 	}
 
@@ -183,7 +190,8 @@ func ConfirmedCurrentCycleOvulation(user *models.User, logs []models.DailyLog, s
 // ConfirmedOvulationSupersedes reports whether a PROJECTED ovulation day is one
 // the owner's temperatures have already answered.
 //
-// The on-screen surfaces replace such a day with the measured one. The two
+// The on-screen surfaces replace such a day with the one inferred from the
+// temperature shift. The two
 // surfaces that leave the instance — the .ics feed and the webhook reminder —
 // cannot: both exist to announce a day that is still ahead, and a shift confirms
 // a day that is behind. Announcing the projection anyway is how they came to

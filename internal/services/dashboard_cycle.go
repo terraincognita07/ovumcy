@@ -45,14 +45,16 @@ type DashboardCycleContext struct {
 	DisplayOvulationRangeEnd    time.Time
 	DisplayOvulationUseRange    bool
 	DisplayOvulationNeedsData   bool
-	// DisplayOvulationConfirmed marks DisplayOvulationDate as a MEASUREMENT.
+	// DisplayOvulationConfirmed marks DisplayOvulationDate as a day the owner's
+	// own thermal shift CONFIRMS — inferred from the temperature signal, never a
+	// measurement of the ovulation itself.
 	// The dashboard reads it before the "needs more cycles" branch: that caption
 	// is about a projection built on thin history, and the calendar grid — gated
 	// on FertilityProjectionSuppressed alone — already marks the detector's day
 	// for this same cohort. The hero ring and the reminder banner deliberately
 	// keep gating on DisplayOvulationNeedsData: the ring is projection
 	// arithmetic, and the banner counts down to a day still ahead, neither of
-	// which a past measurement answers.
+	// which a past confirmation answers.
 	DisplayOvulationConfirmed  bool
 	DisplayOvulationExact      bool
 	DisplayOvulationImpossible bool
@@ -75,8 +77,9 @@ type dashboardPredictionDisplay struct {
 	ovulationRangeStart  time.Time
 	ovulationRangeEnd    time.Time
 	ovulationUseRange    bool
-	// ovulationConfirmed marks ovulationDate as a MEASUREMENT (a detected
-	// thermal shift) rather than a projection. The two representations that
+	// ovulationConfirmed marks ovulationDate as a day a detected thermal shift
+	// CONFIRMS — an inference from the owner's own signal, not a measurement of
+	// the ovulation — rather than a projection. The two representations that
 	// exist to express projection uncertainty — the irregular-cycle range and
 	// the thin-history "needs more cycles" withholding — read it and stand
 	// down, because neither is about a day the temperatures already named.
@@ -509,6 +512,10 @@ func buildDashboardPredictionDisplay(user *models.User, logs []models.DailyLog, 
 	if confirmed, ok := ConfirmedCurrentCycleOvulation(user, logs, stats, today, location); ok {
 		display.ovulationDate = confirmed
 		display.ovulationConfirmed = true
+		// ovulationImpossible is the projection's claim that the account's
+		// median cycle leaves no room for an ovulation, and the shift the owner
+		// recorded is the observation that answers it (ResolveConfirmedCycleStats).
+		display.ovulationImpossible = false
 	}
 	// The prompt is not a projection: with no recorded start there is no date
 	// to withhold and nothing for the overdue signal to be about, so it answers
@@ -638,7 +645,8 @@ func dashboardNextPeriodInPast(display dashboardPredictionDisplay, today time.Ti
 
 func dashboardOvulationInPast(display dashboardPredictionDisplay, today time.Time) bool {
 	// The amber notice is about a PROJECTION the model still points at after the
-	// day has gone by. A measured ovulation being behind the owner is the normal
+	// day has gone by. An ovulation inferred from the temperature shift being
+	// behind the owner is the normal
 	// state of every cycle from the shift until the next period, so reading it as
 	// that notice would raise a standing false alarm — for about a fortnight per
 	// cycle, on exactly the accounts whose data is best. DashboardUpcomingPredictions
